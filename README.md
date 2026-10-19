@@ -1,4 +1,4 @@
-Stability indicators for 1079 multi-planet systems of the NASA Exoplanet Archive (Planetary Systems Composite Parameters, downloaded 2026-10-16), computed 2026-10-16 with exostab 1.0.0.
+Stability indicators for 1079 multi-planet systems of the NASA Exoplanet Archive (Planetary Systems Composite Parameters, downloaded 2026-10-19), computed 2026-10-19 with exostab 1.0.0.
 
 Settings: 10,000 orbits of the innermost planet, 10 Monte Carlo draws, seed 0, at most 300 s per system.
 
