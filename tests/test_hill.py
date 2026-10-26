@@ -39,6 +39,27 @@ def test_circular_limit_values_quoted_in_the_module_docstring() -> None:
     assert dev[1] / dev[0] == pytest.approx(100 ** (2 / 3), rel=0.01)
 
 
+def test_circular_limit_beyond_a_ratio_of_ten() -> None:
+    """A very massive inner body puts the limit beyond a_2 / a_1 = 10; it is still found (issue #26)."""
+    m1, m2 = 0.8, 1e-3
+    crit = hill.gladman_critical_separation(m1, m2, 1.0)
+    assert math.isfinite(crit) and crit > 0
+    # convert back to a_2 / a_1 = (1 + x) / (1 - x) with x = crit * ((m1 + m2) / 3)^(1/3) / 2
+    x = crit * ((m1 + m2) / 3) ** (1 / 3) / 2
+    ratio = (1 + x) / (1 - x)
+    assert ratio > 10
+    assert hill.gladman_margin(m1, m2, 1.0, ratio, 0.0, 0.0, 1.0) == pytest.approx(0.0, abs=1e-9)
+    assert hill.gladman_margin(m1, m2, 1.0, ratio * 0.99, 0.0, 0.0, 1.0) < 0
+    assert hill.gladman_margin(m1, m2, 1.0, ratio * 1.01, 0.0, 0.0, 1.0) > 0
+
+
+def test_pair_table_with_a_very_massive_inner_body() -> None:
+    """The heavy-inner-body file of issue #26 (0.16 M_sun around a 0.2 M_sun star) no longer raises."""
+    real = real_of([0.16, 10 * MEARTH_IN_MSUN], [10.0, 200.0], m_star=0.2)
+    (row,) = hill.pair_table(real)
+    assert math.isfinite(row["gladman_critical_hill"]) and row["gladman_critical_hill"] > 0
+
+
 @given(m1=masses, m2=masses, ratio=st.floats(1.01, 3.0), m_star=st.floats(0.08, 3.0))
 def test_hill_spacing_is_symmetric_in_the_two_masses(
     m1: float, m2: float, ratio: float, m_star: float

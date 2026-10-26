@@ -64,6 +64,7 @@ DELTA_MULTI = 12.0
 K50_CIRCULAR = 10.2  # K_50(0, 0) for 1 Gyr (tau ~ 10^10.5 inner orbits), circular and coplanar orbits
 K50_ECC_SLOPE = 2.4  # rise of K_50 per Hill eccentricity of eccentricity dispersion
 E_CALIBRATED = 0.05  # largest dispersion sigma_e in Pu & Wu's simulations, compared with each planet's e
+_RATIO_MAX = 1e6  # largest a_2 / a_1 searched for the circular-orbit Gladman limit
 
 REFERENCES = [
     "gladman1993",
@@ -116,12 +117,20 @@ def gladman_margin(m1: float, m2: float, a1: float, a2: float, e1: float, e2: fl
 
 
 def gladman_critical_separation(m1: float, m2: float, m_star: float) -> float:
-    """Separation (mutual Hill radii) at which two circular orbits become Hill stable (Gladman 1993)."""
+    """Separation (mutual Hill radii) at which two circular orbits become Hill stable (Gladman 1993).
+
+    The limit is searched in a_2 / a_1 between 1 and 10 first. For a very massive inner body (above about
+    0.75 M_* with a planet-mass outer body) it lies beyond 10, so the upper end is doubled until the margin
+    changes sign, up to ``_RATIO_MAX``.
+    """
 
     def f(ratio: float) -> float:
         return gladman_margin(m1, m2, 1.0, ratio, 0.0, 0.0, m_star)
 
-    ratio = bisect(f, 1.0 + 1e-12, 10.0)
+    hi = 10.0
+    while f(hi) <= 0 and hi < _RATIO_MAX:
+        hi *= 2
+    ratio = bisect(f, 1.0 + 1e-12, hi)
     return separation_in_hill_radii(m1, m2, 1.0, ratio, m_star)
 
 

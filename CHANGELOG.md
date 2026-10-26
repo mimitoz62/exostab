@@ -10,6 +10,8 @@ All notable changes to this project are documented here. The format follows
 
 - `exostab sweep --param e` refuses eccentricities above `E_MAX` (0.95), as `exostab check` does, instead of
   integrating orbits up to e < 1.
+- `exostab check` no longer stops with "root not bracketed" when an inner body is very massive (above about
+  0.75 times the stellar mass): the circular-orbit Gladman limit is now searched beyond a_2 / a_1 = 10 (#26).
 
 ## [1.0.0] - 2026-10-16
 
