@@ -157,7 +157,9 @@ workflow so the catalog page is updated. The full log is in the run's `catalog` 
    Re-read the notebook's text: it quotes results and the snapshot date of the release it installs.
    `tests/test_packaging.py` fails until all of these name the version of the newest dated section of `CHANGELOG.md`.
 3. If the report card has changed, regenerate `docs/assets/demo.gif` with `python scripts/make_demo_gif.py` (it
-   runs the real command, so do it after setting the version) and look at it. Then commit, push to `main` and
+   runs the real command, so do it after setting the version) and look at it. If the card has changed, or
+   `docs/reading-a-report.md` still quotes a development version, print the cards on that page again with its commands
+   and re-read the text around them; `tests/test_report_cli.py` checks the first one. Then commit, push to `main` and
    wait for CI to pass.
 4. Tag and push the tag:
 

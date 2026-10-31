@@ -327,6 +327,8 @@ The Hill and AMD criteria are *sufficient* conditions or heuristics: failing the
 not that the system falls apart. With the published four-planet solution of Rivera et al. (2010), GJ 876 is unstable by
 Hill spacing and marginal by AMD, yet every N-body draw is regular, because its planets are locked in a resonance.
 
+[How to read a report card](reading-a-report.md) goes through a real card line by line.
+
 ## Validated against physics and reference results
 
 <div class="exo-stats" markdown>

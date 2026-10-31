@@ -22,6 +22,10 @@ All notable changes to this project are documented here. The format follows
   home page to a few of them. Each system's page links to the catalog's citation.
 - The home page names the DOI, and describes the software as schema.org `SoftwareSourceCode` for search engines: version,
   licence, author with ORCID and DOI. `tests/test_packaging.py` checks it against `codemeta.json`.
+- A documentation page, How to read a report card (`docs/reading-a-report.md`), which goes through the card of a real
+  run on TRAPPIST-1 line by line and says what to do next in the common cases. The README, the home page, the
+  Quickstart, the web app page, the FAQ and the system pages of the catalog link to it, and `tests/test_report_cli.py`
+  checks the lines of its card that do not depend on the integration.
 
 ### Changed
 
@@ -37,6 +41,9 @@ All notable changes to this project are documented here. The format follows
   `data/catalog.csv` and `data/catalog.parquet`, where the site serves the files.
 - The catalog's filter and the web app's search box now find Proxima Cen as `Proxima Centauri` and V1298 Tau as
   `V1298 Tauri`, and the pages of these two systems give those names.
+- Methods said that the Solar System is AMD-unstable because Mercury could collide with Venus. That reason is not in
+  the arXiv source of Laskar & Petit (2017), which attributes it to the large AMD of the giant planets. The page now
+  says so.
 
 ## [1.0.1] - 2026-10-31
 

@@ -22,6 +22,7 @@ from exostab.report import SCHEMA_VERSION, Report, json_schema, render, write_js
 
 runner = CliRunner()
 FAST = ["--orbits", "300", "--draws", "2", "--jobs", "1"]
+READING_GUIDE = Path(__file__).resolve().parents[1] / "docs" / "reading-a-report.md"
 
 
 @pytest.fixture(scope="module")
@@ -107,6 +108,41 @@ def test_flags_are_grouped_in_the_card() -> None:
     console = Console(record=True, width=120)
     render(res.report, console)
     assert "Data completion" in console.export_text()
+
+
+@pytest.mark.skipif(not READING_GUIDE.is_file(), reason="this page is not in the sdist")
+def test_reading_guide_quotes_a_real_card() -> None:
+    # docs/reading-a-report.md walks through the card of `exostab check "TRAPPIST-1" --offline`. Its title
+    # must name this version or a released one, and the excerpts that take it apart must repeat its lines. A
+    # short run without draws prints every line that does not depend on the integration, so those can be
+    # compared without the long run. If this fails, print the card again with the command on that page and
+    # re-read the text around it.
+    from exostab.data import load_system
+
+    def plain(text: str) -> str:
+        return " ".join(re.sub("[│╭╮╰╯─]", " ", text).split())
+
+    page = READING_GUIDE.read_text(encoding="utf-8")
+    changelog = (READING_GUIDE.parents[1] / "CHANGELOG.md").read_text(encoding="utf-8")
+    released = re.findall(r"^## \[(.+)\] - \d{4}-\d{2}-\d{2}$", changelog, re.MULTILINE)
+    quoted = set(re.findall(r"exostab (\S+) — stability report card", page))
+    assert quoted and quoted <= {__version__, *released}
+
+    # The first text fence is the card. The table of Kepler-292 is another system.
+    fences = re.findall(r"^```text\n(.*?)^```$", page.split("## Common cases")[0], re.MULTILINE | re.DOTALL)
+    excerpts = [line for fence in fences[1:] if "Kepler-292" not in fence for line in fence.splitlines()]
+    assert [line for line in excerpts if line not in fences[0].splitlines()] == []
+
+    res = check_system(
+        load_system("TRAPPIST-1", offline=True), CheckSettings(orbits=50, draws=0, jobs=1, ias15_check=False)
+    )
+    console = Console(record=True, width=100)
+    render(res.report, console)
+    card = console.export_text().splitlines()
+    n_body = next(i for i, line in enumerate(card) if "N-body + MEGNO" in line)
+    completion = next(i for i, line in enumerate(card) if "Data completion" in line)
+    fixed = [line for line in card[1:n_body] + card[completion:] if not re.search("MARGINAL|STABLE", line)]
+    assert [line for line in map(plain, fixed) if line not in plain(fences[0])] == []
 
 
 def test_figures(small_result, tmp_path: Path) -> None:  # type: ignore[no-untyped-def]

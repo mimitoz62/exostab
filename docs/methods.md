@@ -114,9 +114,9 @@ instability. Everything else is *marginal*. A planet whose eccentricity is not m
 AMD; the report then says that β and β_S are lower limits, and that an AMD-stable verdict holds only under that
 assumption.
 
-AMD instability does not mean the system will fall apart. The Solar System itself is AMD-unstable, because Mercury
-could in principle collide with Venus (Laskar & Petit 2017). It means only that AMD conservation cannot rule
-collisions out.
+AMD instability does not mean the system will fall apart. The Solar System itself is AMD-unstable, because the giant
+planets hold far more AMD than the orbits of the inner planets need to cross (Laskar & Petit 2017). It means only
+that AMD conservation cannot rule collisions out.
 
 ## Indicator 3: direct N-body integration and MEGNO
 

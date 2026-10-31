@@ -109,6 +109,7 @@ nav:
   - Home: index.md
   - Get started:
       - Quickstart: quickstart.md
+      - Reading a report card: reading-a-report.md
       - Web app: web.md
       - CLI reference: cli.md
   - Science:

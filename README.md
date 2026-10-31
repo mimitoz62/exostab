@@ -116,6 +116,7 @@ means mixed evidence, not "about to fall apart": planets f and g are 6.6 mutual 
 multi-planet spacing heuristic asks for 12, and 2 of the 20 draws within the published error bars are chaotic over
 this 41.4-year run, while the angular momentum deficit rules out collisions in the secular approximation (if the
 unknown mutual inclinations carry no more AMD than the eccentricities).
+[How to read a report card](https://mimitoz62.github.io/exostab/reading-a-report/) goes through this card line by line.
 
 <details>
 <summary><b>The TRAPPIST-1 report card as text</b></summary>
