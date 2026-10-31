@@ -71,21 +71,23 @@ Do not publish GitHub pre-releases for testing: Zenodo would archive them as ver
 ## Trying exostab in a browser (Colab, Codespaces, Binder)
 
 No account or setting is needed on the maintainer's side: each service reads its files from the repository
-(`examples/exostab_quickstart.ipynb`, `.devcontainer/devcontainer.json` and `.binder/`). The notebook and Binder
-install the release they name, and a codespace installs the checkout. Visitors use their own accounts and quotas: a
-Google account for Colab, a GitHub account for Codespaces, none for Binder. The workflow `Browser paths` runs the
-notebook every night on Python 3.13 on Linux, and the image and commands of `.devcontainer/devcontainer.json` without
-the editor around them. It is not part of the nightly validation, because the notebook needs the live archive and the
-validation badge should not fail when the archive is down. Nothing runs the Binder files automatically, and the
-workflow does not open a real codespace, so the steps below are their only test.
+(`examples/exostab_quickstart.ipynb`, `examples/exostab_exercise.ipynb`, `.devcontainer/devcontainer.json` and
+`.binder/`). The notebooks and Binder install the release they name, and a codespace installs the checkout. Visitors use
+their own accounts and quotas: a Google account for Colab, a GitHub account for Codespaces, none for Binder. The workflow
+`Browser paths` runs the notebooks every night on Python 3.13 on Linux, and the image and commands of
+`.devcontainer/devcontainer.json` without the editor around them. It is not part of the nightly validation, because the
+quickstart notebook needs the live archive and the validation badge should not fail when the archive is down. Nothing
+runs the Binder files automatically, and the workflow does not open a real codespace, so the steps below are their only
+test.
 
 After merging to `main`:
 
 1. Open https://mybinder.org/v2/gh/mimitoz62/exostab/main?urlpath=exostab/ once and wait until the web app appears.
    Binder builds an image for every new commit of `main`. Without this step, the next visitor waits for the build.
 2. If `.binder/` changed, press Run in that app and look at the verdict and the figures.
-3. If the notebook changed, open
-   https://colab.research.google.com/github/mimitoz62/exostab/blob/main/examples/exostab_quickstart.ipynb and use
+3. If a notebook changed, open
+   https://colab.research.google.com/github/mimitoz62/exostab/blob/main/examples/exostab_quickstart.ipynb or
+   https://colab.research.google.com/github/mimitoz62/exostab/blob/main/examples/exostab_exercise.ipynb and use
    Runtime → Run all.
 4. If `.devcontainer/` changed, open https://codespaces.new/mimitoz62/exostab?quickstart=1 and press Run in the app
    that opens in the preview. Then delete the codespace at https://github.com/codespaces: it uses your free hours.
@@ -127,8 +129,9 @@ workflow so the catalog page is updated. The full log is in the run's `catalog` 
      it in `_citation` in place of the sentence that a DOI will follow.
 - A docs run that a catalog starts, or that is started by hand, sends the site's URLs to IndexNow
   (`scripts/indexnow.py`, no account) once the site is deployed; a push sends nothing. The log of the job `indexnow`
-  should say `IndexNow received <n> URLs (HTTP 200)` or `(HTTP 202)`, which confirms receipt and not indexing. A 403 or
-  422 points at the key file (`docs/<key>.txt`) or `keyLocation`. A failed call does not fail the run, so nothing
+  should say `IndexNow received <n> URLs (HTTP 200)` or `(HTTP 202)`, which confirms receipt and not indexing. A first
+  403 with `SiteVerificationNotCompleted` means that the engine is still checking the key: the next run tries again. Any
+  other 403 or a 422 points at the key file (`docs/<key>.txt`) or `keyLocation`. A failed call does not fail the run, so nothing
   announces it: look at that log from time to time.
 
 ## Cutting a release
@@ -148,13 +151,15 @@ workflow so the catalog page is updated. The full log is in the run's `catalog` 
    Also change the version in these places:
    - `@v1.0.1` in the install lines of `README.md`, `overrides/home.html`, `docs/index.md`, `docs/quickstart.md` and
      `docs/web.md`, and in the first code cell and the last text cell of `examples/exostab_quickstart.ipynb`;
+   - `@v1.0.1` in the first code cell of `examples/exostab_exercise.ipynb`;
    - `v1.0.1` and `1.0.1` in the wheel URLs of `README.md`, `docs/quickstart.md` and `.binder/requirements.txt`;
    - `v1.0.1` in the `raw.githubusercontent.com` URLs: the example file in `README.md`, `docs/index.md` and
      `docs/quickstart.md`, and the SPOCK script in `README.md`;
    - "release 1.0.1" in the text of `README.md` and `docs/quickstart.md`, and "Version 1.0.1" in `overrides/home.html`;
    - `"version": "1.0.1"` in the structured data of `overrides/home.html`.
 
-   Re-read the notebook's text: it quotes results and the snapshot date of the release it installs.
+   Re-read the text of the notebooks and the answer notes in `docs/exercise.md`: they quote results and the snapshot
+   date of the release the notebooks install, and the notes were run with 1.0.1.
    `tests/test_packaging.py` fails until all of these name the version of the newest dated section of `CHANGELOG.md`.
 3. If the report card has changed, regenerate `docs/assets/demo.gif` with `python scripts/make_demo_gif.py` (it
    runs the real command, so do it after setting the version) and look at it. If the card has changed, or

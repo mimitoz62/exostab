@@ -115,9 +115,10 @@ def latest_release() -> Version:
     return max(Version(v) for v in re.findall(r"^## \[(.+)\] - \d{4}-\d{2}-\d{2}$", changelog, re.MULTILINE))
 
 
-def test_notebook_has_no_outputs_and_installs_the_latest_release() -> None:
+@pytest.mark.parametrize("name", ["exostab_quickstart.ipynb", "exostab_exercise.ipynb"])
+def test_notebook_has_no_outputs_and_installs_the_latest_release(name: str) -> None:
     # Colab shows the file as committed, so outputs would look like the results of the visitor's own run.
-    notebook = json.loads((ROOT / "examples" / "exostab_quickstart.ipynb").read_text(encoding="utf-8"))
+    notebook = json.loads((ROOT / "examples" / name).read_text(encoding="utf-8"))
     code = [cell for cell in notebook["cells"] if cell["cell_type"] == "code"]
     assert code and [c["id"] for c in code if c["outputs"] or c["execution_count"] is not None] == []
     pins = re.findall(r"@v(\d+\.\d+\.\d+)", "".join("".join(cell["source"]) for cell in notebook["cells"]))

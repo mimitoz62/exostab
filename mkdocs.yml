@@ -88,8 +88,10 @@ extra:
 extra_css:
   - stylesheets/extra.css
   - stylesheets/catalog.css
+  - stylesheets/calculator.css
 extra_javascript:
   - javascripts/catalog.js
+  - javascripts/calculator.js
 
 watch:
   - overrides
@@ -110,8 +112,10 @@ nav:
   - Get started:
       - Quickstart: quickstart.md
       - Reading a report card: reading-a-report.md
+      - Two-planet calculator: calculator.md
       - Web app: web.md
       - CLI reference: cli.md
+      - Classroom exercise: exercise.md
   - Science:
       - Methods: methods.md
       - Data and assumptions: data-assumptions.md
@@ -123,6 +127,7 @@ nav:
       - Changes between catalogs: catalog-changes.md
   - About:
       - FAQ: faq.md
+      - exostab and other tools: other-tools.md
       - Citing exostab: citing.md
       - Changelog: changelog.md
       - Design decisions: https://github.com/mimitoz62/exostab/blob/main/DECISIONS.md

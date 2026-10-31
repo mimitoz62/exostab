@@ -1,0 +1,37 @@
+/* Two-planet calculator (docs/calculator.md). The colours are the tokens of extra.css, so they follow the colour
+   scheme. The verdict words use the classes of catalog.css. */
+.calc-presets { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin: 0.8rem 0; }
+.md-typeset .calc-presets .md-button { margin: 0; padding: 0.3em 0.8em; font-size: 0.7rem; }
+.calc-form fieldset { min-width: 0; margin: 0; padding: 0.3rem 0.7rem 0.7rem;
+  border: 1px solid var(--exo-border); border-radius: 0.4rem; background: var(--exo-surface); }
+.calc-form legend { padding: 0 0.3rem; font-weight: 700; }
+.calc-planets { display: grid; gap: 0.7rem; margin-top: 0.7rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); }
+.calc-field { margin-top: 0.5rem; }
+.calc-field label { display: block; font-size: 0.7rem; font-weight: 600; }
+.calc-control { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.calc-form input, .calc-form select { min-width: 0; padding: 0.25rem 0.4rem; font: inherit;
+  border: 1px solid var(--md-default-fg-color--light); border-radius: 4px;
+  background: var(--md-default-bg-color); color: var(--md-default-fg-color); }
+.calc-form input { flex: 1 1 5rem; width: 100%; font-variant-numeric: tabular-nums; }
+.calc-form select { flex: 1 1 auto; max-width: 100%; }
+.calc-form input:focus-visible, .calc-form select:focus-visible { outline: 2px solid var(--md-accent-fg-color);
+  outline-offset: 1px; }
+.calc-form [aria-invalid="true"] { border-color: var(--exo-unstable); box-shadow: 0 0 0 1px var(--exo-unstable); }
+.md-typeset .calc-verdicts { margin: 0.6rem 0; font-size: 1.1em; font-weight: 600; }
+.calc-errors { margin: 0.8rem 0; padding: 0.1rem 0.7rem; overflow-wrap: anywhere;
+  border-left: 0.2rem solid var(--exo-unstable); background: var(--exo-surface); }
+.md-typeset .calc-swapped { padding: 0.3rem 0.7rem; border-left: 0.2rem solid var(--exo-marginal);
+  background: var(--exo-surface); }
+.md-typeset .calc-results { margin: 0.4rem 0 1rem; }
+.calc-results > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 1rem;
+  padding: 0.4rem 0; border-top: 1px solid var(--exo-border); }
+.md-typeset .calc-results dt { font-weight: 600; }
+.md-typeset .calc-results dd { margin: 0; }
+.md-typeset .calc-results .calc-value { max-width: 14rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  text-align: right; overflow-wrap: anywhere; }
+.md-typeset .calc-results .calc-meaning { grid-column: 1 / -1; margin-top: 0.15rem;
+  color: var(--md-default-fg-color--light); font-size: 0.7rem; }
+.calc-copy { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin: 0.8rem 0; }
+.md-typeset .calc-copy .md-button { margin: 0; padding: 0.3em 0.8em; font-size: 0.7rem; }
+#calc-copy-note { overflow-wrap: anywhere; }

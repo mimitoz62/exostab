@@ -71,8 +71,9 @@ small decision that can change the answer. exostab makes those decisions explici
 ## Quickstart
 
 **Without installing anything.** The [stability catalog](https://mimitoz62.github.io/exostab/catalog/) needs nothing:
-look up a system in the table of the archive's multi-planet systems, recomputed every week. To run exostab
-itself in a browser:
+look up a system in the table of the archive's multi-planet systems, recomputed every week. The
+[two-planet calculator](https://mimitoz62.github.io/exostab/calculator/) evaluates the Hill and AMD criteria for one
+pair of planets on the page itself, with no integration. To run exostab itself in a browser:
 
 - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mimitoz62/exostab/blob/main/examples/exostab_quickstart.ipynb)
   runs `exostab check` and `exostab sweep` in a notebook, and needs a Google account.
@@ -578,6 +579,7 @@ The documentation is at [mimitoz62.github.io/exostab](https://mimitoz62.github.i
 [Quickstart](https://mimitoz62.github.io/exostab/quickstart/) ·
 [CLI reference](https://mimitoz62.github.io/exostab/cli/) ·
 [Web app](https://mimitoz62.github.io/exostab/web/) ·
+[Classroom exercise](https://mimitoz62.github.io/exostab/exercise/) ·
 [Methods](https://mimitoz62.github.io/exostab/methods/) (equations and references) ·
 [Data and assumptions](https://mimitoz62.github.io/exostab/data-assumptions/) ·
 [Validation](https://mimitoz62.github.io/exostab/validation/) ·
@@ -624,6 +626,9 @@ HD 127195* (Öz 2026, prepared for Research Notes of the AAS) and its code,
 
 exostab is not to be confused with [Exostab 2.0](https://exostab2.readthedocs.io), an unrelated web service for the
 stability limits of circumbinary planets, which exostab does not model.
+
+[exostab and other tools](https://mimitoz62.github.io/exostab/other-tools/) says how exostab relates to REBOUND, SPOCK,
+ExoNAMD, the published AMD-stability catalogues, long-term integrators and others, and when to use which.
 
 ## Contributing
 

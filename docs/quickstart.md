@@ -10,10 +10,12 @@ description: >-
 ## Try it without installing
 
 The [stability catalog](catalog.md) needs nothing: look up a system in the table of the multi-planet systems in the
-archive, recomputed every week. To run exostab itself in a browser:
+archive, recomputed every week. The [two-planet calculator](calculator.md) evaluates the Hill and AMD criteria for one
+pair of planets on the page itself, with no integration. To run exostab itself in a browser:
 
 - [Google Colab](https://colab.research.google.com/github/mimitoz62/exostab/blob/main/examples/exostab_quickstart.ipynb)
-  runs `exostab check` and `exostab sweep` in a notebook, and needs a Google account.
+  runs `exostab check` and `exostab sweep` in a notebook, and needs a Google account. A second notebook is a
+  [classroom exercise](exercise.md) for a dynamics or exoplanet course.
 - [GitHub Codespaces](https://codespaces.new/mimitoz62/exostab?quickstart=1) opens the web app and a copy of the
   repository, needs a GitHub account and uses your free monthly hours.
 - [Binder](https://mybinder.org/v2/gh/mimitoz62/exostab/main?urlpath=exostab/) opens the web app and needs no account;
