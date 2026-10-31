@@ -9,7 +9,7 @@
 
 <p align="center">
   <b>Is this planetary system dynamically stable?</b><br>
-  A quick, traceable first answer for any known multi-planet system:<br>
+  A quick, traceable first answer for known multi-planet systems:<br>
   three indicators side by side, published uncertainties propagated, every assumption shown.
 </p>
 
@@ -29,6 +29,13 @@
   <a href="https://github.com/mimitoz62/exostab#validation-at-a-glance"><b>Validation</b></a> ·
   <a href="https://mimitoz62.github.io/exostab/catalog/"><b>Catalog</b></a> ·
   <a href="https://github.com/mimitoz62/exostab#citing-exostab"><b>Cite</b></a>
+</p>
+
+<p align="center">
+  Try it without installing:
+  <a href="https://mimitoz62.github.io/exostab/catalog/">look up a system in the catalog</a> ·
+  <a href="https://colab.research.google.com/github/mimitoz62/exostab/blob/main/examples/exostab_quickstart.ipynb">run it in Colab</a> ·
+  <a href="https://mybinder.org/v2/gh/mimitoz62/exostab/main?urlpath=exostab/">open the web app on Binder</a>
 </p>
 
 <p align="center">
@@ -62,23 +69,45 @@ small decision that can change the answer. exostab makes those decisions explici
 
 ## Quickstart
 
-**Try it without installing anything** (needs [uv](https://docs.astral.sh/uv/); `--offline` uses the snapshot of
-22 well-known systems that ships with exostab):
+**Without installing anything.** The [stability catalog](https://mimitoz62.github.io/exostab/catalog/) needs nothing:
+look up a system in the table of the archive's multi-planet systems, recomputed every week. To run exostab
+itself in a browser:
+
+- [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mimitoz62/exostab/blob/main/examples/exostab_quickstart.ipynb)
+  runs `exostab check` and `exostab sweep` in a notebook, and needs a Google account.
+- [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/mimitoz62/exostab?quickstart=1)
+  opens the web app and a copy of the repository, needs a GitHub account and uses your free monthly hours.
+- [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/mimitoz62/exostab/main?urlpath=exostab/)
+  opens the web app and needs no account; the first start can take several minutes, and the session ends after 10
+  minutes without activity.
+
+**Without a permanent install** (needs [uv](https://docs.astral.sh/uv/) and git, and downloads about 350 MB into uv's
+cache). `--offline` uses the snapshot of 22 well-known systems that ships with exostab; leave it out to use the live
+archive:
 
 ```bash
 uvx --from git+https://github.com/mimitoz62/exostab@v1.0.0 exostab check "TRAPPIST-1" --offline
 ```
 
-**Or install it** (Python 3.10 or newer) and check any multi-planet system in the archive, by host or planet name:
+**Or install it** and check a multi-planet system from the archive, by host or planet name. You need Python 3.10 or
+newer: the first line shows your version, and `/usr/bin/python3` on macOS is 3.9. [Install](#install) has the form
+without git.
 
 ```bash
+python3 --version
+python3 -m venv .venv
+source .venv/bin/activate
 pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.0.0"
 exostab check "TRAPPIST-1"
 ```
 
+Names are the archive's, for example KOI-351 (Kepler-90), GJ 876 (Gliese 876), ups And (Upsilon Andromedae) and
+55 Cnc (55 Cancri); `exostab list` shows them.
+
 The first check downloads the archive's multi-planet table once (about 2,700 rows; 7 s on 13 October 2026) and
 caches it; `--refresh` downloads it again. On a 14-core laptop a default check took about 3 s for the two planets
-of HD 127195 and about 8 s for the seven of TRAPPIST-1. It prints a report card like the one in the recording
+of HD 127195 and about 8 s for the seven of TRAPPIST-1, and about 15 s for TRAPPIST-1 on one of its cores. A smaller
+machine, such as a free cloud session, takes longer. The check prints a report card like the one in the recording
 above and saves `report.json`, `orbits.png` and `megno.png` in `exostab-results/trappist-1/`.
 
 TRAPPIST-1 comes out **marginal**, with the bundled snapshot and with the archive table of 13 October 2026. That
@@ -245,16 +274,33 @@ limit. The Note, which had no energy criterion, found 134 regular, 57 chaotic an
 ## Install
 
 ```bash
+python3 --version
+python3 -m venv .venv
+source .venv/bin/activate
 pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.0.0"
 ```
 
 This installs release 1.0.0 from GitHub. exostab needs Python 3.10 or newer; 3.10–3.14 are tested on Linux and
-macOS in continuous integration. A package on PyPI is planned; until then, install from GitHub.
+macOS in continuous integration. The first line shows your version, and `/usr/bin/python3` on macOS is 3.9. If yours
+is older than 3.10, install a newer Python first, for example from [python.org](https://www.python.org/downloads/). In
+a new terminal, run the `source` line again. A package on PyPI is planned; until then, install from GitHub.
+
+The `pip` line needs git. Without git, install the wheel of the release; `uvx --from` takes the same URL:
+
+```bash
+pip install https://github.com/mimitoz62/exostab/releases/download/v1.0.0/exostab-1.0.0-py3-none-any.whl
+```
 
 | Optional extra | What it adds | Install |
 |---|---|---|
 | `web` | The Streamlit web app (Streamlit, Plotly) | `pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.0.0"` |
 | `catalog` | Parquet output for `exostab catalog build` (pyarrow) | `pip install "exostab[catalog] @ git+https://github.com/mimitoz62/exostab@v1.0.0"` |
+
+Without git, put the wheel's URL after the `@`:
+
+```bash
+pip install "exostab[web] @ https://github.com/mimitoz62/exostab/releases/download/v1.0.0/exostab-1.0.0-py3-none-any.whl"
+```
 
 <details>
 <summary><b>Optional SPOCK indicator</b> (separate environment)</summary>
@@ -263,12 +309,12 @@ macOS in continuous integration. A package on PyPI is planned; until then, insta
 
 SPOCK 2.1.1 needs REBOUND below version 5, while exostab needs REBOUND 5.2, so SPOCK is deliberately not a pip
 extra: it runs as a separate program in its own environment. With [uv](https://docs.astral.sh/uv/) and a C
-compiler, download the setup script (or run it from a clone of the repository) and point exostab at the new
-environment:
+compiler, download the setup script (or run it from a clone of the repository), which creates `~/.exostab-spock`, and
+point exostab at the new environment:
 
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/mimitoz62/exostab/v1.0.0/scripts/make_spock_env.sh
-bash make_spock_env.sh                                   # creates ~/.exostab-spock
+bash make_spock_env.sh
 export EXOSTAB_SPOCK_PYTHON=~/.exostab-spock/bin/python
 exostab check "TRAPPIST-1" --spock
 ```
@@ -308,8 +354,8 @@ orbital phases are drawn at random because the archive's reference time and peri
 publications) and one inconclusive (HD 10180).
 
 > [!IMPORTANT]
-> Hill spacing and AMD are *sufficient* conditions: failing them means stability is not guaranteed, not that the
-> system falls apart. GJ 876 is the standard example. With the published four-planet solution of Rivera et al.
+> Hill spacing and AMD are *sufficient* conditions or heuristics: failing them means stability is not guaranteed, not
+> that the system falls apart. GJ 876 is the standard example. With the published four-planet solution of Rivera et al.
 > (2010), Hill spacing says unstable and AMD marginal, yet all 20 N-body draws are regular: the planets are protected
 > by a resonance. An N-body *stable*, in turn, means "no instability found within the integrated time" (41.4 years for
 > TRAPPIST-1 with the defaults), not stability over billions of years.
@@ -324,9 +370,17 @@ publications) and one inconclusive (HD 10180).
 | `exostab list --min-planets 4 --max-period-days 200` | Lists multi-planet systems in the archive table | (terminal only) |
 | `exostab catalog build --limit 50` | Indicators for many systems in one table | `catalog.csv`, `catalog_meta.json`, and `catalog.parquet` with the `catalog` extra |
 
+The `examples/` folder exists only in a clone of the repository. To get the example file without one:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/mimitoz62/exostab/v1.0.0/examples/two_planet.yaml
+exostab check --from-file two_planet.yaml
+```
+
 Options worth knowing:
 
-- `--seed N`: the same seed gives the same draws and results (default 0).
+- `--seed N`: the same seed gives the same draws and, on the same platform and software versions, the same results
+  (default 0).
 - `--orbits` and `--draws`, or `--budget fast|thorough|<seconds>`: run length and number of draws, set directly or
   chosen to fit a wall-clock budget (`fast` is about 10 s, `thorough` about 2 minutes).
 - `--inclination-prior isotropic`: for minimum masses, draws an inclination in every draw instead of using m sin i
@@ -375,31 +429,41 @@ The web app runs the same analysis as `exostab check` in a browser. Search a sys
 a time budget of 5–120 s, and read the verdicts with interactive figures. Download `report.json` and the plots, or
 copy a **shareable link** that encodes the system, your edits, the seed and the run length.
 
-It runs on your own computer:
+It runs on your own computer, in the virtual environment from [Install](#install):
 
 ```bash
 pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.0.0"
-python -m exostab.web               # then open http://localhost:8501
+python -m exostab.web
 ```
 
-In a clone of the repository, `streamlit run streamlit_app.py` does the same. There is no hosted version yet.
+If Streamlit asks for an email address, press Enter. Then open <http://localhost:8501>. In a clone of the repository,
+`streamlit run streamlit_app.py` does the same. There is no permanent hosted version. To try the app without installing
+it, use the Binder or Codespaces link under [Quickstart](#quickstart). A shareable link made there points at that session: it works only
+while the session runs, and other people may not be able to open it.
 Details: [web app documentation](https://mimitoz62.github.io/exostab/web/).
 
 ## Stability catalog
 
 A [weekly workflow](https://github.com/mimitoz62/exostab/blob/main/.github/workflows/catalog.yml) computes the
-indicators for every multi-planet system in the archive's composite table (1,068 systems in the run of 12 October
-2026) with the same settings for all of them: 10,000 orbits of the innermost planet, 10 draws, seed 0 and at most
-300 s per system (systems over the cap are recorded as "timeout"). It publishes `catalog.csv`, `catalog.parquet` and
+indicators for the multi-planet systems in the archive's composite table with the same settings for all of them:
+10,000 orbits of the innermost planet, 10 draws, seed 0 and at most 300 s per system (systems over the cap are
+recorded as "timeout"). In the run of 26 October 2026 the table had 1,079 such systems: 1,044 were checked and 35
+are listed as skipped, with the reason. It publishes `catalog.csv`, `catalog.parquet` and
 `catalog_meta.json` on the branch [`catalog-data`](https://github.com/mimitoz62/exostab/tree/catalog-data), one
 commit per week, and the documentation shows them as a
 [sortable table](https://mimitoz62.github.io/exostab/catalog/). Each row holds the verdicts, the numbers behind
-them, the completion rules applied and the software versions. The catalogs published so far were computed with a
-development version from before 1.0.0, whose verdict rules differ; the weekly runs after the release recompute them.
+them, the completion rules applied and the software versions, and each system has its own page, for example
+[TRAPPIST-1](https://mimitoz62.github.io/exostab/systems/trappist-1/). The catalogs of 16, 19 and 26 October 2026 are computed
+with 1.0.0, and later ones with the code on `main` at the time, as each row records. The catalogs of 5 and 12 October
+used a development version whose verdict rules differ; they stay on the branch.
+[What the catalog shows](https://mimitoz62.github.io/exostab/findings/) describes the results of the catalog of
+26 October 2026 and how firm they are.
 
 Read catalog verdicts with their caveats: missing orbital phases are drawn at random, minimum masses are used as
-masses and orbits are coplanar, so a resonant system can look unstable there although the full solution of one paper
-shows it is stable (GJ 876 is the standard example). Run `exostab check "<name>"` to see every assumption, or
+masses and orbits are coplanar, so a resonant system can look marginal or unstable there although the full solution
+of one paper shows it is stable (GJ 876 is the standard example). The catalog uses 10 draws and `exostab check` 20 by
+default, so a verdict can differ: TOI-270 is stable in the catalog of 26 October 2026 and marginal with the defaults.
+Add `--draws 10` to match the catalog's settings. Run `exostab check "<name>"` to see every assumption, or
 `--from-file` with a published solution.
 
 ## How it stays honest
@@ -419,9 +483,10 @@ A stability verdict is only as good as the inputs and settings behind it, so exo
 - **The integrators check each other.** The nominal run is repeated with IAS15. If WHFast and IAS15 disagree, the
   N-body verdict cannot be *stable*. The energy error is checked over the whole of every run, and a run whose
   relative energy error exceeds 10⁻⁵ is *inconclusive*.
-- **Runs are reproducible.** The same `--seed` gives identical runs (this is tested). Each `report.json` stores the
-  seed, the versions of exostab, REBOUND, NumPy, astropy and Python, the integrator and time step, the run length,
-  the archive download date and the archive name of every planet.
+- **Runs are reproducible.** On the same platform and software versions, the same `--seed` gives identical runs (this
+  is tested). On another platform, floating-point rounding can change chaotic runs and with them a verdict. Each
+  `report.json` stores the seed, the versions of exostab, REBOUND, NumPy, astropy and Python, the integrator and time
+  step, the run length, the archive download date and the archive name of every planet.
 - **It refuses what it cannot model.** `exostab check "Kepler-47" --offline` answers "Kepler-47 is a circumbinary
   system; exostab models a single host star and cannot check it."
 - **Choices are written down.** MEGNO ⟨Y⟩ ≥ 2.2 for chaos, the 10⁻⁵ energy-error limit, the spacing requirement and
@@ -463,8 +528,8 @@ One of the five completion rules that fired for this system:
 
 ### Validation at a glance
 
-A validation suite compares exostab with physics, published solutions and the HD 127195 Research Note (submitted,
-not yet published). It runs nightly in continuous integration (`pytest -m slow`).
+A validation suite compares exostab with physics, published solutions and the HD 127195 Research Note (prepared for
+Research Notes of the AAS, not yet published). It runs nightly in continuous integration (`pytest -m slow`).
 
 | Test | Reference or tolerance | exostab |
 |---|---|---|
@@ -476,11 +541,11 @@ not yet published). It runs nightly in continuous integration (`pytest -m slow`)
 | Kepler-11, six compact planets (archive snapshot) | the nominal configuration is regular over the test horizon | nominal run regular with both integrators over 282.1 years (⟨Y⟩ 1.7855 / 1.7857); draws 10 regular, 8 chaotic, 2 encounters: N-body **marginal**, reported as found |
 | HD 127195 Research Note inputs (20,000 orbits, 200 draws, seed 42) | 134 regular, 57 chaotic, 9 encounters; best-fit ⟨Y⟩ 2.000 | 133 regular, 51 chaotic, 5 encounters, 11 inconclusive (regular and encounter fractions within 3 binomial σ); best fit ⟨Y⟩ 1.9994 |
 
-The numbers were produced on 13 October 2026 by `scripts/validation_summary.py` and the slow test suite, with
-exostab 1.0.0.dev0, REBOUND 5.2.0, NumPy 2.5.3 and Python 3.12.11 on macOS (Apple M4 Pro), with the bundled archive
-snapshot and default settings unless stated. Chaotic integrations are sensitive to floating-point rounding, so counts
-of chaotic draws can differ by one or two on other machines. The HD 127195 draws cannot match the Note one to one
-because the random number streams differ. Full results, tolerances and figures:
+The numbers were produced on 31 October 2026 by `scripts/validation_summary.py` and the slow test suite from the tag
+v1.0.0, with exostab 1.0.0, REBOUND 5.2.2, NumPy 2.5.4 and Python 3.14.7 on macOS (Apple M4 Pro), with the bundled
+archive snapshot and default settings unless stated. Chaotic integrations are sensitive to floating-point rounding,
+so counts of chaotic draws can differ by one or two on other machines. The HD 127195 draws cannot match the Note one
+to one because the random number streams differ. Full results, tolerances and figures:
 [validation](https://mimitoz62.github.io/exostab/validation/).
 
 ## Limitations
@@ -491,8 +556,8 @@ because the random number streams differ. Full results, tolerances and figures:
   AMD indicator assumes, as Laskar & Petit (2017) do, that the unknown inclinations carry as much AMD as the
   eccentricities; strongly inclined systems can carry more.
 - **Phases.** The composite table mixes publications, and exostab uses a published phase only when it is safe to
-  combine with the period. Otherwise it draws phases at random. Resonant systems can then look unstable: with
-  archive data, 12 of 20 GJ 876 draws have close encounters.
+  combine with the period. Otherwise it draws phases at random. Resonant systems can then look marginal or unstable:
+  with archive data, 12 of 20 GJ 876 draws have close encounters.
 - **Independent draws.** Parameters are drawn independently from their error bars, ignoring the correlations in the
   published posteriors. This tends to overstate the fraction of unstable configurations.
 - **Thresholds are judgment calls.** MEGNO ⟨Y⟩ ≥ 2.2 counts as chaotic, the energy-error limit is 10⁻⁵, and the
@@ -515,6 +580,7 @@ The documentation is at [mimitoz62.github.io/exostab](https://mimitoz62.github.i
 [Data and assumptions](https://mimitoz62.github.io/exostab/data-assumptions/) ·
 [Validation](https://mimitoz62.github.io/exostab/validation/) ·
 [Catalog](https://mimitoz62.github.io/exostab/catalog/) ·
+[What the catalog shows](https://mimitoz62.github.io/exostab/findings/) ·
 [FAQ](https://mimitoz62.github.io/exostab/faq/) ·
 [Changelog](https://mimitoz62.github.io/exostab/changelog/) ·
 [Design decisions](https://github.com/mimitoz62/exostab/blob/main/DECISIONS.md)
@@ -550,8 +616,11 @@ date of every run is stored in its `report.json` (`data.retrieved_utc`).
 ## Related work
 
 exostab grew out of the Research Note *N-body Stability Constraints on the Two Giant Planets of the Red Giant
-HD 127195* (Öz 2026, submitted to Research Notes of the AAS) and its code,
+HD 127195* (Öz 2026, prepared for Research Notes of the AAS) and its code,
 [mimitoz62/hd127195-stability](https://github.com/mimitoz62/hd127195-stability).
+
+exostab is not to be confused with [Exostab 2.0](https://exostab2.readthedocs.io), an unrelated web service for the
+stability limits of circumbinary planets, which exostab does not model.
 
 ## Contributing
 
@@ -578,12 +647,17 @@ astroquery, NumPy, Matplotlib, pydantic, Typer, Rich, Streamlit and Plotly. The 
 (2017) and Petit, Laskar & Boué (2017, 2018). [SPOCK](https://github.com/dtamayo/spock) (Tamayo et al. 2020;
 GPL-3.0) is used, when enabled, as a separate program in its own environment.
 
+Most of the code, tests and documentation were written with an AI coding assistant (Claude Code) under the author's
+direction.
+
 exostab is an independent project. It is not affiliated with or endorsed by NASA, Caltech/IPAC or the NASA Exoplanet
 Archive.
 
 ## License
 
 MIT. See [LICENSE](https://github.com/mimitoz62/exostab/blob/main/LICENSE). Copyright (c) 2026 Mehmet Öz.
+
+The catalog data on the branch `catalog-data` are licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 ---
 

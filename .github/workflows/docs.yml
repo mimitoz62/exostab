@@ -18,12 +18,13 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: python -m pip install -e ".[dev]"
-      - name: Catalog page and downloads from the branch catalog-data (placeholder if it does not exist yet)
+      - name: Catalog page, system pages and downloads from the branch catalog-data (placeholder if it does not exist yet)
         run: |
           if git fetch --depth 1 origin catalog-data; then
             mkdir -p catalog-latest docs/data
             for f in catalog.csv catalog.parquet catalog_meta.json; do git show "FETCH_HEAD:$f" > "catalog-latest/$f"; done
             cp catalog-latest/* docs/data/
+            python scripts/system_pages.py catalog-latest
             python scripts/catalog_page.py catalog-latest
           else
             python scripts/catalog_page.py

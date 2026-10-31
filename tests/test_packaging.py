@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import datetime
+import json
+import os
 import re
 import shutil
 import subprocess
@@ -18,6 +20,7 @@ from exostab import __version__
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
+BINDER = ROOT / ".binder"
 
 
 def test_citation_names_the_package_version() -> None:
@@ -36,6 +39,17 @@ def test_citation_names_the_package_version() -> None:
     datetime.date.fromisoformat(str(cff["date-released"]))
 
 
+def test_codemeta_matches_the_citation() -> None:
+    # Software catalogs read codemeta.json and GitHub reads CITATION.cff, so both name the same release.
+    cff = yaml.safe_load((ROOT / "CITATION.cff").read_text(encoding="utf-8"))
+    meta = json.loads((ROOT / "codemeta.json").read_text(encoding="utf-8"))
+    assert meta["version"] == str(cff["version"])
+    assert meta["datePublished"] == str(cff["date-released"])
+    assert meta["description"] == " ".join(cff["abstract"].split())
+    assert meta["codeRepository"] == cff["repository-code"]
+    assert meta["author"][0]["@id"] == cff["authors"][0]["orcid"]
+
+
 def test_a_release_version_has_a_changelog_section() -> None:
     # release.yml refuses a tag whose version has no "## [X.Y.Z]" section in CHANGELOG.md. Checked on every
     # commit, so that main never claims a release version (with a release date in CITATION.cff) before its
@@ -47,6 +61,67 @@ def test_a_release_version_has_a_changelog_section() -> None:
     ]
     wanted = "[Unreleased]" if Version(__version__).is_prerelease else f"[{__version__}]"
     assert any(wanted in heading for heading in headings)
+
+
+def latest_release() -> Version:
+    # A release gives its changelog section a date; "[Unreleased]" has none. So the pins checked below name a
+    # version the changelog knows as released, and they must move in the release commit (RELEASING.md).
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    return max(Version(v) for v in re.findall(r"^## \[(.+)\] - \d{4}-\d{2}-\d{2}$", changelog, re.MULTILINE))
+
+
+def test_notebook_has_no_outputs_and_installs_the_latest_release() -> None:
+    # Colab shows the file as committed, so outputs would look like the results of the visitor's own run.
+    notebook = json.loads((ROOT / "examples" / "exostab_quickstart.ipynb").read_text(encoding="utf-8"))
+    code = [cell for cell in notebook["cells"] if cell["cell_type"] == "code"]
+    assert code and [c["id"] for c in code if c["outputs"] or c["execution_count"] is not None] == []
+    pins = re.findall(r"@v(\d+\.\d+\.\d+)", "".join("".join(cell["source"]) for cell in notebook["cells"]))
+    assert pins and {Version(pin) for pin in pins} == {latest_release()}
+
+
+@pytest.mark.skipif(
+    not (ROOT / "docs" / "quickstart.md").is_file(), reason="these pages are not in the sdist"
+)
+def test_install_lines_name_the_latest_release() -> None:
+    # Every form RELEASING.md lists: an older pin still works after a release, so nothing else would notice it.
+    pins = re.compile(
+        r"@v(\d+\.\d+\.\d+)"
+        r"|/releases/download/v(\d+\.\d+\.\d+)/"
+        r"|/exostab-(\d+\.\d+\.\d+)-py3"
+        r"|raw\.githubusercontent\.com/mimitoz62/exostab/v(\d+\.\d+\.\d+)/"
+        r"|[Rr]elease (\d+\.\d+\.\d+)"
+        r"|Version (\d+\.\d+\.\d+)"
+    )
+    for name in ("README.md", "docs/index.md", "docs/quickstart.md", "docs/web.md", "overrides/home.html"):
+        text = (ROOT / name).read_text(encoding="utf-8")
+        named = {Version(version) for match in pins.findall(text) for version in match if version}
+        assert named == {latest_release()}, name
+
+
+def test_code_blocks_have_no_comments() -> None:
+    # Interactive zsh, the default shell on macOS, does not treat # as a comment. Pasted, the words of a comment
+    # become arguments, and an apostrophe in one opens a quote that swallows every later line.
+    pages = [ROOT / "README.md", ROOT / "CONTRIBUTING.md", *sorted((ROOT / "docs").glob("*.md"))]
+    blocks = [
+        (page.name, line)
+        for page in pages
+        if page.is_file()  # the sdist has only some of them
+        for block in re.findall(r"```bash\n(.*?)```", page.read_text(encoding="utf-8"), re.DOTALL)
+        for line in block.splitlines()
+    ]
+    assert blocks and [(name, line) for name, line in blocks if re.search(r"(^|\s)#", line)] == []
+
+
+@pytest.mark.skipif(not BINDER.is_dir(), reason=".binder is not in the sdist")
+def test_binder_installs_the_wheel_of_the_latest_release() -> None:
+    wheel = re.search(
+        r"^exostab\[web\] @ https://github\.com/mimitoz62/exostab/releases/download/"
+        r"v(.+)/exostab-(.+)-py3-none-any\.whl$",
+        (BINDER / "requirements.txt").read_text(encoding="utf-8"),
+        re.MULTILINE,
+    )
+    assert wheel is not None and {Version(v) for v in wheel.groups()} == {latest_release()}
+    assert os.access(BINDER / "postBuild", os.X_OK)  # git mode 100755
 
 
 def pyproject() -> dict[str, Any]:

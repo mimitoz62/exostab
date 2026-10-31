@@ -173,11 +173,12 @@ def overall_verdict(
 
     ``upper_limits`` lists the inputs that are only published upper limits (:func:`upper_limit_inputs`). The
     nominal run uses each limit and the draws are uniform below it, which does not sample a measurement
-    uncertainty. A limit on a planet's mass or eccentricity is the worst case for stability, so a stable
-    result still holds; an N-body instability, however, only constrains the limited values and gives
-    "marginal", whichever input is limited (a stellar-mass limit is not a worst case). Without
-    Monte Carlo draws (``--draws 0``) nothing was tested against the uncertainties, so the verdict is at most
-    "marginal". ``n_stars`` is the number of stars in the system (the archive's ``sy_snum``); only the host star
+    uncertainty. For Hill spacing and the integration, a limit on a planet's mass or eccentricity is normally the
+    hardest case; for AMD a mass limit need not be, because beta_S grows as the innermost planet gets lighter. So a
+    stable result describes the values that were run, not every value below a mass limit (``docs/methods.md``,
+    BD-06 1339). An N-body instability only constrains the limited values and gives "marginal", whichever input is
+    limited. Without Monte Carlo draws (``--draws 0``) nothing was tested against the uncertainties, so the verdict
+    is at most "marginal". ``n_stars`` is the number of stars in the system (the archive's ``sy_snum``); only the host star
     is modelled, so with more than one an N-body instability may come from the model and also gives "marginal":
     the planets may orbit different stars (Kepler-132 b and c, whose periods differ by 4%, cannot stably orbit
     one star), or a companion may change their orbits. The summary is built from the draw counts and never

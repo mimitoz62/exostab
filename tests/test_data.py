@@ -268,6 +268,54 @@ def test_mass_kind_uses_transit_and_limit_flags() -> None:
     assert list_systems(rows)[0].minimum_masses == 1
 
 
+def test_archive_calculated_value_provenance() -> None:
+    # The archive cell for a value it computed itself (pscp_calc.html). A radius is filled from the
+    # Chen & Kipping mass-radius relation ("estimated"); any other column is computed from measured
+    # quantities ("derived"). HD 127195 b and c in the snapshot are this kind of radius.
+    calc = "<a refstr=CALCULATED_VALUE href=/docs/pscp_calc.html target=_blank>Calculated Value</a>"
+    s = system_from_rows(
+        pair(
+            pl_bmassprov="Msini",
+            pl_rade=14.0,
+            pl_rade_reflink=calc,
+            pl_orbsmax=1.25,
+            pl_orbsmax_reflink=calc,
+        ),
+        INFO,
+    )
+    c = s.planets[1]
+    assert c.radius_earth is not None and c.semimajor_axis_au is not None
+    assert c.radius_earth.value == 14.0
+    assert c.radius_earth.provenance is Provenance.ESTIMATED
+    assert c.radius_earth.reference == "Calculated Value"
+    assert c.radius_earth.reference_url == "https://exoplanetarchive.ipac.caltech.edu/docs/pscp_calc.html"
+    assert c.radius_earth.err_plus is None and c.radius_earth.err_minus is None
+    assert c.semimajor_axis_au.provenance is Provenance.DERIVED
+    assert c.semimajor_axis_au.reference == "Calculated Value"
+    # the published mass is untouched: these radii never feed the Chen & Kipping mass
+    assert c.mass_kind is MassKind.MINIMUM and c.mass_earth.provenance is Provenance.MEASURED
+    published = system_from_rows(
+        pair(pl_rade=1.2, pl_radeerr1=0.1, pl_radeerr2=-0.1, pl_rade_reflink=REF_B), INFO
+    )
+    assert published.planets[1].radius_earth is not None
+    assert published.planets[1].radius_earth.provenance is Provenance.MEASURED
+    # the rule lives in _value, so it covers columns the planet builder does not special-case
+    r = row("Host b")
+    r.update(pl_radj=1.1, pl_radj_reflink=calc, pl_orbincl=89.0, pl_orbincl_reflink=calc)
+    assert completion._value(r, "pl_radj").provenance is Provenance.ESTIMATED
+    assert completion._value(r, "pl_bmasse").provenance is Provenance.MEASURED  # literature reference
+    assert completion._value(r, "pl_orbincl").provenance is Provenance.DERIVED
+    assert completion._value({"pl_bmassj": 1.0, "pl_bmassj_reflink": calc}, "pl_bmassj").provenance is (
+        Provenance.ESTIMATED
+    )
+    hd = load_system("HD 127195")
+    calculated = [p for p in hd.planets if p.radius_earth and p.radius_earth.reference == "Calculated Value"]
+    assert [p.name for p in calculated] == ["HD 127195 b", "HD 127195 c"]
+    assert all(
+        p.radius_earth is not None and p.radius_earth.provenance is Provenance.ESTIMATED for p in calculated
+    )
+
+
 def test_mass_from_radius_and_failures() -> None:
     s = system_from_rows(pair(pl_bmasse=None, pl_rade=2.0), INFO)
     assert s.planets[1].mass_kind is MassKind.ESTIMATED
@@ -606,6 +654,164 @@ def test_planet_name_that_normalises_to_another_host() -> None:
     assert isinstance(err.value, SystemNotFoundError)  # the CLI and the web app report it like a miss
     assert set(err.value.suggestions) == {"55 Cnc", "55 Cnc B"}
     assert "'55 Cnc b'" in str(err.value) and "'55 Cnc B'" in str(err.value)
+
+
+def test_name_carried_only_by_planets() -> None:
+    # The archive's host of Kepler-90 is KOI-351, and only its planet "Kepler-90 i" carries the name; the
+    # close matches used to suggest Kepler-990. "TOI-836.01" is an archive name without a final planet letter.
+    hosts = archive.group_by_host(
+        [
+            row("KOI-351 b", host="KOI-351"),
+            row("Kepler-90 i", host="KOI-351"),
+            row("Kepler-990 b", host="Kepler-990"),
+            row("Kepler-990 c", host="Kepler-990"),
+            row("TOI-2267 b", host="TOI-2267 A"),
+            row("TOI-2267 c", host="TOI-2267 A"),
+            row("TOI-2267 d", host="TOI-2267 B"),
+            row("TOI-836 b", host="TOI-836"),
+            row("TOI-836.01", host="TOI-836", pl_letter="c"),
+        ]
+    )
+    assert names.resolve_host("Kepler-90", hosts) == "KOI-351"
+    assert names.resolve_host("kepler 90", hosts) == "KOI-351"
+    assert names.resolve_host("Kepler-90 i", hosts) == "KOI-351"
+    assert names.resolve_host("TOI-836.01", hosts) == "TOI-836"
+    # the planets of two hosts carry the name: refused, as for any other ambiguous name
+    with pytest.raises(names.AmbiguousNameError) as err:
+        names.resolve_host("TOI-2267", hosts)
+    assert set(err.value.suggestions) == {"TOI-2267 A", "TOI-2267 B"}
+    assert "of 'TOI-2267 A'" in str(err.value) and "of 'TOI-2267 B'" in str(err.value)
+    # the whole query must match: "Kepler-9" and "KOI" are not what the planets are called
+    for query in ("Kepler-9", "KOI"):
+        with pytest.raises(SystemNotFoundError) as err:
+            names.resolve_host(query, hosts)
+        assert "KOI-351" not in err.value.suggestions
+
+
+def test_host_and_planet_names_win_over_the_names_of_other_planets() -> None:
+    hosts = archive.group_by_host(
+        [
+            row("Kepler-90 b", host="Kepler-90"),
+            row("Kepler-90 c", host="Kepler-90"),
+            row("KOI-351 b", host="KOI-351"),
+            row("Kepler-90 i", host="KOI-351"),
+            row("HD 5 b", host="HD 5"),
+            row("HD 5 c", host="HD 5"),
+            row("HD 6 b", host="HD 6"),
+            row("HD 5 B d", host="HD 6"),
+        ]
+    )
+    assert names.resolve_host("Kepler-90", hosts) == "Kepler-90"
+    assert names.resolve_host("kepler 90", hosts) == "Kepler-90"
+    assert names.resolve_host("Kepler-90 i", hosts) == "KOI-351"
+    assert names.resolve_host("HD 5 B", hosts) == "HD 5"  # the planet "HD 5 b", once case is ignored
+
+
+SUGGESTED_HOSTS = archive.group_by_host(
+    [
+        *(
+            row(f"{host} {letter}", host=host)
+            for host in (
+                "GJ 876",
+                "GJ 667 C",
+                "GJ 1148",
+                "Gl 725 A",
+                "Gl 725 B",
+                "ups And",
+                "tau Cet",
+                "55 Cnc",
+                "55 Cnc B",
+                "nu Oph",
+                "47 UMa",
+                "14 Her",
+                "rho CrB",
+                "iot Dra",
+                "HD 124",
+            )
+            for letter in "bc"
+        ),
+        row("KOI-351 b", host="KOI-351"),
+        row("Kepler-90 i", host="KOI-351"),
+        row("HD 39091 b", host="HD 39091"),
+        row("pi Men c", host="HD 39091"),
+    ]
+)
+
+
+@pytest.mark.parametrize(
+    ("query", "suggested"),
+    [
+        ("Gliese 876", ["GJ 876"]),
+        ("Gl 876", ["GJ 876"]),
+        ("gliese-876", ["GJ 876"]),
+        ("Gliese 876 b", ["GJ 876"]),
+        ("Gliese 667", ["GJ 667 C"]),
+        ("Gliese 667 Cc", ["GJ 667 C"]),
+        ("Gliese 725", ["Gl 725 A", "Gl 725 B"]),
+        ("GJ 725", ["Gl 725 A", "Gl 725 B"]),
+        ("Upsilon Andromedae", ["ups And"]),
+        ("upsilon  andromedae", ["ups And"]),
+        ("Upsilon Andromedae d", ["ups And"]),
+        ("Tau Ceti", ["tau Cet"]),
+        ("55 Cancri", ["55 Cnc"]),
+        ("55 Cancri e", ["55 Cnc"]),
+        ("55 Cancri B", ["55 Cnc", "55 Cnc B"]),
+        ("Nu Ophiuchi", ["nu Oph"]),
+        ("47 Ursae Majoris", ["47 UMa"]),
+        ("14 Herculis", ["14 Her"]),
+        ("Rho Coronae Borealis", ["rho CrB"]),
+        ("Pi Mensae", ["HD 39091"]),  # the archive's host is HD 39091; only its planet carries the name
+        ("Kepler-90 h", ["KOI-351"]),  # the archive's planet is KOI-351 h
+        ("Kepler-90h", ["KOI-351"]),
+        ("KEPLER-90 H", ["KOI-351"]),
+        ("KOI-351 x", ["KOI-351"]),
+    ],
+)
+def test_other_forms_of_a_name_are_suggested_and_never_resolved(query: str, suggested: list[str]) -> None:
+    with pytest.raises(SystemNotFoundError) as err:
+        names.resolve_host(query, SUGGESTED_HOSTS)
+    assert err.value.suggestions == suggested
+    assert not isinstance(err.value, names.AmbiguousNameError)
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "Gliese 87",  # the same number, not the same first digits
+        "Gliese 1",
+        "Gliese",
+        "Tau Cygni",  # the constellation must fit as well as the star
+        "Zeta Ceti",
+        "Iota Andromedae",  # the letters of Dra occur in order, but the rest must start with the D
+        "Tau Crateris",  # it starts with the C of Cet, but the E and T do not follow in order
+        "145 Herculis",  # a number must match whole: this is not 14 Her
+        "Andromedae Upsilon",
+        "Upsilon",
+        "HD 1920384",  # the digits of HD 124 in order, but a catalogue number is not an abbreviation
+        "Nonexistent-999",
+    ],
+)
+def test_no_suggestion_points_to_the_list_command(query: str) -> None:
+    with pytest.raises(SystemNotFoundError) as err:
+        names.resolve_host(query, SUGGESTED_HOSTS)
+    assert err.value.suggestions == []
+    assert str(err.value) == (
+        f"No multi-planet system named {query!r} in the archive table. Run exostab list to see the names."
+    )
+
+
+def test_error_text_says_either_what_to_try_or_where_to_look() -> None:
+    with pytest.raises(SystemNotFoundError) as err:
+        names.resolve_host("Gliese 876", SUGGESTED_HOSTS)
+    assert (
+        str(err.value)
+        == "No multi-planet system named 'Gliese 876' in the archive table. Did you mean: GJ 876?"
+    )
+    # the snapshot's message keeps the suggestions, or the pointer when there are none
+    with pytest.raises(SystemNotFoundError, match=r"offline snapshot.*Did you mean: GJ 876\?"):
+        load_system("Gliese 876", offline=True)
+    with pytest.raises(SystemNotFoundError, match=r"offline snapshot.*Run exostab list"):
+        load_system("Nonexistent-999", offline=True)
 
 
 def test_list_systems_filters() -> None:

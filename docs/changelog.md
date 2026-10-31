@@ -1,3 +1,7 @@
+---
+description: What changed in each release of exostab.
+---
+
 # Changelog
 
 All notable changes to this project are documented here. The format follows

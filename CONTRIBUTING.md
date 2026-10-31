@@ -5,12 +5,15 @@ welcome; please use the issue templates.
 
 ## Development setup
 
+You need Python 3.10 or newer. `pre-commit install` is optional: it runs ruff and mypy before each commit.
+
 ```bash
 git clone https://github.com/mimitoz62/exostab
 cd exostab
-python -m venv .venv && source .venv/bin/activate   # Python 3.10 or newer
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -e ".[dev]"
-pre-commit install                                   # optional: run ruff and mypy before each commit
+pre-commit install
 ```
 
 ## Checks
@@ -18,11 +21,14 @@ pre-commit install                                   # optional: run ruff and my
 ```bash
 ruff check src tests scripts && ruff format --check src tests scripts
 mypy
-pytest                      # fast suite (about 15-20 s), uses the bundled offline snapshot
-pytest --cov=exostab        # coverage; CI requires at least 85%
-pytest -m slow              # validation suite (about a minute on many cores)
-mkdocs serve                # documentation preview
+pytest
+pytest --cov=exostab
+pytest -m slow
+mkdocs serve
 ```
+
+`pytest` runs the fast suite (about 15-20 s) with the bundled offline snapshot, and CI requires at least 85% coverage.
+`pytest -m slow` runs the validation suite (about a minute on many cores). `mkdocs serve` previews the documentation.
 
 Tests never touch the network or your cache: `tests/conftest.py` sets `EXOSTAB_OFFLINE=1` and a temporary
 `EXOSTAB_CACHE_DIR`.
@@ -51,8 +57,10 @@ Tests never touch the network or your cache: `tests/conftest.py` sets `EXOSTAB_O
 
 ## Updating the offline snapshot
 
+This downloads the listed systems and rewrites `src/exostab/data/snapshot/`:
+
 ```bash
-python scripts/make_snapshot.py   # downloads the listed systems and rewrites src/exostab/data/snapshot/
+python scripts/make_snapshot.py
 ```
 
 Validation numbers and figures in `docs/validation.md` come from `scripts/validation_summary.py` and

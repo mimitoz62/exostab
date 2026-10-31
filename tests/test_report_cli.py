@@ -256,6 +256,7 @@ def test_default_output_folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
         (["check"], "either a system name or --from-file"),
         (["check", "TRAPIST-1"], "Did you mean"),
         (["check", "Kepler-47"], "circumbinary"),
+        (["check", "[/red]"], "'[/red]'"),  # text, not markup: it used to crash with a traceback
     ],
 )
 def test_check_errors(args: list[str], message: str) -> None:
