@@ -26,7 +26,7 @@ from ..analysis import CheckResult, CheckSettings, check_system, settings_for_bu
 from ..budget import estimate_seconds
 from ..data import IncompleteSystemError, TableInfo, find_host, load_rows, system_from_rows
 from ..data.archive import ArchiveError, group_by_host
-from ..data.names import SystemNotFoundError
+from ..data.names import LIST_HINT, SystemNotFoundError
 from ..indicators import Verdict
 from ..indicators.spock import SpockUnavailableError, spock_python
 from ..models import System
@@ -393,7 +393,7 @@ def main() -> None:
     st.title("exostab")
     st.write(
         "Is this planetary system dynamically stable? Three indicators (Hill spacing, angular momentum "
-        "deficit, N-body integration with MEGNO) for any multi-planet system in the NASA Exoplanet Archive, "
+        "deficit, N-body integration with MEGNO) for multi-planet systems in the NASA Exoplanet Archive, "
         "with every assumption shown."
     )
     hosts, kind, retrieved, _ = _archive(state.source)
@@ -402,7 +402,7 @@ def main() -> None:
     try:
         system = _system(state.source, state.system)
     except SystemNotFoundError as exc:
-        st.error(str(exc))
+        st.error(str(exc).replace(LIST_HINT, "The search box in the sidebar lists the names."))
         return
     except IncompleteSystemError as exc:
         st.error(f"This system cannot be checked: {exc}")
