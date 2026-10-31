@@ -1,4 +1,5 @@
 ---
+title: "Web app: search a system and try what-if changes"
 description: >-
   The exostab web app runs the same stability analysis as the command line in a browser: search a system, edit its
   parameters, try what-if changes, and download the report and figures.

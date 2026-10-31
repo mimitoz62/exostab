@@ -1,4 +1,5 @@
 ---
+title: "Methods: Hill spacing, AMD and N-body integration with MEGNO"
 description: >-
   How exostab estimates orbital stability: Hill spacing, the angular momentum deficit, N-body integration with MEGNO,
   the propagation of uncertainties and the rules of the overall verdict.

@@ -1,4 +1,5 @@
 ---
+title: What the stability catalog of exoplanet systems shows
 description: >-
   What exostab's catalog of 26 October 2026 shows: 619 of 1,044 checked multi-planet systems are called stable,
   512 of them with every eccentricity assumed 0, and 6 published parameter sets do not survive integration.
@@ -6,15 +7,15 @@ description: >-
 
 # What the catalog shows
 
-Every week, exostab checks each multi-planet system in the NASA Exoplanet Archive's composite table with three
+Every week, exostab checks the multi-planet systems in the NASA Exoplanet Archive's composite table with three
 indicators: Hill spacing, the angular momentum deficit (AMD) and N-body integration with MEGNO
 ([Methods](methods.md)). Each system it can model gets a verdict: stable, marginal, unstable or inconclusive.
 
 This page describes one of those catalogs: the one of **26 October 2026**, computed with exostab 1.0.0 from that
-day's table (Christiansen et al. 2025; doi:10.26133/NEA13). Every system had the same settings: 10,000 orbits of the
-innermost planet, 10 draws within the published uncertainties and seed 0. The [catalog page](catalog.md) shows the
-newest weekly catalog, so its counts can differ from the ones here. The commands behind the numbers are under
-[How to reproduce](#how-to-reproduce).
+day's table (Christiansen et al. 2025; doi:10.26133/NEA13). Each system exostab checked had the same settings:
+10,000 orbits of the innermost planet, 10 draws within the published uncertainties and seed 0. The
+[catalog page](catalog.md) shows the newest weekly catalog, so its counts can differ from the ones here. The commands
+behind the numbers are under [How to reproduce](#how-to-reproduce).
 
 The main results:
 

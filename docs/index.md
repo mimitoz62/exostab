@@ -125,8 +125,12 @@ answer.
 === "No install"
 
     The [stability catalog](catalog.md) needs nothing: look up a system in the table of the archive's multi-planet
-    systems, recomputed every week. [What the catalog shows](findings.md) describes its results and how
-    firm they are.
+    systems, recomputed every week. Each system has its own page, for example
+    [TRAPPIST-1](https://mimitoz62.github.io/exostab/systems/trappist-1/),
+    [KOI-351 (Kepler-90)](https://mimitoz62.github.io/exostab/systems/koi-351/),
+    [GJ 876 (Gliese 876)](https://mimitoz62.github.io/exostab/systems/gj-876/) and
+    [55 Cnc (55 Cancri)](https://mimitoz62.github.io/exostab/systems/55-cnc/).
+    [What the catalog shows](findings.md) describes its results and how firm they are.
 
     To run exostab itself in a browser, use
     [Google Colab](https://colab.research.google.com/github/mimitoz62/exostab/blob/main/examples/exostab_quickstart.ipynb)
@@ -374,7 +378,8 @@ continuous integration.
 ## Cite exostab
 
 If exostab helps your work, please cite the software, the methods behind the indicators you report and the
-NASA Exoplanet Archive. [Citing exostab](citing.md) has a BibTeX entry and the list of references.
+NASA Exoplanet Archive. [Citing exostab](citing.md) has a BibTeX entry, the DOI
+[10.5281/zenodo.23844658](https://doi.org/10.5281/zenodo.23844658) and the list of references.
 What changed in each release is in the [changelog](changelog.md).
 
 <p class="exo-meta">

@@ -1,11 +1,13 @@
 ---
+title: How to cite the software, the methods and the data
 description: How to cite exostab, the methods behind its indicators and the NASA Exoplanet Archive.
 ---
 
 # Citing exostab
 
 If exostab helps your work, please cite three things: the software, the methods behind the indicators you
-report, and the data.
+report, and the data. If you use the stability catalog, see
+[How to cite the catalog](https://mimitoz62.github.io/exostab/catalog/#how-to-cite-the-catalog).
 
 ## The software
 

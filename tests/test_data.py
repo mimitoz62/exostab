@@ -839,6 +839,8 @@ def test_other_names() -> None:
     assert names("55 Cnc", "55 Cnc e", set()) == ["55 Cancri"]
     assert names("HD 39091", "pi Men c;HD 39091 b", set()) == ["pi Men", "Pi Mensae"]
     assert names("AU Mic", "AU Mic b", set()) == ["AU Microscopii"]
+    assert names("Proxima Cen", "Proxima Cen b;Proxima Cen d", set()) == ["Proxima Centauri"]
+    assert names("V1298 Tau", "V1298 Tau b", set()) == ["V1298 Tauri"]
     # candidates, parts of the host's name, other hosts and unknown abbreviations give no name
     assert names("TOI-216", "TOI-216.01;TOI-216.02", set()) == []
     assert names("Barnard's star", "Barnard b", set()) == []

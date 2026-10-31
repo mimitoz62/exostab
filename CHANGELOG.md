@@ -18,6 +18,25 @@ All notable changes to this project are documented here. The format follows
   catalogs under the current verdict rules, the page lists the systems added and removed and the rows whose overall
   verdict changed, and the feed gives the counts. The page says why a verdict can change between catalogs, and that a
   change is not a discovery.
+- The catalog page links to the pages of some well-known systems, such as TRAPPIST-1 and KOI-351 (Kepler-90), and the
+  home page to a few of them. Each system's page links to the catalog's citation.
+- The home page names the DOI, and describes the software as schema.org `SoftwareSourceCode` for search engines: version,
+  licence, author with ORCID and DOI. `tests/test_packaging.py` checks it against `codemeta.json`.
+
+### Changed
+
+- The documentation's pages have more descriptive titles, for browser tabs and search engines. The titles of the system
+  pages no longer repeat the name of the site, and the CLI reference has its own description: `scripts/cli_page.py`
+  now writes `docs/cli.md`.
+- The catalog's schema.org Dataset names its creator's ORCID iD in the form Google's documentation asks for, and adds
+  the version, the variables and the technique.
+
+### Fixed
+
+- The download URLs in the catalog's schema.org Dataset led to pages that do not exist. They now name
+  `data/catalog.csv` and `data/catalog.parquet`, where the site serves the files.
+- The catalog's filter and the web app's search box now find Proxima Cen as `Proxima Centauri` and V1298 Tau as
+  `V1298 Tauri`, and the pages of these two systems give those names.
 
 ## [1.0.1] - 2026-10-31
 

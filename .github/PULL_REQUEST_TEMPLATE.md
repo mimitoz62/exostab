@@ -10,4 +10,4 @@
 - [ ] Every new scientific statement or formula cites a verified source (DOI) in the code and docs
 - [ ] New choices (thresholds, defaults) are recorded in DECISIONS.md
 - [ ] CHANGELOG.md is updated under "Unreleased"
-- [ ] If the CLI changed: `docs/cli.md` regenerated (`python -m typer exostab.cli utils docs --name exostab --title "CLI reference" --output docs/cli.md`)
+- [ ] If the CLI changed: `docs/cli.md` regenerated (`python scripts/cli_page.py`)

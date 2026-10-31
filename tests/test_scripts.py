@@ -1,4 +1,4 @@
-"""Scripts: catalog page, changes and findings, release notes, Zenodo upload, IndexNow, snapshot builder, SPOCK environment."""
+"""Scripts: catalog page, changes and findings, CLI reference, release notes, Zenodo upload, IndexNow, snapshot builder, SPOCK environment."""
 
 from __future__ import annotations
 
@@ -76,15 +76,16 @@ def test_catalog_page(small_catalog: Path, tmp_path: Path, monkeypatch: pytest.M
     assert '<tr id="koi-351" data-names="Kepler-90">' in page.render(folder)
     # the description for dataset search engines is valid JSON and names real files
     dataset = json.loads(re.search(r'<script type="application/ld\+json">(.+)</script>', text).group(1))
-    assert dataset["@type"] == "Dataset" and len(dataset["description"]) >= 50
-    assert {d["contentUrl"].rsplit("/", 1)[1] for d in dataset["distribution"]} == {
-        "catalog.csv",
-        "catalog.parquet",
+    # what Google's documentation on datasets requires or recommends: 50 to 5,000 characters, an ORCID iD in sameAs
+    assert dataset["@type"] == "Dataset" and 50 <= len(dataset["description"]) <= 5000
+    assert dataset["creator"]["sameAs"] == "https://orcid.org/0009-0007-1005-7640"
+    # the site serves docs/data/ at data/, not below the page catalog/
+    assert {d["contentUrl"] for d in dataset["distribution"]} == {
+        "https://mimitoz62.github.io/exostab/data/catalog.csv",
+        "https://mimitoz62.github.io/exostab/data/catalog.parquet",
     }
-    assert (
-        dataset["dateModified"]
-        == json.loads((small_catalog / "catalog_meta.json").read_text())["created_utc"][:10]
-    )
+    date = json.loads((small_catalog / "catalog_meta.json").read_text())["created_utc"][:10]
+    assert dataset["dateModified"] == date == dataset["version"]
     # the sidebar is hidden on this page, so these sentences are the way to the pages about the results
     assert "[What the catalog shows](findings.md)" in text and "(catalog-changes.md)" in text
     # the filter says what the names are, and catalog.js shows this element when no row matches
@@ -124,11 +125,17 @@ def test_system_pages(small_catalog: Path, tmp_path: Path, monkeypatch: pytest.M
     monkeypatch.setattr(table, "SYSTEMS", tmp_path / "systems")
     # no pages yet: the table has no dead links, and row anchors stay
     assert "../systems/" not in table.render(small_catalog)
+    assert "well-known systems" not in table.render(small_catalog)
     assert pages.write_all(small_catalog) == 4
     text = table.render(small_catalog)
     links = re.findall(r'<a href="\.\./systems/([^/"]+)/">', text)
     assert sorted(links) == sorted(p.stem for p in (tmp_path / "systems").glob("*.md")) and len(links) == 4
     assert len(re.findall(r'<tr id="', text)) == 4
+    # the line of well-known systems links only to pages that exist, with links that the strict build checks
+    assert (
+        "**Some well-known systems:** [GJ 876 (Gliese 876)](systems/gj-876.md), "
+        "[55 Cnc (55 Cancri)](systems/55-cnc.md), [HD 10180](systems/hd-10180.md).\n"
+    ) in text
 
     meta = {"created_utc": "2026-10-26T11:24:44+00:00"}
     row = {
@@ -158,8 +165,10 @@ def test_system_pages(small_catalog: Path, tmp_path: Path, monkeypatch: pytest.M
         "exostab_version": "1.0.0",
     }
     unstable = pages.page(row, meta, {"KOI-351"})
-    assert 'title: "KOI-351 (Kepler-90): orbital stability verdicts from exostab"' in unstable
+    # the site's template adds " - exostab" to the title
+    assert 'title: "KOI-351 (Kepler-90): orbital stability verdicts"' in unstable
     assert "exclude: true" in unstable and 'exostab check "KOI-351" --draws 10' in unstable
+    assert "(../catalog.md#how-to-cite-the-catalog)" in unstable
     assert "not a prediction for the planets" in unstable and "#published-parameter-sets" in unstable
     assert "β = ∞" in unstable and "1,234 years" in unstable and "10 with a close encounter" in unstable
     assert "`a_future_rule`" in unstable and "overview/KOI-351" in unstable
@@ -176,6 +185,8 @@ def test_system_pages(small_catalog: Path, tmp_path: Path, monkeypatch: pytest.M
     }
     no_verdict = pages.page(skipped, meta, {"KOI-351"})
     assert "circumbinary\\_system" in no_verdict and "verdict-" not in no_verdict
+    assert 'title: "KOI-351: no verdict in the stability catalog"' in no_verdict
+    assert "(../catalog.md#how-to-cite-the-catalog)" in no_verdict
     assert (
         "exostab check" not in no_verdict
         and "mybinder" not in no_verdict
@@ -203,6 +214,29 @@ def test_system_pages(small_catalog: Path, tmp_path: Path, monkeypatch: pytest.M
         assert path.path == "exostab/"
         assert decode_state({k: v[0] for k, v in parse_qs(path.query).items()}).system == name
         assert unquote(pages.binder_url(name)).count("exostab/?system=") == 1
+
+
+@pytest.mark.skipif(not (ROOT / "docs" / "index.md").is_file(), reason="this page is not in the sdist")
+def test_home_page_links_to_well_known_systems() -> None:
+    # Absolute links, because a build without a catalog has no system pages, so the strict build cannot check them.
+    page = load("catalog_page")
+    known = {page._row_id(system) for system in page.WELL_KNOWN}
+    text = (ROOT / "docs" / "index.md").read_text(encoding="utf-8")
+    linked = re.findall(r"\(https://mimitoz62\.github\.io/exostab/systems/([^/]+)/\)", text)
+    assert linked and set(linked) <= known
+
+
+def test_cli_page(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    page = load("cli_page")
+    out = tmp_path / "cli.md"
+    monkeypatch.setattr("sys.argv", ["cli_page.py", str(out)])
+    page.main()
+    text = out.read_text(encoding="utf-8")
+    assert text.startswith(page.FRONT_MATTER + "# CLI reference\n")
+    # FRONT_MATTER names the commands, and CI's comparison cannot notice a new one: both sides keep the list
+    assert re.findall(r"^## `exostab (\w+)`", text, re.MULTILINE) == ["check", "sweep", "list", "catalog"]
+    # the committed page has the same head; CI compares the whole page, with the versions of its docs job
+    assert (ROOT / "docs" / "cli.md").read_text(encoding="utf-8").startswith(page.FRONT_MATTER)
 
 
 def test_catalog_data_dictionary(small_catalog: Path) -> None:

@@ -50,6 +50,51 @@ def test_codemeta_matches_the_citation() -> None:
     assert meta["author"][0]["@id"] == cff["authors"][0]["orcid"]
 
 
+@pytest.mark.skipif(not (ROOT / "overrides" / "home.html").is_file(), reason="the site is not in the sdist")
+def test_home_page_structured_data_matches_codemeta() -> None:
+    # Search engines read this block and software catalogs read codemeta.json, so both name the same release.
+    html = (ROOT / "overrides" / "home.html").read_text(encoding="utf-8")
+    block = re.search(r'<script type="application/ld\+json">(.+?)</script>', html, re.DOTALL)
+    assert block is not None
+    data = json.loads(block[1])
+    meta = json.loads((ROOT / "codemeta.json").read_text(encoding="utf-8"))
+    for key in (
+        "@type",
+        "name",
+        "url",
+        "codeRepository",
+        "programmingLanguage",
+        "license",
+        "version",
+        "identifier",
+    ):
+        assert data[key] == meta[key], key
+    author = meta["author"][0]
+    assert data["author"]["sameAs"] == author["@id"]
+    assert data["author"]["givenName"] == author["givenName"]
+    assert data["author"]["familyName"] == author["familyName"]
+    assert data["author"]["name"] == f"{author['givenName']} {author['familyName']}"
+    # the description is the page's own, which a reader of the page can compare it with
+    index = (ROOT / "docs" / "index.md").read_text(encoding="utf-8")
+    assert data["description"] == yaml.safe_load(index.split("---")[1])["description"]
+    # Google's guidelines ask not to mark up what readers cannot see, so the page's text has the DOI too
+    assert f"({data['identifier']})" in index
+
+
+@pytest.mark.skipif(
+    not (ROOT / "docs" / "quickstart.md").is_file(), reason="these pages are not in the sdist"
+)
+def test_each_documentation_page_has_its_own_description() -> None:
+    # A page without one gets the description of the whole site, in search results and in link previews.
+    descriptions = {}
+    for page in sorted((ROOT / "docs").glob("*.md")):
+        text = page.read_text(encoding="utf-8")
+        front_matter = yaml.safe_load(text.split("---")[1]) if text.startswith("---\n") else {}
+        descriptions[page.name] = front_matter.get("description")
+    assert [name for name, description in descriptions.items() if not description] == []
+    assert len(set(descriptions.values())) == len(descriptions)
+
+
 def test_a_release_version_has_a_changelog_section() -> None:
     # release.yml refuses a tag whose version has no "## [X.Y.Z]" section in CHANGELOG.md. Checked on every
     # commit, so that main never claims a release version (with a release date in CITATION.cff) before its

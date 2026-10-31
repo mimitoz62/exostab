@@ -6,6 +6,37 @@
   so keep them few: relative links go through the `url` filter.
 -#}
 
+{% block extrahead %}
+  {{ super() }}
+  {#-
+    The software for search engines, as a schema.org SoftwareSourceCode like codemeta.json. Not SoftwareApplication:
+    Google's result for that type asks for a rating or reviews, and exostab has none. tests/test_packaging.py compares
+    these facts with codemeta.json and the description with docs/index.md. The version is that of the latest release,
+    not of the development version in the package; RELEASING.md lists it.
+  -#}
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareSourceCode",
+      "name": "exostab",
+      "description": "exostab estimates the orbital stability of known multi-planet systems with Hill spacing, the angular momentum deficit and N-body integrations with MEGNO, propagates the published uncertainties and shows every assumption.",
+      "url": "https://mimitoz62.github.io/exostab/",
+      "codeRepository": "https://github.com/mimitoz62/exostab",
+      "programmingLanguage": "Python",
+      "license": "https://spdx.org/licenses/MIT",
+      "version": "1.0.1",
+      "identifier": "https://doi.org/10.5281/zenodo.23844658",
+      "author": {
+        "@type": "Person",
+        "name": "Mehmet Öz",
+        "givenName": "Mehmet",
+        "familyName": "Öz",
+        "sameAs": "https://orcid.org/0009-0007-1005-7640"
+      }
+    }
+  </script>
+{% endblock %}
+
 {% block tabs %}
   {{ super() }}
   <section class="exo-hero" aria-labelledby="exo-hero-title">
