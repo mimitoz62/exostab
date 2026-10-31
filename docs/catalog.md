@@ -14,6 +14,7 @@ exostab's three indicators for the multi-planet systems in the NASA Exoplanet Ar
 Composite Parameters table, recomputed every week by the
 [catalog workflow](https://github.com/mimitoz62/exostab/blob/main/.github/workflows/catalog.yml).
 [What the catalog shows](findings.md) describes the results of the catalog of 26 October 2026 and how firm they are.
+[Changes between catalogs](catalog-changes.md) lists what changed from one catalog to the next.
 Each system has its own page, for example
 [TRAPPIST-1](https://mimitoz62.github.io/exostab/systems/trappist-1/).
 

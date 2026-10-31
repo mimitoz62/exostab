@@ -1,9 +1,10 @@
-"""Scripts: catalog page and findings, release notes, Zenodo upload, IndexNow, snapshot builder, SPOCK environment."""
+"""Scripts: catalog page, changes and findings, release notes, Zenodo upload, IndexNow, snapshot builder, SPOCK environment."""
 
 from __future__ import annotations
 
 import contextlib
 import csv
+import html
 import importlib.util
 import io
 import json
@@ -13,6 +14,8 @@ import re
 import shutil
 import subprocess
 import urllib.error
+import xml.etree.ElementTree as ET
+from datetime import datetime
 from email.message import Message
 from pathlib import Path
 from types import ModuleType
@@ -82,8 +85,8 @@ def test_catalog_page(small_catalog: Path, tmp_path: Path, monkeypatch: pytest.M
         dataset["dateModified"]
         == json.loads((small_catalog / "catalog_meta.json").read_text())["created_utc"][:10]
     )
-    # the sidebar is hidden on this page, so this sentence is the way to the page about the results
-    assert "[What the catalog shows](findings.md)" in text
+    # the sidebar is hidden on this page, so these sentences are the way to the pages about the results
+    assert "[What the catalog shows](findings.md)" in text and "(catalog-changes.md)" in text
     # the filter says what the names are, and catalog.js shows this element when no row matches
     assert "GJ 876 (Gliese 876)" in text and 'id="catalog-filter-none"' in text
     # a catalog from before the 1.0.0 rules (the weekly runs of 0.1.0.dev0) says that its rules differ
@@ -103,7 +106,7 @@ def test_catalog_page(small_catalog: Path, tmp_path: Path, monkeypatch: pytest.M
     placeholder = page.render(None)
     assert "has no catalog table" in placeholder and "data/catalog.csv" not in placeholder
     assert "No catalog has been published" not in placeholder  # the weekly runs have published catalogs
-    assert "[What the catalog shows](findings.md)" in placeholder
+    assert "[What the catalog shows](findings.md)" in placeholder and "(catalog-changes.md)" in placeholder
     monkeypatch.setattr("sys.argv", ["catalog_page.py", str(small_catalog)])
     page.main()
     written = (tmp_path / "catalog.md").read_text()
@@ -386,6 +389,226 @@ def test_social_preview_svg_path(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_release_notes(small_catalog: Path) -> None:
     notes = load("catalog_release_notes").notes(small_catalog)
     assert "4 multi-planet systems" in notes and "NASA Exoplanet Archive" in notes
+
+
+def weekly_catalog(folder: Path, day: str, rows: dict[str, str], version: str = "1.0.0") -> None:
+    """A file of archive/ on the branch: each system with its overall verdict or, without a verdict, its status."""
+    draws = {"stable": (10, 0, 0), "marginal": (7, 3, 0), "unstable": (0, 0, 10), "inconclusive": (9, 0, 0)}
+    columns = ["nbody_regular", "nbody_chaotic", "nbody_unstable"]
+    fields = ["system", "status", "overall", *columns, "orbits", "draws", "seed"]
+    fields += ["data_retrieved_utc", "exostab_version"]
+    folder.mkdir(exist_ok=True)
+    with (folder / f"catalog-{day}.csv").open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fields)
+        writer.writeheader()
+        for system, state in rows.items():
+            verdict = state in draws
+            row = {
+                "system": system,
+                "status": "ok" if verdict else state,
+                "overall": state if verdict else "",
+                "orbits": "10000.0",
+                "draws": "10",
+                "seed": "0",
+                "data_retrieved_utc": f"{day}T10:00:00+00:00",
+                "exostab_version": version,
+            }
+            writer.writerow({**row, **(dict(zip(columns, draws[state])) if verdict else {})})
+
+
+def atom_entries(text: str) -> list[ET.Element]:
+    """The entries of a feed, after a check of what RFC 4287 requires of a feed and of its entries."""
+    atom = "{http://www.w3.org/2005/Atom}"
+    root = ET.fromstring(text)
+    assert root.tag == f"{atom}feed" and root.findtext(f"{atom}author/{atom}name")
+    assert root.find(f"{atom}link[@rel='self']") is not None
+    entries = root.findall(f"{atom}entry")
+    for element in (root, *entries):
+        assert element.findtext(f"{atom}title")
+        assert re.match(r"[a-z]+:", element.findtext(f"{atom}id", ""))  # an IRI, not a relative reference
+        datetime.strptime(element.findtext(f"{atom}updated", ""), "%Y-%m-%dT%H:%M:%S%z")
+    # with no atom:content, an entry needs a link to the alternate version
+    assert all(e.find(f"{atom}link[@rel='alternate']") is not None for e in entries)
+    assert all(e.findtext(f"{atom}summary") for e in entries)
+    ids = [root.findtext(f"{atom}id"), *(e.findtext(f"{atom}id") for e in entries)]
+    assert len(ids) == len(set(ids))
+    return entries
+
+
+def test_catalog_changes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    atom = "{http://www.w3.org/2005/Atom}"
+    changes = load("catalog_changes")
+    systems = tmp_path / "systems"
+    systems.mkdir()
+    monkeypatch.setattr(changes, "SYSTEMS", systems)
+    tricky = 'A*B_c <x> & "q" [y]|z `1`'
+    for name in ("hd-1", "hd-5", changes._row_id(tricky)):
+        (systems / f"{name}.md").write_text("a page")
+    archive = tmp_path / "archive"
+    # Earlier rules: HD 1 would be a change, and HD 9 a removed system, if this catalog were compared.
+    weekly_catalog(archive, "2026-10-05", {"HD 1": "unstable", "HD 9": "stable"}, version="0.1.0.dev0")
+    older = {
+        tricky: "stable",
+        "HD 1": "stable",
+        "HD 2": "marginal",
+        "HD 3": "marginal",
+        "HD 4": "unstable",
+        "HD 6": "skipped",
+        "HD 7": "stable",
+        "HD 8": "skipped",
+    }
+    newer = {
+        tricky: "inconclusive",
+        "HD 1": "marginal",
+        "HD 2": "unstable",
+        "HD 3": "marginal",
+        "HD 5": "stable",
+        "HD 6": "marginal",
+        "HD 7": "timeout",
+        "HD 8": "timeout",
+    }
+    weekly_catalog(archive, "2026-10-12", older)
+    weekly_catalog(archive, "2026-10-19", newer, version="1.0.2.dev0")
+    (archive / "catalog.csv").write_text("not a dated file, so not read")
+    catalogs = changes.read_archive(archive)
+    assert [str(c.day) for c in catalogs] == ["2026-10-05", "2026-10-12", "2026-10-19"]
+    [found] = changes.comparisons(catalogs)
+    assert (found.added, found.removed) == (["HD 5"], ["HD 4"])
+    assert found.changed == [tricky, "HD 1", "HD 2"]
+    # HD 3 is the same in both, and HD 8 has no verdict in both, whatever its status
+    assert (found.gained, found.lost) == (["HD 6"], ["HD 7"])
+
+    page = changes.render(catalogs)
+    assert "## 12 October 2026 to 19 October 2026 {#from-2026-10-12-to-2026-10-19}" in page
+    assert "12 October 2026: exostab 1.0.0, 8 systems, 10,000 orbits, 10 draws, seed 0." in page
+    assert "19 October 2026: exostab 1.0.2.dev0, 8 systems" in page
+    for label, n in (
+        ("Systems added", 1),
+        ("Systems removed", 1),
+        ("Overall verdicts changed", 3),
+        ("Rows from no verdict to a verdict", 1),
+        ("Rows from a verdict to no verdict", 1),
+    ):
+        assert f"<li>{label}: {n}\n<ul>" in page
+    stable, marginal, unstable = (
+        f'<span class="verdict-{v}">{v}</span>' for v in ("stable", "marginal", "unstable")
+    )
+    # old to new, as the rows say it, and a link only where a page exists
+    assert (
+        f'<li><a href="../systems/hd-1/">HD 1</a>: {stable} to {marginal} (draws 10/0/0 to 7/3/0)</li>'
+        in page
+    )
+    assert f"<li>HD 2: {marginal} to {unstable} (draws 7/3/0 to 0/0/10)</li>" in page
+    assert "newly" not in page.lower()
+    assert f'<li><a href="../systems/hd-5/">HD 5</a>: {stable} (draws 10/0/0)</li>' in page
+    assert f"<li>HD 4: {unstable} (draws 0/0/10)</li>" in page
+    assert f"<li>HD 6: skipped to {marginal} (draws — to 7/3/0)</li>" in page
+    assert f"<li>HD 7: {stable} to timeout (draws 10/0/0 to —)</li>" in page
+    assert "HD 3" not in page and "HD 8" not in page
+    # the catalog under earlier rules is named as left out, and compared with nothing
+    assert "left out" in page and "5 October 2026 (exostab 0.1.0.dev0)" in page
+    assert "from-2026-10-05" not in page and "HD 9" not in page
+    # why a verdict can change, and what a change does not mean
+    assert "The archive's values changed" in page and "The code changed" in page and "**Chance.**" in page
+    assert "one draw can change" in page and "(findings.md#how-firm-these-numbers-are)" in page
+    assert "says nothing about the planets" in page and "(catalog-changes.xml)" in page
+    assert "With the same seed, values and code" in page and "wall-clock seconds" in page
+    # a system added need not be new to the archive, a row need not name REBOUND, draws need not add up to 10
+    assert "when the code changes which hosts get a row" in page
+    assert "with a verdict, that of REBOUND" in page and "can add up to less than" in page
+
+    # the name reaches the reader as it is: not as HTML, not as Markdown, and with a link of its own
+    assert html.escape(tricky) in page and "<x>" not in page
+    markdown = pytest.importorskip("markdown")
+    rendered = markdown.markdown(page, extensions=["admonition", "attr_list"])
+    assert 'id="from-2026-10-12-to-2026-10-19"' in rendered
+    assert f'<a href="../systems/{changes._row_id(tricky)}/">{html.escape(tricky)}</a>' in rendered
+
+    text = changes.feed(catalogs)
+    [entry] = atom_entries(text)
+    root = ET.fromstring(text)
+    assert entry.findtext(f"{atom}updated") == "2026-10-19T10:00:00+00:00" == root.findtext(f"{atom}updated")
+    # the URL readers subscribe to, and the ids, which must never change once they are published
+    self_link = root.find(f"{atom}link[@rel='self']")
+    assert (
+        self_link is not None
+        and self_link.get("href") == "https://mimitoz62.github.io/exostab/catalog-changes.xml"
+    )
+    assert root.findtext(f"{atom}id") == "tag:mimitoz62.github.io,2026:exostab/catalog-changes"
+    assert (
+        entry.findtext(f"{atom}id")
+        == "tag:mimitoz62.github.io,2026:exostab/catalog-changes/from-2026-10-12-to-2026-10-19"
+    )
+    link = entry.find(f"{atom}link")
+    assert link is not None and link.get("href") == f"{changes.PAGE}#from-2026-10-12-to-2026-10-19"
+    assert entry.findtext(f"{atom}summary", "").startswith(
+        "Systems added: 1. Systems removed: 1. Overall verdicts changed: 3. "
+        "Rows from no verdict to a verdict: 1. Rows from a verdict to no verdict: 1. "
+    )
+    assert "not a discovery" in entry.findtext(f"{atom}summary", "")
+    # a later build of the site changes nothing in the feed, so readers see no new entries
+    assert changes.feed(changes.read_archive(archive)) == text
+    # the entry's time comes from the file, so a second run on the same day changes it; if the time of the
+    # download is not known, it is the file's date
+    path = archive / "catalog-2026-10-19.csv"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace("2026-10-19T10:00:00+00:00", ""), encoding="utf-8"
+    )
+    [entry] = atom_entries(changes.feed(changes.read_archive(archive)))
+    assert entry.findtext(f"{atom}updated") == "2026-10-19T00:00:00Z"
+
+
+def test_catalog_changes_keeps_the_newest_comparisons(tmp_path: Path) -> None:
+    changes = load("catalog_changes")
+    for day in range(1, 12):
+        weekly_catalog(tmp_path, f"2026-11-{day:02d}", {"HD 1": "stable"})
+    catalogs = changes.read_archive(tmp_path)
+    found = changes.comparisons(catalogs)
+    assert len(found) == changes.MAX_COMPARISONS == 8
+    assert found[0].anchor == "from-2026-11-10-to-2026-11-11"
+    assert found[-1].anchor == "from-2026-11-03-to-2026-11-04"
+    assert changes.render(catalogs).count("\n## ") == 8 and len(atom_entries(changes.feed(catalogs))) == 8
+
+
+def test_catalog_changes_with_nothing_to_compare(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    changes = load("catalog_changes")
+    monkeypatch.setattr(changes, "OUT", tmp_path / "catalog-changes.md")
+    monkeypatch.setattr(changes, "FEED", tmp_path / "catalog-changes.xml")
+    # no archive at all: the page of the committed placeholder, whose build must not need the feed's file
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    (empty / "catalog-2026-10-19.csv").write_text("system,status,overall\n")  # no rows, so no catalog
+    for folder in (None, tmp_path / "missing", empty):
+        assert changes.read_archive(folder) == []
+    placeholder = changes.render([])
+    assert "has no comparisons" in placeholder and "catalog-changes.xml" not in placeholder
+    assert placeholder.startswith("---\ntitle:") and "(findings.md#how-firm-these-numbers-are)" in placeholder
+    assert atom_entries(changes.feed([])) == []
+    monkeypatch.setattr("sys.argv", ["catalog_changes.py"])
+    changes.main()
+    assert (tmp_path / "catalog-changes.md").read_text(encoding="utf-8") == placeholder
+    assert atom_entries((tmp_path / "catalog-changes.xml").read_text(encoding="utf-8")) == []
+    # one catalog under the current rules, beside one under earlier rules: nothing to compare yet
+    archive = tmp_path / "archive"
+    weekly_catalog(archive, "2026-10-12", {"HD 1": "stable"}, version="0.1.0.dev0")
+    weekly_catalog(archive, "2026-10-19", {"HD 1": "marginal"})
+    catalogs = changes.read_archive(archive)
+    assert changes.comparisons(catalogs) == [] and atom_entries(changes.feed(catalogs)) == []
+    page = changes.render(catalogs)
+    assert "no comparison yet" in page and "left out" in page and "has no comparisons" not in page
+    monkeypatch.setattr("sys.argv", ["catalog_changes.py", str(archive)])
+    changes.main()
+    assert (tmp_path / "catalog-changes.md").read_text(encoding="utf-8") == page
+
+
+@pytest.mark.skipif(not (ROOT / "mkdocs.yml").is_file(), reason="the site's files are not in the sdist")
+def test_catalog_changes_are_part_of_the_site() -> None:
+    assert "catalog-changes.md" in (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    head = (ROOT / "overrides" / "main.html").read_text(encoding="utf-8")
+    assert re.search(r'<link rel="alternate" type="application/atom\+xml"[^>]*catalog-changes\.xml"', head)
+    # the names on the page link to the system pages, so those are written first
+    workflow = (ROOT / ".github" / "workflows" / "docs.yml").read_text(encoding="utf-8")
+    assert workflow.index("scripts/system_pages.py") < workflow.index("scripts/catalog_changes.py archive")
 
 
 class FakeResponse:
