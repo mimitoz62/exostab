@@ -73,6 +73,8 @@ All notable changes to this project are documented here. The format follows
   on every platform. Hill spacing and AMD are sufficient conditions or heuristics, not only sufficient conditions. An
   upper limit is no longer called the worst case for stability: a mass limit need not be for AMD, because a lighter
   innermost planet raises β_S (BD-06 1339).
+- `report.json` labels a radius that the archive calculated as `estimated`, not `measured`, and any other column the
+  archive calculated as `derived`. No number or verdict changes.
 
 ## [1.0.0] - 2026-10-16
 
