@@ -122,6 +122,11 @@ workflow so the catalog page is updated. The full log is in the run's `catalog` 
   4. Try it on https://sandbox.zenodo.org first (separate account, token and record): also set the variable
      `ZENODO_URL` = `https://sandbox.zenodo.org`, run the workflow, then delete `ZENODO_URL` and switch the
      token and record id to the real ones.
+- A docs run that a catalog starts, or that is started by hand, sends the site's URLs to IndexNow
+  (`scripts/indexnow.py`, no account) once the site is deployed; a push sends nothing. The log of the job `indexnow`
+  should say `IndexNow received <n> URLs (HTTP 200)` or `(HTTP 202)`, which confirms receipt and not indexing. A 403 or
+  422 points at the key file (`docs/<key>.txt`) or `keyLocation`. A failed call does not fail the run, so nothing
+  announces it: look at that log from time to time.
 
 ## Cutting a release
 

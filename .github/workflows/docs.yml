@@ -57,3 +57,22 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+
+  indexnow:
+    # Sends the deployed site's URLs to IndexNow after a workflow_dispatch: the weekly catalog (catalog.yml,
+    # `gh workflow run`) or "Run workflow". A push sends nothing. With no status function in `if`, this job also needs
+    # `deploy` to have succeeded. It is a job of its own because GitHub prepares every action of a job before the job's
+    # first step, whatever a step's `if` and continue-on-error say, and because the deploy job holds id-token: write.
+    # The sitemap comes from the live site: a copy still cached by the CDN at worst delays a new page to the next run.
+    if: github.event_name == 'workflow_dispatch'
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true  # a failed call leaves the run green: the site is already deployed
+    steps:
+      - uses: actions/checkout@v7
+      - name: Send the site's URLs to IndexNow
+        run: |
+          curl --fail --silent --show-error --location --retry 3 \
+            --output sitemap.xml https://mimitoz62.github.io/exostab/sitemap.xml
+          python3 scripts/indexnow.py sitemap.xml

@@ -175,3 +175,24 @@ def test_workflow_pipelines_keep_the_exit_status() -> None:
                 if pipe.search(step.get("run", "")) and step.get("shell", shell) != "bash":
                     unsafe.append(f"{path.name}: {job_id}: {step.get('name') or step['run'][:60]}")
     assert unsafe == []
+
+
+@pytest.mark.skipif(not WORKFLOWS.is_dir(), reason="workflows are not in the sdist")
+def test_indexnow_follows_a_dispatched_deployment_in_a_job_of_its_own() -> None:
+    # The weekly catalog starts the docs workflow with workflow_dispatch, and a push must send nothing. GitHub prepares
+    # every action of a job before its first step, so the jobs that deploy must not mention IndexNow at all.
+    assert "gh workflow run docs.yml" in (WORKFLOWS / "catalog.yml").read_text(encoding="utf-8")
+    workflow = yaml.safe_load((WORKFLOWS / "docs.yml").read_text(encoding="utf-8"))
+    jobs = workflow["jobs"]
+    assert "indexnow" not in str(jobs["build"]).lower() and "indexnow" not in str(jobs["deploy"]).lower()
+    job = jobs["indexnow"]
+    # With no status function in `if`, the job also needs `deploy` to have succeeded.
+    assert job["if"] == "github.event_name == 'workflow_dispatch'" and job["needs"] == "deploy"
+    # A failed call leaves the run green, and the job has only the workflow's read permission.
+    assert job["continue-on-error"] is True and "permissions" not in job
+    assert workflow["permissions"] == {"contents": "read"}
+    # All of it is silent if it breaks: the run stays green and no other test would notice.
+    assert job["steps"][0]["uses"].startswith("actions/checkout@")
+    run = job["steps"][-1]["run"]
+    assert "--output sitemap.xml https://mimitoz62.github.io/exostab/sitemap.xml" in run
+    assert "python3 scripts/indexnow.py sitemap.xml" in run
