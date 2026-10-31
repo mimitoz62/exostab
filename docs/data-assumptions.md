@@ -1,3 +1,9 @@
+---
+description: >-
+  Where exostab's parameters come from and how gaps are filled: the NASA Exoplanet Archive's composite table, the
+  completion rules, orbital phases, Monte Carlo draws and YAML input.
+---
+
 # Data and assumptions
 
 ## Source
@@ -33,13 +39,14 @@ another and a transit time from a third. The archive's documentation calls the t
 self-consistent". This matters most for orbital phases (below).
 
 The same holds for the host star: every planet row carries its own stellar mass, and the rows of one host can
-disagree. In the table of 2026-09-28, 198 of the 1,070 hosts have rows with different stellar masses, 61 of them by
+disagree. In the table of 2026-10-31, 200 of the 1,079 hosts have rows with different stellar masses, 61 of them by
 more than 10%. A measured planet mass scales with the stellar mass its publication assumed, so exostab uses the
 stellar mass of the publication that gives more of the measured planet masses than any other, if a row gives that
-publication's value (47 of the 198 hosts). Otherwise it uses the median of the rows; for an even number of rows
-whose two middle values differ, it uses the lower one, because a smaller star gives larger planet-to-star mass
-ratios and is the less stable choice. The result does not depend on the order in which the archive returns the
-rows. The flag `star_mass_inconsistent` lists every value with its reference and says which rule chose the value.
+publication's value (47 of the 198 of these hosts that can be modelled). Otherwise it uses the median of the rows;
+for an even number of rows whose two middle values differ, it uses the lower one, because a smaller star gives larger
+planet-to-star mass ratios and is the less stable choice. The result does not depend on the order in which the archive
+returns the rows. The flag `star_mass_inconsistent` lists every value with its reference and says which rule chose the
+value.
 Planet masses that a publication derived with a different stellar mass are not rescaled. Limits on the stellar
 mass are not used.
 
@@ -52,7 +59,7 @@ lists every flag exostab can set.
 |---|---|---|
 | Eccentricity | 0, labelled "assumed" | `eccentricity_assumed_zero` |
 | Eccentricity published as exactly 0 without an uncertainty | treated like a missing eccentricity: such a value is a circular orbit fixed in the source's fit, not a measurement; 0 in every run, labelled "assumed" | `eccentricity_fixed_zero_by_source` |
-| Eccentricity or planet mass given as an upper limit | the nominal run uses the limit (the worst case for stability); draws are uniform between 0 and the limit. These draws do not sample a measurement uncertainty, so an N-body instability that rests on them gives an overall "marginal", never "unstable". Upper limits on other values are not accepted | `eccentricity_upper_limit`, `mass_upper_limit` |
+| Eccentricity or planet mass given as an upper limit | the nominal run uses the limit (normally the hardest case, though a mass limit need not be for AMD: see [Methods](methods.md#step-3-the-overall-verdict)); draws are uniform between 0 and the limit. These draws do not sample a measurement uncertainty, so an N-body instability that rests on them gives an overall "marginal", never "unstable". Upper limits on other values are not accepted | `eccentricity_upper_limit`, `mass_upper_limit` |
 | Eccentricity given as a lower limit | the limit is used as the value | `eccentricity_lower_limit` |
 | Period given as a limit | the limit is used as the value | `period_upper_limit`, `period_lower_limit` |
 | Argument of periastron ω | drawn uniformly in [0°, 360°) for every run | `omega_randomized` |
@@ -74,10 +81,9 @@ lists every flag exostab can set.
 | Value changed in the web app | used as edited; listed in the report | `edited_in_web_app`, `what_if_in_web_app` |
 | Circumbinary planets; a planet with no mass and no radius, or only a radius above 11.3 R⊕; no period and no semi-major axis; no period for a planet found by microlensing or direct imaging (the archive's `pl_orbsmax` is then "the projected separation in the plane of the sky", which gives neither the orbit nor the spacing of the planets); a published eccentricity above 0.95; no stellar mass, or only a limit on it; only one planet row for the host (its other planets orbit a companion star) | the system is rejected with the reason | — |
 
-On the table of 2026-09-28, 1,034 of the 1,070 hosts with `sy_pnum >= 2` can be modelled. The 36 rejected hosts
-are 10 with a single planet row, 10 microlensing or imaging systems without a period, 8 circumbinary systems, 6
-with a planet that has neither a mass nor a usable radius, 1 with neither a period nor a semi-major axis and 1
-without a stellar mass.
+On the table of 2026-10-31, 1,044 of the 1,079 hosts with `sy_pnum >= 2` can be modelled. The 35 rejected hosts
+are 11 microlensing or imaging systems without a period, 10 with a single planet row, 8 circumbinary systems, 5
+with a planet that has neither a mass nor a usable radius and 1 without a stellar mass.
 
 ### Orbital phases
 
@@ -108,12 +114,15 @@ uniformly between 0 and the limit. Negative eccentricities are set to 0 and draw
 a different orbit from the one the report shows. Masses, periods and the stellar mass are redrawn until positive.
 Phases are propagated from their reference times to the common epoch with the drawn periods. Draws are
 independent: correlations in the published posteriors are ignored, which usually widens the spread of outcomes.
-The same `--seed` always gives the same draws.
+The same `--seed` gives the same draws.
 
 ## Your own parameters
 
-`exostab check --from-file system.yaml` reads a YAML file. `examples/two_planet.yaml` shows every key, with the
-alternatives in comments. `examples/hd127195_note.yaml` contains the inputs of the HD 127195 Research Note. The same
+`exostab check --from-file system.yaml` reads a YAML file.
+[`examples/two_planet.yaml`](https://github.com/mimitoz62/exostab/blob/main/examples/two_planet.yaml) shows every
+key, with the alternatives in comments; the [Quickstart](quickstart.md#check-a-system) has the line that downloads it.
+[`examples/hd127195_note.yaml`](https://github.com/mimitoz62/exostab/blob/main/examples/hd127195_note.yaml) contains
+the inputs of the HD 127195 Research Note. The same
 completion rules apply to anything left out. Unknown keys, values that are not finite numbers and contradictory
 input are refused with a message that names the field.
 

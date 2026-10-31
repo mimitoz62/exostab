@@ -196,7 +196,7 @@ exostab's AMD verdict for these inputs is "marginal" although every draw passes 
 β = 2β_p (D14, since 2026-10-03) the AMD indicator's draws are 137 stable, 49 marginal and 14 unstable (185, 1 and
 14 with the coplanar AMD); the equal-eccentricity limit for β = 1 is 0.0713.
 
-## D11 — Data completion rules (final for v0.1; amended 2026-10-03 and 2026-10-04)
+## D11 — Data completion rules (final for v0.1; amended 2026-10-03, 2026-10-04 and 2026-10-31)
 
 As in the brief, plus these choices:
 
@@ -233,6 +233,13 @@ microlensing or imaging systems without a period, 8 circumbinary, 6 with a plane
 usable radius, 1 without a period or semi-major axis, 1 without a stellar mass). Every rejected host appears in
 the catalog as skipped, with the reason (before 2026-10-04 the 10 hosts with a single planet row were left out
 of it).
+
+*Amended 2026-10-31.* "Worst case for stability" above is too strong for a mass limit and the AMD indicator:
+β_S = C / Λ₁ grows as the innermost planet gets lighter. exostab calls BD-06 1339 stable with the archive's limit of
+1,523 M⊕ for planet b (β_S = 0.011). In a run with a YAML file, with the planet's m sin i of 8.5 M⊕ (Lo Curto et al.
+2013), β_S = 1.96, and AMD and the overall verdict are marginal. A stable result therefore describes the values that
+were run, not every value below a mass limit. For Hill spacing and the integration, the limit is normally the hardest
+case. The rule is unchanged: only its reasoning and the documentation changed (`docs/methods.md`).
 
 ## D12 — Hill indicator (final for v0.1; amended 2026-10-03 and 2026-10-04)
 
@@ -508,7 +515,7 @@ lower limit of 3.5 radii, "the Hill stability limit", matches 2√3 only with th
 training code's radius and warns above 30. With the inner semi-major axis it differs from the Hill indicator's
 radius: 30 of these radii are 21.3 of the Hill indicator's for two planets of 3e-5 M_* and 26.5 for 1e-6.
 
-## D24 — Data completion after the October 2026 review (2026-10-03; amended 2026-10-04)
+## D24 — Data completion after the October 2026 review (2026-10-03; amended 2026-10-04 and 2026-10-31)
 
 Measured on the archive cache of 2026-09-28 (2,663 rows, 1,070 hosts) unless stated.
 
@@ -559,6 +566,14 @@ Measured on the archive cache of 2026-09-28 (2,663 rows, 1,070 hosts) unless sta
   reported as missing from the snapshot (in the web app too, since 2026-10-04).
 - **Cache:** written atomically; the row count and SHA-256 are checked on load.
 
+*Amended 2026-10-31.* **Upper limits:** the limit is not always the worst case (see the amendment of D11). **Names:**
+a name that only planets carry now finds their host when the whole query is a planet name without its final letter.
+The archive's host of Kepler-90 i is KOI-351, and "Kepler-90" used to get the suggestion Kepler-990. If the planets of
+several hosts carry the name ("TOI-2267"), the query is refused as ambiguous. Other forms of a name ("Gliese 876",
+"Upsilon Andromedae", "Kepler-90 h") are guesses, so they are only suggested in the error and never resolved: a wrong
+guess would check another system. When there is no suggestion, the error points to `exostab list`, and in the web app
+to its search box.
+
 ## D25 — Dependency lower bounds are tested (2026-10-03)
 
 The lower bounds in `pyproject.toml` had never been installed. pip keeps an installed version that satisfies a
@@ -596,7 +611,7 @@ the Hill-limit test at 3.0 mutual Hill radii on Ubuntu only; that test was repla
 
 PyPI is optional (repository variable `PUBLISH_PYPI`). Setup steps for every service are in `RELEASING.md`.
 
-## D27 — Overall verdict: upper limits, zero draws, close-encounter draws and multiple stars (2026-10-04)
+## D27 — Overall verdict: upper limits, zero draws, close-encounter draws and multiple stars (2026-10-04; amended 2026-10-31)
 
 - **Upper limits never give overall "unstable".** When an input is only a published upper limit, the nominal run
   uses the limit and the draws are uniform below it (D11). That is the worst case for a stable verdict, which
@@ -628,6 +643,9 @@ PyPI is optional (repository variable `PUBLISH_PYPI`). Setup steps for every ser
   their large measured eccentricities, and are downgraded too (issue proposed on modelling companion stars).
 - The overall summary is built from the draw counts and never claims more than they show; a stable summary lists
   any draws that failed an indicator.
+
+*Amended 2026-10-31.* "The worst case for a stable verdict, which therefore stands" holds for Hill spacing and the
+integration, but not always for AMD: see the amendment of D11. The rule is unchanged.
 
 ## D28 — Shared web-app links are validated and cost-limited (2026-10-03; amended 2026-10-04)
 
@@ -666,11 +684,19 @@ guesswork. `--param e` keeps 0 to 0.5; the other parameters require `--range`. B
 rules as each swept value before anything runs. `sweep.json` records the seed, run length, range, steps,
 integrator, time step, command and creation time.
 
-## D31 — Packaged web entry point (2026-10-03)
+## D31 — Packaged web entry point (2026-10-03; amended 2026-10-31)
 
 `python -m exostab.web` runs `streamlit run` on `src/exostab/web/streamlit_app.py`, a packaged copy of the root
 `streamlit_app.py`; the root file stays for clones and Streamlit Community Cloud. The SPOCK setup script is not
 packaged; the CLI gives its GitHub URL (it needs uv and a C compiler, not a clone).
+
+*Amended 2026-10-31.* The wheel has no `.streamlit/config.toml`, so the launcher passes its settings on the command
+line, before the user's arguments, which can override them: `--server.headless true`,
+`--browser.gatherUsageStats false` and `--client.toolbarMode viewer`. Without the first, the first run outside a clone
+stopped at Streamlit's email prompt, and nothing was served until Enter was pressed. In headless mode no browser opens,
+as in a clone, and Streamlit looks up the public IP address at every start and prints it as External URL.
+`--browser.serverAddress localhost` would avoid that, but it has not been tried in a codespace or behind Binder's proxy,
+which use this launcher, so it stays out for now.
 
 ## D32 — What the Hill-limit validation asserts (2026-10-04)
 
@@ -699,4 +725,3 @@ Hill radius), time step (P/50) and grid, and is no longer claimed as reproduced 
 - **Schema `$id`.** The `$id` is https://mimitoz62.github.io/exostab/schemas/report-1.3.json. The docs workflow
   copies the generated schema to that path, so the identifier resolves. Older `$id` values pointed at a GitHub URL
   that did not exist.
-

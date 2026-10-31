@@ -6,10 +6,68 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Three ways to try exostab in a browser with no install: a notebook for Google Colab
+  (`examples/exostab_quickstart.ipynb`), a dev container for GitHub Codespaces (`.devcontainer/`) and a Binder
+  configuration (`.binder/`) that serves the web app at `<session URL>/exostab/`. The notebook and Binder install the
+  latest release; a codespace installs the checkout. The README and the Quickstart link to them and say what each
+  needs.
+- A nightly workflow, `Browser paths`, runs the notebook on Python 3.13 on Linux and the commands of the dev container
+  in its image, apart from the validation workflow, because the notebook needs the live archive. `tests/test_packaging.py` checks that the notebook has no outputs, that the notebook, Binder and the
+  install lines of the documentation name the latest release, and that the code blocks of the documentation have no
+  comments, which break when pasted into zsh, the default shell on macOS.
+- A documentation page, What the catalog shows (`docs/findings.md`), on the catalog of 26 October 2026: the stable
+  share by number of planets, what the stable verdicts rest on, the six published parameter sets that do not survive
+  integration, mass upper limits as inputs, and how firm the numbers are. `scripts/catalog_findings.py` computes its
+  numbers and draws its figures from a catalog CSV and the archive table.
+- Each row of the catalog page has its own link (`catalog/#trappist-1`), and the published page describes the catalog
+  as a schema.org Dataset for dataset search engines. `codemeta.json` describes the software for software catalogs;
+  `tests/test_packaging.py` checks it against `CITATION.cff`.
+- The README and the FAQ say that most of the code, tests and documentation were written with an AI coding assistant
+  under the author's direction. The FAQ says why the catalog, `exostab check` and the web app can differ for one system.
+
+### Changed
+
+- The Catalog tab of the documentation is a section with the table and the new page, and the table page links to it.
+- The install instructions in the README and the documentation check the Python version, use a virtual environment
+  and give a form without git, with the release's wheel. They say what the `uvx` line needs and that it downloads
+  about 350 MB, and they name the catalog as the option that needs no installation.
+- The catalog page has a title and description of its own, and so has every other documentation page except the CLI
+  reference, which CI compares with the generated help text.
+- The validation numbers in the README and the documentation are from the tag v1.0.0 with REBOUND 5.2.2. They are the
+  same as those of 13 October 2026 from `1.0.0.dev0` with REBOUND 5.2.0.
+- The code after the release calls itself `1.0.1.dev0`, so a report or a catalog made with it no longer says 1.0.0.
+- The filter of the catalog page ignores case, spaces and punctuation, as `exostab check` does, says what the names
+  are, and says so when no system matches.
+- The README, the documentation and the help of `exostab catalog build` no longer say "any" or "every" multi-planet
+  system where some are skipped: 1,044 of the 1,079 systems of 26 October 2026 were checked.
+
 ### Fixed
 
 - `exostab sweep --param e` refuses eccentricities above `E_MAX` (0.95), as `exostab check` does, instead of
   integrating orbits up to e < 1.
+- `python -m exostab.web` starts at once outside a clone. It used to stop at Streamlit's first-run email prompt,
+  and nothing was served until Enter was pressed. It also turns off Streamlit's usage statistics and Deploy button, as
+  the repository's own configuration does. As in a clone, no browser opens; the terminal shows the address. Later
+  arguments override these settings.
+- A name that the archive gives only to planets finds their host: "Kepler-90" gives KOI-351, whose planets include
+  Kepler-90 i, instead of suggesting Kepler-990. A name that the planets of several hosts carry ("TOI-2267") is
+  refused as ambiguous.
+- The error for an unknown name suggests the host for other forms of its name, which are never resolved on their
+  own: "Gliese 876" and "Gl 876" suggest GJ 876, "Upsilon Andromedae" ups And, "Kepler-90 h" and "Kepler-90h"
+  KOI-351. When there is no suggestion, it points to `exostab list`, and in the web app to its search box.
+- An error message that quotes a name with square brackets no longer ends in a traceback (`exostab check "[/red]"`).
+- Documentation: names are the archive's, with examples, and `exostab list` shows them. `--from-file` examples that
+  needed a clone of the repository first download the example file.
+- Documentation: the README no longer says that the published catalogs come from a development version: those of 16,
+  19 and 26 October 2026 are computed with 1.0.0. The catalog's caveats say that a resonant system can look marginal or
+  unstable, and that the catalog uses 10 draws where `exostab check` uses 20, so a verdict can differ (TOI-270). The
+  numbers of hosts in `docs/data-assumptions.md` are those of the table of 31 October 2026.
+- Documentation and `--seed` help: the same seed gives identical runs on the same platform and software versions, not
+  on every platform. Hill spacing and AMD are sufficient conditions or heuristics, not only sufficient conditions. An
+  upper limit is no longer called the worst case for stability: a mass limit need not be for AMD, because a lighter
+  innermost planet raises β_S (BD-06 1339).
 
 ## [1.0.0] - 2026-10-16
 

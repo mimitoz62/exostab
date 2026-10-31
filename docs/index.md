@@ -114,7 +114,7 @@ answer.
     ---
 
     `exostab check` for one system and `exostab sweep` for "what if" scans, a Streamlit app with sliders, and a
-    weekly catalog of every multi-planet system in the archive.
+    weekly catalog of the archive's multi-planet systems.
 
     [:octicons-arrow-right-24: Catalog](catalog.md)
 
@@ -122,39 +122,64 @@ answer.
 
 ## Get started
 
+=== "No install"
+
+    The [stability catalog](catalog.md) needs nothing: look up a system in the table of the archive's multi-planet
+    systems, recomputed every week. [What the catalog shows](findings.md) describes its results and how
+    firm they are.
+
+    To run exostab itself in a browser, use
+    [Google Colab](https://colab.research.google.com/github/mimitoz62/exostab/blob/main/examples/exostab_quickstart.ipynb)
+    (needs a Google account), [GitHub Codespaces](https://codespaces.new/mimitoz62/exostab?quickstart=1) (needs a
+    GitHub account and uses your free monthly hours) or
+    [Binder](https://mybinder.org/v2/gh/mimitoz62/exostab/main?urlpath=exostab/) (needs no account; the first start
+    can take several minutes, and the session ends after 10 minutes without activity). More in the
+    [Quickstart](quickstart.md#try-it-without-installing).
+
 === "Command line"
 
     ```bash
+    python3 --version
+    python3 -m venv .venv
+    source .venv/bin/activate
     pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.0.0"
     exostab check "TRAPPIST-1"
     exostab list --min-planets 4 --max-period-days 200
     ```
 
-    Python 3.10 or newer. The first `check` downloads the archive's multi-planet table once (about 2,700 rows)
-    and caches it; `--offline` uses a bundled snapshot of 22 well-known systems. A package on PyPI is planned;
-    until then, install from GitHub.
+    You need Python 3.10 or newer: the first line shows your version, and `/usr/bin/python3` on macOS is 3.9. The
+    `pip` line needs git; the [Quickstart](quickstart.md#install) has the form without git. Names are the archive's, for example KOI-351 (Kepler-90), GJ 876 (Gliese 876), ups And (Upsilon Andromedae) and 55 Cnc
+    (55 Cancri); `exostab list` shows them. The first `check` downloads the archive's multi-planet table once
+    (about 2,700 rows) and caches it; `--offline` uses a bundled snapshot of 22 well-known systems. A package on
+    PyPI is planned; until then, install from GitHub.
 
 === "Web app"
+
+    In the virtual environment from the [Quickstart](quickstart.md#install):
 
     ```bash
     pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.0.0"
     python -m exostab.web
     ```
 
-    Then open <http://localhost:8501>. Search a system, edit its parameters, try "what if" changes with
-    sliders, choose a time budget, and download the report or a shareable link to the run. The app runs on your
-    own computer; there is no hosted version yet. More in [Web app](web.md).
+    If Streamlit asks for an email address, press Enter. Then open <http://localhost:8501>. Search a system, edit
+    its parameters, try "what if" changes with sliders, choose a time budget, and download the report or a
+    shareable link to the run. There is no permanent hosted version: the app runs on your own computer, or for a
+    while on Binder or GitHub Codespaces, as the [Quickstart](quickstart.md#try-it-without-installing) describes.
+    More in [Web app](web.md).
 
 === "Your own parameters"
 
     ```bash
-    exostab check --from-file examples/two_planet.yaml
+    curl -fsSLO https://raw.githubusercontent.com/mimitoz62/exostab/v1.0.0/examples/two_planet.yaml
+    exostab check --from-file two_planet.yaml
     exostab sweep "HD 127195" --planet b --param e --range 0 0.6 --steps 25
     ```
 
     A YAML file describes a system the archive does not have, or a published solution you want to test; the
-    repository's `examples/` folder has two to start from. `sweep` varies one parameter of one planet and records
-    every indicator.
+    example above shows every key, and the repository's
+    [`examples/`](https://github.com/mimitoz62/exostab/tree/main/examples) folder has a second one. `sweep`
+    varies one parameter of one planet and records every indicator.
 
 [Quickstart](quickstart.md){ .md-button .md-button--primary }
 [CLI reference](cli.md){ .md-button }
@@ -294,8 +319,8 @@ large.
 
 </div>
 
-The Hill and AMD criteria are *sufficient* conditions: failing them means stability is not guaranteed, not that
-the system falls apart. With the published four-planet solution of Rivera et al. (2010), GJ 876 is unstable by
+The Hill and AMD criteria are *sufficient* conditions or heuristics: failing them means stability is not guaranteed,
+not that the system falls apart. With the published four-planet solution of Rivera et al. (2010), GJ 876 is unstable by
 Hill spacing and marginal by AMD, yet every N-body draw is regular, because its planets are locked in a resonance.
 
 ## Validated against physics and reference results
@@ -326,7 +351,7 @@ Regular draws for HD 127195 with the inputs of the Research Note (submitted, not
 
 </div>
 
-These numbers come from `python scripts/validation_summary.py` (13 October 2026, macOS). The suite runs nightly in
+These numbers come from `python scripts/validation_summary.py` (31 October 2026, macOS). The suite runs nightly in
 continuous integration.
 
 [:octicons-arrow-right-24: Full validation, with tolerances and versions](validation.md)

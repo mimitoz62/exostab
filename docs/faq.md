@@ -1,3 +1,9 @@
+---
+description: >-
+  Common questions about exostab: what marginal, unstable and inconclusive verdicts mean, system names, run times,
+  coplanar orbits, installing and citing.
+---
+
 # FAQ
 
 **exostab says "marginal". Is the system unstable?**
@@ -23,7 +29,18 @@ of the star, none of which exostab models, can decide what happens. No overall v
 
 **How long does a check take?**
 About 3–8 seconds for 2–7 planets with the defaults on a recent laptop with many cores, and about 7 s (3 planets)
-to 15 s (7 planets) on a single core. The analytic indicators take milliseconds.
+to 15 s (7 planets) on a single core. A smaller machine, such as a free cloud session, takes longer. The analytic
+indicators take milliseconds.
+
+**Why does exostab not find a system I know?**
+Names are the archive's, for example KOI-351 (Kepler-90), GJ 876 (Gliese 876), ups And (Upsilon Andromedae) and 55 Cnc
+(55 Cancri). `exostab list` shows them.
+
+**Why can the catalog, `exostab check` and the web app give different verdicts for one system?**
+They run different numbers of draws: 10 in the catalog, 20 by default in `exostab check`, and in the web app as
+many as fit the time budget. A stable verdict needs at least 95% of the draws to agree, so one draw can decide it.
+TOI-270, for example, is stable in the catalog of 26 October 2026 and marginal with the defaults. Add `--draws 10`
+to match the catalog's settings. On another platform, floating-point rounding can also change chaotic runs.
 
 **Why are the orbits flat (coplanar)?**
 The angles between orbital planes are almost never measured. Transit and radial-velocity inclinations are
@@ -41,3 +58,12 @@ Not yet: a release on PyPI is planned. Install from GitHub as shown in the [Quic
 Use the repository's `CITATION.cff` and cite the methods and the NASA Exoplanet Archive.
 [Citing exostab](citing.md) has a BibTeX entry and the references for each indicator. A Zenodo DOI will be added
 with the first archived release.
+
+**Was exostab written with AI?**
+Most of the code, tests and documentation were written with an AI coding assistant (Claude Code) under the author's
+direction, and the commits say so. The [validation](validation.md) results and the
+[decision log](https://github.com/mimitoz62/exostab/blob/main/DECISIONS.md) are there to be checked.
+
+**Is this the same as Exostab 2.0?**
+No. exostab is not to be confused with [Exostab 2.0](https://exostab2.readthedocs.io), an unrelated web service for the
+stability limits of circumbinary planets, which exostab does not model.
