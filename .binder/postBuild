@@ -1,0 +1,7 @@
+#!/bin/bash
+# Jupyter reads the copied file when the Binder session starts. Matplotlib builds its font cache now rather than on
+# the first page load.
+set -e
+mkdir -p "$HOME/.jupyter"
+cp .binder/jupyter_server_config.py "$HOME/.jupyter/jupyter_server_config.py"
+python -c "import matplotlib.font_manager"

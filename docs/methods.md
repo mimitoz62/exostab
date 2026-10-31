@@ -1,3 +1,9 @@
+---
+description: >-
+  How exostab estimates orbital stability: Hill spacing, the angular momentum deficit, N-body integration with MEGNO,
+  the propagation of uncertainties and the rules of the overall verdict.
+---
+
 # Methods
 
 This page explains, in plain language, what exostab computes and why. Every formula is written out in the
@@ -197,8 +203,12 @@ Running the script again rebuilds the environment.
 Some of these conditions need a word of explanation:
 
 - **Upper limits.** When the archive publishes only an upper limit for a mass or an eccentricity, the nominal run
-  uses the limit and the draws are uniform below it. That is the worst case for stability, so a stable result
-  still holds. An instability found this way only constrains the limited values. The archive's masses of the four
+  uses the limit and the draws are uniform below it. For Hill spacing and the integration, the limit is normally the
+  hardest case. For AMD a mass limit need not be: β_S = C / Λ₁ grows as the innermost planet gets lighter. A stable
+  result therefore describes the values that were run, not every value below a mass limit. exostab calls BD-06 1339
+  stable with the archive's limit of 1,523 Earth masses for planet b (β_S = 0.011). In a run with a YAML file, not a
+  catalog result, the planet's m sin i of 8.5 Earth masses gives β_S = 1.96, so AMD and the overall verdict are
+  marginal. An instability found with limits only constrains the limited values. The archive's masses of the four
   planets of HD 215152, for example, are upper limits of 469 to 975 Earth masses, for orbital periods of 6 to
   25 days. The overall verdict is then marginal, and the report names the limits.
 - **No draws.** With `--draws 0` the verdict is at most marginal, whichever way the nominal run points.

@@ -1,24 +1,41 @@
+---
+description: >-
+  The exostab web app runs the same stability analysis as the command line in a browser: search a system, edit its
+  parameters, try what-if changes, and download the report and figures.
+---
+
 # Web app
 
 The web app runs the same analysis as `exostab check` in a browser: search a system, edit its parameters, try
-"what if" changes, and download the report and figures. There is no hosted version yet; you run it on your own
-computer.
+"what if" changes, and download the report and figures. There is no permanent hosted version. You can run it on your
+own computer, or try it without installing it:
+
+- [Binder](https://mybinder.org/v2/gh/mimitoz62/exostab/main?urlpath=exostab/) needs no account. The first start can
+  take several minutes, and the session ends after 10 minutes without activity.
+- [GitHub Codespaces](https://codespaces.new/mimitoz62/exostab?quickstart=1) needs a GitHub account and uses your free
+  monthly hours.
+
+A shareable link made in either of them points at that session: it works only while the session runs, and other people
+may not be able to open it.
 
 ## Running it locally
+
+In the virtual environment from the [Quickstart](quickstart.md#install):
 
 ```bash
 pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.0.0"
 python -m exostab.web
 ```
 
-Then open http://localhost:8501. Options after the command go to `streamlit run` (for example
-`python -m exostab.web --server.port 8502`). In a clone of the repository, `streamlit run streamlit_app.py` does
-the same.
+If Streamlit asks for an email address, press Enter. Then open http://localhost:8501. Options after the command go to
+`streamlit run` (for example `python -m exostab.web --server.port 8502`). In a clone of the repository,
+`streamlit run streamlit_app.py` does the same.
 
 ## Using it
 
-1. **Pick a system** in the sidebar. The search box filters as you type. Data come from the NASA Exoplanet
-   Archive or from the offline snapshot of 22 systems. The archive table is downloaded on first use and then
+1. **Pick a system** in the sidebar. The search box filters as you type. Names are the archive's: Kepler-90, for
+   example, is listed as KOI-351. Data come from the NASA Exoplanet Archive or from the offline snapshot of 22
+   systems. The archive table is downloaded on first use and then
    reused from the same cache folder as the command line; the app does not download it again by itself. Running
    `exostab check --refresh` on the same computer updates the cache, and the app picks the new table up within a
    day or when it is restarted. If the archive cannot be reached and there is no cache, the app uses the snapshot
@@ -32,7 +49,8 @@ the same.
 4. **Choose a time budget** (5–120 s) and press **Run**. The app measures how fast this system integrates and
    picks the run length and number of draws that fit (see [`--budget`](cli.md)). It always integrates in a single
    process, also when run locally, so a given budget covers fewer orbits and draws than `exostab check --budget`
-   on a multi-core computer.
+   on a multi-core computer. A verdict here can therefore differ from `exostab check`, which uses 20 draws by
+   default, and from the [catalog](catalog.md), which uses 10.
 5. **Read the result.** It shows the overall verdict, the indicators with their explanations, the
    data-completion rules that were applied, and interactive figures (orbits, MEGNO over time, all draws).
 6. **Download** `report.json`, `orbits.png` and `megno.png`, or copy the **shareable link**.

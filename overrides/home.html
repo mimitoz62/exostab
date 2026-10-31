@@ -23,7 +23,7 @@
           <p class="exo-hero__eyebrow">Orbital stability for known exoplanet systems</p>
           <h1 class="exo-hero__title" id="exo-hero-title">Is this planetary system dynamically stable?</h1>
           <p class="exo-hero__lead">
-            exostab gives a quick, traceable first answer for any multi-planet system in the NASA Exoplanet Archive,
+            exostab gives a quick, traceable first answer for multi-planet systems in the NASA Exoplanet Archive,
             or for your own parameters: three stability indicators side by side, the published uncertainties
             propagated, and every assumption shown.
           </p>
@@ -33,7 +33,13 @@
             <a href="{{ config.repo_url }}" class="md-button">GitHub</a>
           </div>
           <p class="exo-hero__install"><code>pip install "exostab @ git+https://github.com/<wbr>mimitoz62/exostab<wbr>@v1.0.0"</code></p>
-          <p class="exo-hero__note">Version 1.0.0, for Python 3.10 or newer. A package on PyPI is planned.</p>
+          <p class="exo-hero__note">
+            Version 1.0.0, for Python 3.10 or newer, in a virtual environment. This line needs git; the
+            <a href="{{ 'quickstart/' | url }}#install">Quickstart</a> has the full steps and a form without it.
+            To try exostab first, <a href="{{ 'catalog/' | url }}">look up a system in the catalog</a>, which needs
+            nothing, or <a href="{{ 'quickstart/' | url }}#try-it-without-installing">run it in a browser</a>.
+            A package on PyPI is planned.
+          </p>
         </div>
         <figure class="exo-hero__demo">
           <div class="exo-terminal">

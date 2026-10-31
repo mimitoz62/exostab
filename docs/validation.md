@@ -1,3 +1,9 @@
+---
+description: >-
+  How exostab is tested against physics and published results: energy conservation, the Hill limit, TRAPPIST-1, GJ 876,
+  Kepler-11 and the HD 127195 Research Note, with tolerances and versions.
+---
+
 # Validation
 
 The validation suite is in `tests/validation/test_validation.py`. It is slow (about a minute on a 14-core laptop),
@@ -5,17 +11,18 @@ so it runs nightly in continuous integration and on demand:
 
 ```bash
 pytest -m slow
-python scripts/validation_summary.py   # prints the numbers below
-python scripts/validation_figures.py   # draws the figures below and prints the Hill-limit fractions
+python scripts/validation_summary.py
+python scripts/validation_figures.py
 ```
 
-(Run the two scripts from the repository root with `PYTHONPATH=.`.)
+The first script prints the numbers below. The second draws the figures below and prints the Hill-limit fractions. Run
+the two scripts from the repository root with `PYTHONPATH=.`.
 
-The numbers on this page were produced on 2026-10-13 by these two scripts with exostab 1.0.0.dev0, REBOUND 5.2.0,
-NumPy 2.5.3 and Python 3.12.11 on macOS (Apple M4 Pro). They use the bundled archive snapshot of 2026-09-28 and
-default settings unless stated. `validation_summary.py` prints sections 1, 3 and 4; `validation_figures.py`
-prints the fractions of section 2. The robustness measurements quoted in section 2 come from a separate study of
-the Hill-limit test (2026-10-04) and are not reproduced by the scripts.
+The numbers on this page were produced on 2026-10-31 by these two scripts from the tag v1.0.0, with exostab 1.0.0,
+REBOUND 5.2.2, NumPy 2.5.4 and Python 3.14.7 on macOS (Apple M4 Pro). They use the bundled archive snapshot of
+2026-09-28 and default settings unless stated. `validation_summary.py` prints sections 1, 3 and 4;
+`validation_figures.py` prints the fractions of section 2. The robustness measurements quoted in section 2 come from
+a separate study of the Hill-limit test (2026-10-04) and are not reproduced by the scripts.
 
 Chaotic integrations are sensitive to floating-point rounding. Counts of chaotic draws can differ by one or two on
 other machines, and so can which runs of a chaotic pair meet within a finite horizon. The tests assert only what
@@ -91,8 +98,8 @@ No draw of these four runs is inconclusive. What the tests require (from the pro
 - **GJ 876**, in a Laplace resonance: expected stable. The archive does not provide usable orbital phases for
   GJ 876, and with random phases the resonance is destroyed (12 of 20 draws have close encounters). The test
   therefore uses the published four-planet solution of Rivera et al. (2010, Table 3), with its mean anomalies,
-  and requires the **N-body** verdict to be stable ✔. The Hill and AMD criteria are only sufficient conditions,
-  and they fail for this resonance-protected system. By design, the conservative overall verdict is therefore
+  and requires the **N-body** verdict to be stable ✔. The Hill and AMD criteria are only sufficient conditions
+  or heuristics, and they fail for this resonance-protected system. By design, the conservative overall verdict is therefore
   marginal, not stable.
 - **Kepler-11**, a compact six-planet system: expected stable over the test horizon. The test requires that the
   nominal configuration (archive values, phases from the transit times) completes 10,000 orbits of Kepler-11 b
@@ -152,7 +159,10 @@ draws, and its verdict is *marginal*.
 
 ## 5. Reproducibility
 
-The same seed gives identical runs (tested). Each `report.json` stores the seed, the versions of exostab, REBOUND,
-NumPy, astropy and Python, the integrator and time step, the run length and the archive download date. Each
+On the same platform and software versions, the same seed gives identical runs (tested). On another platform,
+floating-point rounding can change chaotic runs and with them a verdict;
+[What the catalog shows](findings.md#how-firm-these-numbers-are) gives the numbers for the catalog. Each `report.json`
+stores the seed, the versions of exostab, REBOUND, NumPy, astropy and Python, the integrator and time step, the run
+length and the archive download date. Each
 `sweep.json` stores the seed, the run length, the range and number of steps, the integrator and time step, the
 command and the creation time.

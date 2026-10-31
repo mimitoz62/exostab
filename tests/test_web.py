@@ -228,7 +228,10 @@ def test_app_runs_headless() -> None:
     at2 = AppTest.from_file(APP, default_timeout=60)
     at2.query_params.update({"system": "Nonexistent-99", "source": "snapshot"})
     at2.run()
-    assert not at2.exception and at2.error and "No multi-planet system" in at2.error[0].value
+    assert not at2.exception and at2.error
+    # the command line's pointer to `exostab list` means nothing in a browser
+    assert "No multi-planet system" in at2.error[0].value and "search box" in at2.error[0].value
+    assert "exostab list" not in at2.error[0].value
 
 
 def test_app_says_when_only_the_snapshot_was_searched(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -366,7 +369,7 @@ def test_packaged_launcher(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Captu
     monkeypatch.setattr(sys, "argv", ["python -m exostab.web"])
     monkeypatch.setattr(stcli, "main", lambda: calls.append(list(sys.argv)))
     assert launcher.main(["--server.port", "8502"]) == 0
-    assert calls == [["streamlit", "run", str(launcher.SCRIPT), "--server.port", "8502"]]
+    assert calls == [["streamlit", "run", str(launcher.SCRIPT), *launcher.SETTINGS, "--server.port", "8502"]]
     assert launcher.SCRIPT.parent == Path(launcher.__file__).parent
     at = AppTest.from_file(str(launcher.SCRIPT), default_timeout=60)
     at.query_params.update({"system": "Kepler-36", "source": "snapshot"})
@@ -380,6 +383,33 @@ def test_packaged_launcher(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Captu
     err = capsys.readouterr().err
     assert "[web] extra" in err and "https://mimitoz62.github.io/exostab/quickstart/" in err
     assert 'pip install "exostab[web]"' not in err
+
+
+def test_launcher_settings_and_overriding_them(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The wheel has no .streamlit/config.toml. Without --server.headless the first run stops at Streamlit's
+    # email prompt, without --browser.gatherUsageStats false it sends usage statistics, and without
+    # --client.toolbarMode viewer the toolbar has a Deploy button.
+    import streamlit.web.cli as stcli
+
+    import exostab.web.__main__ as launcher
+
+    calls: list[list[str]] = []
+    monkeypatch.setattr(stcli, "main", lambda: calls.append(list(sys.argv)))
+    monkeypatch.setattr(sys, "argv", ["python -m exostab.web"])
+    assert launcher.main() == 0
+    monkeypatch.setattr(sys, "argv", ["python -m exostab.web", "--server.headless", "false"])
+    assert launcher.main() == 0
+
+    def parsed(argv: list[str]) -> dict[str, object]:
+        assert argv[:3] == ["streamlit", "run", str(launcher.SCRIPT)]
+        return stcli.main_run.make_context("run", argv[2:]).params  # Streamlit's own parser
+
+    params = parsed(calls[0])
+    assert params["server_headless"] is True and params["browser_gatherUsageStats"] is False
+    assert params["client_toolbarMode"] == "viewer"
+    # the user's arguments come later, and the last value of an option wins
+    params = parsed(calls[1])
+    assert params["server_headless"] is False and params["browser_gatherUsageStats"] is False
 
 
 def test_app_reports_a_broken_spock_environment(monkeypatch: pytest.MonkeyPatch) -> None:

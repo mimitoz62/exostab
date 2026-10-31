@@ -1,0 +1,70 @@
+name: Browser paths
+
+# What a visitor gets from the Colab and Codespaces links. Not jobs of nightly.yml: the notebook needs the live archive,
+# and the README's validation badge shows the status of that workflow, which should not fail when the archive is down.
+on:
+  schedule:
+    - cron: "47 3 * * *"
+  pull_request:
+    paths:
+      - ".devcontainer/**"
+      - "examples/exostab_quickstart.ipynb"
+      - ".github/workflows/browser-paths.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notebook:
+    # Python 3.13 on Linux, the release the notebook installs and the live archive, as on Colab. nbconvert exits with 0
+    # after a failed `!` command or a missing image, so the step reads the executed notebook. A failed check leaves an
+    # error there: the next cell reads the files it should write.
+    name: quickstart notebook
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install nbconvert ipykernel
+      - name: Run the notebook and read what its cells show
+        working-directory: examples
+        run: |
+          jupyter nbconvert --to notebook --execute --allow-errors \
+            exostab_quickstart.ipynb --output executed.ipynb
+          # "systems (data:" is the title of the `exostab list` table, whose output no cell reads.
+          if grep -q '"output_type": "error"' executed.ipynb || ! grep -q "systems (data:" executed.ipynb; then
+            echo "::error::a cell of the notebook failed: see the artifact executed-notebook"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: executed-notebook
+          path: examples/executed.ipynb
+
+  codespace-setup:
+    # The image and commands of .devcontainer/devcontainer.json, without the editor around them. The commands are read
+    # from that file, so this job follows it.
+    name: codespace setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container: mcr.microsoft.com/devcontainers/python:3-3.12
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run the commands of devcontainer.json and ask the app for its health
+        shell: bash
+        run: |
+          read_config() { python -c "import json; c = json.load(open('.devcontainer/devcontainer.json')); print($1)"; }
+          eval "$(read_config "c['updateContentCommand']")"
+          eval "$(read_config "c['postAttachCommand']['web app']")" > app.log 2>&1 &
+          for _ in $(seq 1 60); do
+            if [ "$(curl -fsS http://localhost:8501/_stcore/health)" = "ok" ]; then exit 0; fi
+            sleep 1
+          done
+          echo "::error::the web app did not answer on port 8501"
+          cat app.log
+          exit 1

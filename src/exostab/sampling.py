@@ -13,8 +13,9 @@ Sampling rules (also listed in ``docs/data-assumptions.md``):
   are capped at ``E_MAX``, and a nominal eccentricity above it is refused (the loaders reject such
   systems). Masses, periods and the stellar mass are redrawn until positive.
 * Upper limits, allowed only on planet masses and eccentricities: the nominal run uses the limit itself
-  (the worst case for stability); draws are uniform between zero and the limit. An upper limit on any
-  other value (stellar mass, period, angle, reference time) is refused.
+  (normally the hardest case; a mass limit need not be for AMD, see ``docs/methods.md``); draws are uniform
+  between zero and the limit. An upper limit on any other value (stellar mass, period, angle, reference time)
+  is refused.
 * Orbital phases are propagated from the published reference time to the common epoch ``t0`` with the
   drawn period, so period and timing uncertainties both enter the draws.
 * ``inclination_prior="isotropic"`` draws one inclination per run for the whole (coplanar) system with

@@ -1,0 +1,23 @@
+{
+  "name": "exostab web app",
+  "image": "mcr.microsoft.com/devcontainers/python:3-3.12",
+  "updateContentCommand": "pip install -e \".[web]\"",
+  "postAttachCommand": {
+    "web app": "python -m exostab.web --server.enableCORS false --server.enableXsrfProtection false"
+  },
+  "forwardPorts": [8501],
+  "portsAttributes": {
+    "8501": {
+      "label": "exostab web app",
+      "onAutoForward": "openPreview"
+    }
+  },
+  "customizations": {
+    "codespaces": {
+      "openFiles": ["README.md"]
+    },
+    "vscode": {
+      "extensions": ["ms-python.python"]
+    }
+  }
+}

@@ -5,6 +5,9 @@
 #catalog-table th[aria-sort="ascending"]::after { content: " ▲"; }
 #catalog-table th[aria-sort="descending"]::after { content: " ▼"; }
 #catalog-table td { white-space: nowrap; }
+/* A link to a row (catalog/#trappist-1): below the fixed header, and marked. */
+#catalog-table tr { scroll-margin-top: 4rem; }
+#catalog-table tr:target td { background: var(--md-accent-fg-color--transparent); }
 #catalog-filter { margin: 0.5rem 0; padding: 0.3rem 0.5rem; width: 16rem; max-width: 100%;
   border: 1px solid var(--md-default-fg-color--lighter); border-radius: 4px;
   background: var(--md-default-bg-color); color: var(--md-default-fg-color); }

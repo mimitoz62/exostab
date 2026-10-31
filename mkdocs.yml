@@ -111,7 +111,10 @@ nav:
       - Methods: methods.md
       - Data and assumptions: data-assumptions.md
       - Validation: validation.md
-  - Catalog: catalog.md
+  # catalog.md hides the sidebar, so the table page reaches findings.md through a sentence near its top.
+  - Catalog:
+      - Stability catalog: catalog.md
+      - What the catalog shows: findings.md
   - About:
       - FAQ: faq.md
       - Citing exostab: citing.md

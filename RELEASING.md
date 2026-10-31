@@ -62,6 +62,28 @@ Do not publish GitHub pre-releases for testing: Zenodo would archive them as ver
    `.streamlit/config.toml`. The app redeploys on every push to `main`.
 4. Add the app's URL to `README.md` and `docs/web.md`.
 
+## Trying exostab in a browser (Colab, Codespaces, Binder)
+
+No account or setting is needed on the maintainer's side: each service reads its files from the repository
+(`examples/exostab_quickstart.ipynb`, `.devcontainer/devcontainer.json` and `.binder/`). The notebook and Binder
+install the release they name, and a codespace installs the checkout. Visitors use their own accounts and quotas: a
+Google account for Colab, a GitHub account for Codespaces, none for Binder. The workflow `Browser paths` runs the
+notebook every night on Python 3.13 on Linux, and the image and commands of `.devcontainer/devcontainer.json` without
+the editor around them. It is not part of the nightly validation, because the notebook needs the live archive and the
+validation badge should not fail when the archive is down. Nothing runs the Binder files automatically, and the
+workflow does not open a real codespace, so the steps below are their only test.
+
+After merging to `main`:
+
+1. Open https://mybinder.org/v2/gh/mimitoz62/exostab/main?urlpath=exostab/ once and wait until the web app appears.
+   Binder builds an image for every new commit of `main`. Without this step, the next visitor waits for the build.
+2. If `.binder/` changed, press Run in that app and look at the verdict and the figures.
+3. If the notebook changed, open
+   https://colab.research.google.com/github/mimitoz62/exostab/blob/main/examples/exostab_quickstart.ipynb and use
+   Runtime → Run all.
+4. If `.devcontainer/` changed, open https://codespaces.new/mimitoz62/exostab?quickstart=1 and press Run in the app
+   that opens in the preview. Then delete the codespace at https://github.com/codespaces: it uses your free hours.
+
 ## Social preview image
 
 GitHub shows a link-preview image when the repository is shared: Settings → General → Social preview → Edit →
@@ -100,17 +122,26 @@ workflow so the catalog page is updated. The full log is in the run's `catalog` 
 
 1. Check that CI and the nightly validation suite pass on `main` (Actions tab). The release workflow runs both
    suites again and stops before publishing if either fails.
-2. Choose the version `X.Y.Z` ([semantic versioning](https://semver.org/)) and set it in three places:
+2. Choose the version `X.Y.Z` ([semantic versioning](https://semver.org/)) and set it in four places:
    - `src/exostab/__init__.py`: `__version__ = "X.Y.Z"`;
    - `CITATION.cff`: `version: "X.Y.Z"` and `date-released: "YYYY-MM-DD"` (the release date);
+   - `codemeta.json`: `version` and `datePublished`, the same values;
    - `CHANGELOG.md`: move the entries under "Unreleased" to a new section `## [X.Y.Z] - YYYY-MM-DD`, and copy
-     the file to `docs/changelog.md`. For 1.0.0 the section `## [1.0.0] - unreleased` already exists, below an
-     empty `## [Unreleased]` heading that `tests/test_packaging.py` requires while the version is a development
-     version: replace "unreleased" with the release date, then copy the file.
+     the file to `docs/changelog.md`, below that page's front matter. For 1.0.0 the section
+     `## [1.0.0] - unreleased` already exists, below an empty `## [Unreleased]` heading that
+     `tests/test_packaging.py` requires while the version is a development version: replace "unreleased" with the
+     release date, then copy the file.
 
-   For a version after 1.0.0, also change `@v1.0.0` to `@vX.Y.Z` in the install lines of `README.md`,
-   `overrides/home.html`, `docs/index.md`, `docs/quickstart.md` and `docs/web.md`, and in the SPOCK script URL in
-   `README.md`.
+   For a version after 1.0.0, also change the version in these places:
+   - `@v1.0.0` in the install lines of `README.md`, `overrides/home.html`, `docs/index.md`, `docs/quickstart.md` and
+     `docs/web.md`, and in the first code cell and the last text cell of `examples/exostab_quickstart.ipynb`;
+   - `v1.0.0` and `1.0.0` in the wheel URLs of `README.md`, `docs/quickstart.md` and `.binder/requirements.txt`;
+   - `v1.0.0` in the `raw.githubusercontent.com` URLs: the example file in `README.md`, `docs/index.md` and
+     `docs/quickstart.md`, and the SPOCK script in `README.md`;
+   - "release 1.0.0" in the text of `README.md` and `docs/quickstart.md`, and "Version 1.0.0" in `overrides/home.html`.
+
+   Re-read the notebook's text: it quotes results and the snapshot date of the release it installs.
+   `tests/test_packaging.py` fails until all of these name the version of the newest dated section of `CHANGELOG.md`.
 3. If the report card has changed, regenerate `docs/assets/demo.gif` with `python scripts/make_demo_gif.py` (it
    runs the real command, so do it after setting the version) and look at it. Then commit, push to `main` and
    wait for CI to pass.
@@ -133,5 +164,11 @@ workflow so the catalog page is updated. The full log is in the run's `catalog` 
    (`git push --delete origin vX.Y.Z` and `git tag -d vX.Y.Z`) and tag again. Once a version is on PyPI its
    number cannot be used again: release `X.Y.Z+1` instead.
 7. Announce the release only after the tag is pushed and the GitHub release exists. The `pip` and `uvx` lines in
-   the README and on the documentation's landing page, the SPOCK setup script's URL and the release badge all
-   point to the tag, and fail or read "no releases" until then.
+   the README and on the documentation's landing page, the SPOCK setup script's URL, the install cell of the notebook
+   and the release badge all point to the tag, and fail or read "no releases" until then. Binder cannot build until
+   the wheel is on the GitHub release.
+8. Once the GitHub release exists, do the steps after merging in "Trying exostab in a browser" above: the release
+   commit changed the pins of the notebook and of Binder.
+9. Set `__version__` in `src/exostab/__init__.py` to the next development version, for example `X.Y.(Z+1).dev0`, and
+   commit it. Otherwise the code on `main`, which a codespace, the weekly catalog and `pip install git+...` use, gives
+   the version of the release in its reports although it differs from the tag. `CITATION.cff` keeps citing the release.
