@@ -11,11 +11,11 @@ GitHub is complete.
   to `main` and after every weekly catalog.
 - **Private vulnerability reporting**, which `SECURITY.md` and the issue template point to.
 
-## PyPI (optional)
+## PyPI
 
-`.github/workflows/release.yml` uploads to PyPI with trusted publishing (no API token is stored), but only when
-the repository variable `PUBLISH_PYPI` is `true`. Set it up before the tag whose version should be the first on
-PyPI; a version already released on GitHub is not uploaded afterwards.
+Set up on 2026-10-31; the steps stay here in case they are needed again. `.github/workflows/release.yml` uploads to
+PyPI with trusted publishing (no API token is stored), but only when the repository variable `PUBLISH_PYPI` is `true`.
+A version already released on GitHub is not uploaded afterwards.
 
 1. Create an account at https://pypi.org/account/register/ and turn on two-factor authentication (PyPI
    requires it for uploads).
@@ -37,7 +37,7 @@ To pause PyPI uploads, delete the variable or set it to anything other than `tru
 
 ## Zenodo (software DOI)
 
-Not set up yet. Once its GitHub integration is switched on, Zenodo archives every published GitHub release,
+Set up on 2026-10-31. With its GitHub integration switched on, Zenodo archives every published GitHub release,
 pre-releases included, and gives it a DOI. Its metadata (title, authors with ORCID, license, keywords) come from
 `CITATION.cff`.
 
@@ -132,13 +132,13 @@ workflow so the catalog page is updated. The full log is in the run's `catalog` 
      `tests/test_packaging.py` requires while the version is a development version: replace "unreleased" with the
      release date, then copy the file.
 
-   For a version after 1.0.0, also change the version in these places:
-   - `@v1.0.0` in the install lines of `README.md`, `overrides/home.html`, `docs/index.md`, `docs/quickstart.md` and
-     `docs/web.md`, and in the first code cell and the last text cell of `examples/exostab_quickstart.ipynb`;
-   - `v1.0.0` and `1.0.0` in the wheel URLs of `README.md`, `docs/quickstart.md` and `.binder/requirements.txt`;
-   - `v1.0.0` in the `raw.githubusercontent.com` URLs: the example file in `README.md`, `docs/index.md` and
+   Also change the version in these places:
+   - `@v1.0.1` in the first code cell and the last text cell of `examples/exostab_quickstart.ipynb`;
+   - `v1.0.1` and `1.0.1` in the wheel URL of `.binder/requirements.txt`;
+   - `v1.0.1` in the `raw.githubusercontent.com` URLs: the example file in `README.md`, `docs/index.md` and
      `docs/quickstart.md`, and the SPOCK script in `README.md`;
-   - "release 1.0.0" in the text of `README.md` and `docs/quickstart.md`, and "Version 1.0.0" in `overrides/home.html`.
+   - "release 1.0.1" in `docs/quickstart.md`, "Version 1.0.1" in `overrides/home.html`, and the `version` of the BibTeX
+     entries in `README.md` and `docs/citing.md`.
 
    Re-read the notebook's text: it quotes results and the snapshot date of the release it installs.
    `tests/test_packaging.py` fails until all of these name the version of the newest dated section of `CHANGELOG.md`.
@@ -164,8 +164,8 @@ workflow so the catalog page is updated. The full log is in the run's `catalog` 
    (`git push --delete origin vX.Y.Z` and `git tag -d vX.Y.Z`) and tag again. Once a version is on PyPI its
    number cannot be used again: release `X.Y.Z+1` instead.
 7. Announce the release only after the tag is pushed and the GitHub release exists. The `pip` and `uvx` lines in
-   the README and on the documentation's landing page, the SPOCK setup script's URL, the install cell of the notebook
-   and the release badge all point to the tag, and fail or read "no releases" until then. Binder cannot build until
+   the README and on the documentation's landing page work once the version is on PyPI, and the SPOCK setup script's URL
+   and the install cell of the notebook once the tag exists. Binder cannot build until
    the wheel is on the GitHub release.
 8. Once the GitHub release exists, do the steps after merging in "Trying exostab in a browser" above: the release
    commit changed the pins of the notebook and of Binder.

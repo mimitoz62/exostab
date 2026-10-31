@@ -11,8 +11,8 @@ authors:
     given-names: "Mehmet"
     orcid: "https://orcid.org/0009-0007-1005-7640"
     email: "mehmet@mehmet-oz.com"
-version: "1.0.0"
-date-released: "2026-10-16"
+version: "1.0.1"
+date-released: "2026-10-31"
 license: MIT
 repository-code: "https://github.com/mimitoz62/exostab"
 url: "https://github.com/mimitoz62/exostab"

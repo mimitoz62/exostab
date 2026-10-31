@@ -1,6 +1,6 @@
 # The web app of the release in the URL, and the proxy that serves it at <session URL>/exostab/
 # (jupyter_server_config.py). Streamlit and the proxy stay at the versions tested together: Binder builds a new
 # image for every new commit, and a newer version could otherwise reach the first visitor untested.
-exostab[web] @ https://github.com/mimitoz62/exostab/releases/download/v1.0.0/exostab-1.0.0-py3-none-any.whl
+exostab[web] @ https://github.com/mimitoz62/exostab/releases/download/v1.0.1/exostab-1.0.1-py3-none-any.whl
 streamlit==1.66.1
 jupyter-server-proxy==4.6.0

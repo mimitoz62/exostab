@@ -17,7 +17,7 @@ citation metadata; GitHub's **Cite this repository** button turns it into APA or
   author  = {{\"O}z, Mehmet},
   title   = {exostab: honest, traceable orbital-stability indicators for known exoplanet systems},
   year    = {2026},
-  version = {1.0.0},
+  version = {1.0.1},
   url     = {https://github.com/mimitoz62/exostab}
 }
 ```
