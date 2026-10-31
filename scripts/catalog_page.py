@@ -19,6 +19,8 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+from exostab.data.names import other_names
+
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "catalog.md"
 SYSTEMS = ROOT / "docs" / "systems"  # one page per system, written by scripts/system_pages.py
@@ -70,8 +72,8 @@ the [published page]({page}) from the newest catalog on the branch [`catalog-dat
 
 # Next to the filter: a common name such as Gliese 876 finds nothing, and Kepler-90 finds another system.
 FILTER = """Names are the archive's, for example KOI-351 (Kepler-90), GJ 876 (Gliese 876), ups And (Upsilon Andromedae)
-and 55 Cnc (55 Cancri). The filter looks for part of a name and ignores case, spaces and punctuation, so `Kepler-90`
-finds Kepler-903 but not KOI-351. Each row has its own link, for example [TRAPPIST-1](#trappist-1).
+and 55 Cnc (55 Cancri). The filter looks for part of a name, also of these other names, and ignores case, spaces and
+punctuation, so `Kepler-90` finds KOI-351 and Kepler-903, and `gliese 876` finds GJ 876. Each row has its own link, for example [TRAPPIST-1](#trappist-1).
 
 <input id="catalog-filter" type="search" placeholder="Filter systems…" aria-label="Filter systems">
 
@@ -330,6 +332,7 @@ def render(folder: Path | None) -> str:
     head = "".join(
         f'<th scope="col" data-col="{i}">{html.escape(t)}</th>' for i, (_, t) in enumerate(COLUMNS)
     )
+    systems = {r["system"] for r in rows}
     body = []
     for r in rows:
         row_id = _row_id(r["system"])
@@ -347,7 +350,9 @@ def render(folder: Path | None) -> str:
             if key == "system" and (SYSTEMS / f"{row_id}.md").exists():
                 shown = f'<a href="../systems/{row_id}/">{shown}</a>'
             cells.append(f'<td data-sort="{html.escape(sort)}"{cls}{title}>{shown}</td>')
-        body.append(f'<tr id="{html.escape(row_id)}">' + "".join(cells) + "</tr>")
+        names = other_names(r["system"], filter(None, r["archive_rows"].split(";")), systems)
+        also = f' data-names="{html.escape("; ".join(names))}"' if names else ""
+        body.append(f'<tr id="{html.escape(row_id)}"{also}>' + "".join(cells) + "</tr>")
     parts.append(
         '<div class="catalog-wrap"><table id="catalog-table">\n<thead><tr>'
         + head

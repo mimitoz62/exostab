@@ -35,7 +35,9 @@
       filter.addEventListener("input", function () {
         var q = key(filter.value), shown = 0;
         Array.prototype.forEach.call(tbody.rows, function (r) {
-          var match = key(r.cells[0].textContent).indexOf(q) !== -1;
+          var match = (r.cells[0].textContent + ";" + (r.dataset.names || "")).split(";").some(function (name) {
+            return key(name).indexOf(q) !== -1;
+          });
           r.style.display = match ? "" : "none";
           if (match) shown += 1;
         });

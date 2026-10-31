@@ -234,6 +234,15 @@ def test_app_runs_headless() -> None:
     assert "exostab list" not in at2.error[0].value
 
 
+def test_search_box_shows_other_names() -> None:
+    at = AppTest.from_file(APP, default_timeout=60)
+    at.query_params.update({"source": "snapshot"})
+    at.run()
+    assert not at.exception, at.exception
+    options = at.sidebar.selectbox[0].options
+    assert "GJ 876 (Gliese 876)" in options and "TRAPPIST-1" in options
+
+
 def test_app_says_when_only_the_snapshot_was_searched(monkeypatch: pytest.MonkeyPatch) -> None:
     # The web app called resolve_host directly: with the snapshot chosen, or during an archive outage without
     # a cache, a real archive system was reported as missing from "the archive table" (F009).

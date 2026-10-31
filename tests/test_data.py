@@ -22,6 +22,7 @@ from exostab.data import (
     store,
     system_from_rows,
 )
+from exostab.data.names import other_names
 from exostab.data.store import TableInfo
 from exostab.models import MassKind, PhaseKind, Provenance
 
@@ -824,3 +825,24 @@ def test_list_systems_filters() -> None:
     assert "HD 127195" not in {s.host for s in four}
     hd = next(s for s in all_ if s.host == "HD 127195")
     assert hd.minimum_masses == 2
+
+
+def test_other_names() -> None:
+    def names(host: str, planets: str, hosts: set[str]) -> list[str]:
+        return other_names(host, planets.split(";"), hosts)
+
+    assert names("KOI-351", "KOI-351 b;Kepler-90 i", set()) == ["Kepler-90"]
+    assert names("GJ 876", "GJ 876 b", set()) == ["Gliese 876"]
+    assert names("GJ 15 A", "GJ 15 A b", set()) == ["Gliese 15 A"]
+    assert names("GJ 1132", "GJ 1132 b", set()) == []  # not one of Gliese's own numbers
+    assert names("ups And", "ups And b", set()) == ["Upsilon Andromedae"]
+    assert names("55 Cnc", "55 Cnc e", set()) == ["55 Cancri"]
+    assert names("HD 39091", "pi Men c;HD 39091 b", set()) == ["pi Men", "Pi Mensae"]
+    assert names("AU Mic", "AU Mic b", set()) == ["AU Microscopii"]
+    # candidates, parts of the host's name, other hosts and unknown abbreviations give no name
+    assert names("TOI-216", "TOI-216.01;TOI-216.02", set()) == []
+    assert names("Barnard's star", "Barnard b", set()) == []
+    assert names("HD 142", "HD 142 A b", set()) == []
+    assert names("55 Cnc B", "55 Cnc B b", {"55 Cnc"}) == ["55 Cancri B"]
+    assert names("HD 1", "HD 2 b", {"HD 1", "HD 2"}) == []
+    assert names("XX Foo", "XX Foo b", set()) == []

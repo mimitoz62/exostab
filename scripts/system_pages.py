@@ -16,6 +16,8 @@ import sys
 from pathlib import Path
 from urllib.parse import quote
 
+from exostab.data.names import other_names
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from catalog_page import CSV_COLUMNS, RULES_VERSION, _num, _release, _row_id
 
@@ -23,38 +25,6 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "systems"
 OVERVIEW = "https://exoplanetarchive.ipac.caltech.edu/overview/"
 BINDER = "https://mybinder.org/v2/gh/mimitoz62/exostab/main?urlpath="
-
-# Abbreviations used in the archive's host names. A name with an abbreviation that is not listed gets no expansion.
-GREEK = {
-    "bet": "Beta",
-    "gam": "Gamma",
-    "iot": "Iota",
-    "nu": "Nu",
-    "pi": "Pi",
-    "rho": "Rho",
-    "tau": "Tau",
-    "ups": "Upsilon",
-}
-CONSTELLATIONS = {
-    "And": "Andromedae",
-    "Aqr": "Aquarii",
-    "CMa": "Canis Majoris",
-    "Cet": "Ceti",
-    "Cnc": "Cancri",
-    "CrB": "Coronae Borealis",
-    "Dra": "Draconis",
-    "For": "Fornacis",
-    "Her": "Herculis",
-    "Lib": "Librae",
-    "Men": "Mensae",
-    "Mic": "Microscopii",
-    "Oph": "Ophiuchi",
-    "Pic": "Pictoris",
-    "Ser": "Serpentis",
-    "Sex": "Sextantis",
-    "UMa": "Ursae Majoris",
-    "Vir": "Virginis",
-}
 
 # The completion rules in plain language; data-assumptions.md has the full table.
 RULES = {
@@ -119,44 +89,6 @@ unstable here although the full solution of one paper shows it is stable. The ve
 composite table, which can combine several publications ([Data and assumptions](../data-assumptions.md))."""
 
 
-def other_names(system: str, archive_rows: str, systems: set[str]) -> list[str]:
-    """Other names of a host: those its planet rows use, and spelled-out catalogue and constellation names.
-
-    A row name counts only as a planet letter after a stem. A candidate such as TOI-1233.01, a name that is the host's
-    with or without a star's letter (GJ 15 for GJ 15 A, which may be the whole binary) and a host elsewhere in the
-    catalog are left out.
-    """
-    stems = []
-    for name in filter(None, archive_rows.split(";")):
-        m = re.fullmatch(r"(.+?) [a-z]", name)
-        if (
-            m
-            and not system.startswith(m[1])
-            and not m[1].startswith(system)
-            and m[1] not in systems
-            and m[1] not in stems
-        ):
-            stems.append(m[1])
-    names = [*stems]
-    for name in [system, *stems]:
-        expanded = _expanded(name)
-        if expanded and expanded not in names:
-            names.append(expanded)
-    return names
-
-
-def _expanded(name: str) -> str | None:
-    """Gliese 876 for GJ 876 (Gliese's own numbers, below 1000), GJ 725 A for Gl 725 A, 55 Cancri for 55 Cnc."""
-    m = re.fullmatch(r"(GJ|Gl) (\d{1,3})( [A-Z])?", name)
-    if m:
-        return f"Gliese {m[2]}{m[3] or ''}"
-    m = re.fullmatch(r"(\w+) ([A-Za-z]{3})( [A-Z])?", name)
-    if not m or m[2] not in CONSTELLATIONS:
-        return None
-    first = GREEK.get(m[1], m[1]) if not m[1].islower() or m[1] in GREEK else None
-    return f"{first} {CONSTELLATIONS[m[2]]}{m[3] or ''}" if first else None
-
-
 def binder_url(system: str) -> str:
     """The web app on Binder with this system selected (the app's query parameter `system`, encoded for urlpath)."""
     return BINDER + quote(f"exostab/?system={quote(system, safe='')}", safe="")
@@ -188,7 +120,7 @@ def _front(system: str, names: list[str], title: str, summary: str) -> str:
 def page(row: dict[str, str], meta: dict[str, object], systems: set[str]) -> str:
     """The Markdown of one system's page."""
     system = row["system"]
-    names = other_names(system, row["archive_rows"], systems)
+    names = other_names(system, filter(None, row["archive_rows"].split(";")), systems)
     date = str(meta["created_utc"])[:10]
     ok = row["status"] == "ok"
     if ok:
