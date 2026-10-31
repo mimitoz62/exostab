@@ -119,6 +119,7 @@ nav:
   - Catalog:
       - Stability catalog: catalog.md
       - What the catalog shows: findings.md
+      - Changes between catalogs: catalog-changes.md
   - About:
       - FAQ: faq.md
       - Citing exostab: citing.md

@@ -18,16 +18,20 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: python -m pip install -e ".[dev]"
-      - name: Catalog page, system pages and downloads from the branch catalog-data (placeholder if it does not exist yet)
+      - name: Catalog page, system pages, changes and downloads from the branch catalog-data (placeholders if it does not exist yet)
         run: |
           if git fetch --depth 1 origin catalog-data; then
-            mkdir -p catalog-latest docs/data
+            mkdir -p catalog-latest docs/data archive
             for f in catalog.csv catalog.parquet catalog_meta.json; do git show "FETCH_HEAD:$f" > "catalog-latest/$f"; done
             cp catalog-latest/* docs/data/
+            # The newest commit holds every weekly file in archive/, so --depth 1 is enough for these too.
+            for f in $(git ls-tree --name-only FETCH_HEAD archive/); do git show "FETCH_HEAD:$f" > "$f"; done
             python scripts/system_pages.py catalog-latest
             python scripts/catalog_page.py catalog-latest
+            python scripts/catalog_changes.py archive
           else
             python scripts/catalog_page.py
+            python scripts/catalog_changes.py
           fi
       - name: Publish the report JSON Schema at the URL of its $id (DECISIONS.md, D33)
         run: |

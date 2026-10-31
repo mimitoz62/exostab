@@ -13,6 +13,11 @@ All notable changes to this project are documented here. The format follows
 - After each weekly catalog, the documentation workflow sends the site's URLs to IndexNow (`scripts/indexnow.py`), so
   that Bing and other search engines that take part can learn of new pages with no account. Success confirms receipt,
   not indexing.
+- A documentation page, Changes between catalogs (`catalog-changes/`), and an Atom feed (`catalog-changes.xml`),
+  generated at build time by `scripts/catalog_changes.py` from `archive/` on the branch `catalog-data`. For consecutive
+  catalogs under the current verdict rules, the page lists the systems added and removed and the rows whose overall
+  verdict changed, and the feed gives the counts. The page says why a verdict can change between catalogs, and that a
+  change is not a discovery.
 
 ## [1.0.1] - 2026-10-31
 

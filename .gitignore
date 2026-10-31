@@ -45,3 +45,5 @@ docs/data/
 docs/schemas/
 # written by scripts/system_pages.py
 docs/systems/
+# written by scripts/catalog_changes.py
+docs/catalog-changes.xml

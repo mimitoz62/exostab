@@ -11,6 +11,8 @@
   {{ super() }}
   <link rel="icon" type="image/png" sizes="32x32" href="{{ 'assets/logo/favicon-32.png' | url }}">
   <link rel="apple-touch-icon" href="{{ 'assets/logo/apple-touch-icon.png' | url }}">
+  {#- For browsers and feed readers: the feed of scripts/catalog_changes.py, by its full URL as local builds lack the file. #}
+  <link rel="alternate" type="application/atom+xml" title="exostab: changes between the weekly stability catalogs" href="{{ config.site_url }}catalog-changes.xml">
   {%- if page.meta and page.meta.title %}
     {%- set og_title = page.meta.title ~ " - " ~ config.site_name %}
   {%- elif page.title and not page.is_homepage %}
