@@ -26,7 +26,7 @@ from ..analysis import CheckResult, CheckSettings, check_system, settings_for_bu
 from ..budget import estimate_seconds
 from ..data import IncompleteSystemError, TableInfo, find_host, load_rows, system_from_rows
 from ..data.archive import ArchiveError, group_by_host
-from ..data.names import LIST_HINT, SystemNotFoundError
+from ..data.names import LIST_HINT, SystemNotFoundError, other_names
 from ..indicators import Verdict
 from ..indicators.spock import SpockUnavailableError, spock_python
 from ..models import System
@@ -163,7 +163,16 @@ def _verdict_badge(v: Verdict, label: str) -> None:
     st.badge(f"{label}: {v.value}", icon=ICON[v], color=BADGE[v])  # type: ignore[arg-type]
 
 
-def _sidebar(state: AppState, names: list[str]) -> None:
+def _labels(hosts: dict[str, list[dict[str, Any]]]) -> dict[str, str]:
+    """What the search box shows: a host with its other names, so that typing "Kepler-90" finds KOI-351."""
+    labels = {}
+    for host, rows in hosts.items():
+        also = other_names(host, (str(r["pl_name"]) for r in rows), hosts)
+        labels[host] = f"{host} ({', '.join(also)})" if also else host
+    return labels
+
+
+def _sidebar(state: AppState, names: list[str], labels: dict[str, str]) -> None:
     with st.sidebar:
         st.header("System")
         index = names.index(state.system) if state.system in names else None
@@ -171,6 +180,7 @@ def _sidebar(state: AppState, names: list[str]) -> None:
             "Search the archive (type to filter)",
             names,
             index=index,
+            format_func=labels.__getitem__,
             placeholder="e.g. TRAPPIST-1",
             key="system_select",
         )
@@ -398,7 +408,7 @@ def main() -> None:
     )
     hosts, kind, retrieved, _ = _archive(state.source)
     names = sorted(hosts, key=str.lower)
-    _sidebar(state, names)
+    _sidebar(state, names, _labels(hosts))
     try:
         system = _system(state.source, state.system)
     except SystemNotFoundError as exc:

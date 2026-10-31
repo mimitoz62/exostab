@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import difflib
 import re
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 
 from .archive import Row
 
@@ -13,6 +13,37 @@ _PLANET_LETTER = re.compile(r"\s*[a-z]$", re.IGNORECASE)
 _GLIESE = re.compile(r"(?:gliese|gl|gj)\W*(\d+)", re.IGNORECASE)
 # For the command line. The web app replaces it, because it has its own list of the names in the sidebar.
 LIST_HINT = "Run exostab list to see the names."
+# Abbreviations in the archive's host names. A name with an abbreviation that is not listed gets no long form.
+_GREEK = {
+    "bet": "Beta",
+    "gam": "Gamma",
+    "iot": "Iota",
+    "nu": "Nu",
+    "pi": "Pi",
+    "rho": "Rho",
+    "tau": "Tau",
+    "ups": "Upsilon",
+}
+_CONSTELLATIONS = {
+    "And": "Andromedae",
+    "Aqr": "Aquarii",
+    "CMa": "Canis Majoris",
+    "Cet": "Ceti",
+    "Cnc": "Cancri",
+    "CrB": "Coronae Borealis",
+    "Dra": "Draconis",
+    "For": "Fornacis",
+    "Her": "Herculis",
+    "Lib": "Librae",
+    "Men": "Mensae",
+    "Mic": "Microscopii",
+    "Oph": "Ophiuchi",
+    "Pic": "Pictoris",
+    "Ser": "Serpentis",
+    "Sex": "Sextantis",
+    "UMa": "Ursae Majoris",
+    "Vir": "Virginis",
+}
 
 
 class SystemNotFoundError(LookupError):
@@ -120,3 +151,41 @@ def resolve_host(query: str, hosts: Mapping[str, Sequence[Row]]) -> str:
 
 def all_names(hosts: Iterable[str]) -> list[str]:
     return sorted(hosts, key=str.lower)
+
+
+def other_names(host: str, planets: Iterable[str], hosts: Collection[str]) -> list[str]:
+    """Other names of a host: those its planet names use, and spelled-out catalogue and constellation names.
+
+    A planet name counts only as a stem and a planet letter ("Kepler-90" for "Kepler-90 i"). A candidate such as
+    TOI-1233.01, a name that is the host's with or without a star's letter (GJ 15 for GJ 15 A, which may be the
+    whole binary) and a host elsewhere in ``hosts`` are left out.
+    """
+    stems: list[str] = []
+    for name in planets:
+        m = re.fullmatch(r"(.+?) [a-z]", name)
+        if (
+            m
+            and not host.startswith(m[1])
+            and not m[1].startswith(host)
+            and m[1] not in hosts
+            and m[1] not in stems
+        ):
+            stems.append(m[1])
+    names = [*stems]
+    for name in [host, *stems]:
+        long_form = _long_form(name)
+        if long_form and long_form not in names:
+            names.append(long_form)
+    return names
+
+
+def _long_form(name: str) -> str | None:
+    """Gliese 876 for GJ 876 (Gliese's own numbers, below 1000), Gliese 725 A for Gl 725 A, 55 Cancri for 55 Cnc."""
+    m = re.fullmatch(r"(GJ|Gl) (\d{1,3})( [A-Z])?", name)
+    if m:
+        return f"Gliese {m[2]}{m[3] or ''}"
+    m = re.fullmatch(r"(\w+) ([A-Za-z]{3})( [A-Z])?", name)
+    if not m or m[2] not in _CONSTELLATIONS:
+        return None
+    first = _GREEK.get(m[1], m[1]) if not m[1].islower() or m[1] in _GREEK else None
+    return f"{first} {_CONSTELLATIONS[m[2]]}{m[3] or ''}" if first else None
