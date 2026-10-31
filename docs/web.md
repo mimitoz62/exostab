@@ -23,7 +23,7 @@ may not be able to open it.
 In the virtual environment from the [Quickstart](quickstart.md#install):
 
 ```bash
-pip install "exostab[web]"
+pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.0.1"
 python -m exostab.web
 ```
 

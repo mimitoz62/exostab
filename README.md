@@ -81,22 +81,23 @@ itself in a browser:
   opens the web app and needs no account; the first start can take several minutes, and the session ends after 10
   minutes without activity.
 
-**Without a permanent install** (needs [uv](https://docs.astral.sh/uv/) and downloads about 350 MB into uv's
+**Without a permanent install** (needs [uv](https://docs.astral.sh/uv/) and git, and downloads about 350 MB into uv's
 cache). `--offline` uses the snapshot of 22 well-known systems that ships with exostab; leave it out to use the live
 archive:
 
 ```bash
-uvx exostab check "TRAPPIST-1" --offline
+uvx --from git+https://github.com/mimitoz62/exostab@v1.0.1 exostab check "TRAPPIST-1" --offline
 ```
 
 **Or install it** and check a multi-planet system from the archive, by host or planet name. You need Python 3.10 or
-newer: the first line shows your version, and `/usr/bin/python3` on macOS is 3.9.
+newer: the first line shows your version, and `/usr/bin/python3` on macOS is 3.9. [Install](#install) has the form
+without git.
 
 ```bash
 python3 --version
 python3 -m venv .venv
 source .venv/bin/activate
-pip install exostab
+pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.0.1"
 exostab check "TRAPPIST-1"
 ```
 
@@ -276,18 +277,30 @@ limit. The Note, which had no energy criterion, found 134 regular, 57 chaotic an
 python3 --version
 python3 -m venv .venv
 source .venv/bin/activate
-pip install exostab
+pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.0.1"
 ```
 
-exostab needs Python 3.10 or newer; 3.10–3.14 are tested on Linux and
+This installs release 1.0.1 from GitHub. exostab needs Python 3.10 or newer; 3.10–3.14 are tested on Linux and
 macOS in continuous integration. The first line shows your version, and `/usr/bin/python3` on macOS is 3.9. If yours
 is older than 3.10, install a newer Python first, for example from [python.org](https://www.python.org/downloads/). In
-a new terminal, run the `source` line again.
+a new terminal, run the `source` line again. A package on PyPI is planned; until then, install from GitHub.
+
+The `pip` line needs git. Without git, install the wheel of the release; `uvx --from` takes the same URL:
+
+```bash
+pip install https://github.com/mimitoz62/exostab/releases/download/v1.0.1/exostab-1.0.1-py3-none-any.whl
+```
 
 | Optional extra | What it adds | Install |
 |---|---|---|
-| `web` | The Streamlit web app (Streamlit, Plotly) | `pip install "exostab[web]"` |
-| `catalog` | Parquet output for `exostab catalog build` (pyarrow) | `pip install "exostab[catalog]"` |
+| `web` | The Streamlit web app (Streamlit, Plotly) | `pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.0.1"` |
+| `catalog` | Parquet output for `exostab catalog build` (pyarrow) | `pip install "exostab[catalog] @ git+https://github.com/mimitoz62/exostab@v1.0.1"` |
+
+Without git, put the wheel's URL after the `@`:
+
+```bash
+pip install "exostab[web] @ https://github.com/mimitoz62/exostab/releases/download/v1.0.1/exostab-1.0.1-py3-none-any.whl"
+```
 
 <details>
 <summary><b>Optional SPOCK indicator</b> (separate environment)</summary>
@@ -419,7 +432,7 @@ copy a **shareable link** that encodes the system, your edits, the seed and the 
 It runs on your own computer, in the virtual environment from [Install](#install):
 
 ```bash
-pip install "exostab[web]"
+pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.0.1"
 python -m exostab.web
 ```
 

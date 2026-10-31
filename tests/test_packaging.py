@@ -83,8 +83,7 @@ def test_notebook_has_no_outputs_and_installs_the_latest_release() -> None:
     not (ROOT / "docs" / "quickstart.md").is_file(), reason="these pages are not in the sdist"
 )
 def test_install_lines_name_the_latest_release() -> None:
-    # Every form RELEASING.md lists: an older pin still works after a release, so nothing else would notice it. The
-    # install lines themselves name no version, since they use PyPI.
+    # Every form RELEASING.md lists: an older pin still works after a release, so nothing else would notice it.
     pins = re.compile(
         r"@v(\d+\.\d+\.\d+)"
         r"|/releases/download/v(\d+\.\d+\.\d+)/"
@@ -93,7 +92,7 @@ def test_install_lines_name_the_latest_release() -> None:
         r"|[Rr]elease (\d+\.\d+\.\d+)"
         r"|Version (\d+\.\d+\.\d+)"
     )
-    for name in ("README.md", "docs/index.md", "docs/quickstart.md", "overrides/home.html"):
+    for name in ("README.md", "docs/index.md", "docs/quickstart.md", "docs/web.md", "overrides/home.html"):
         text = (ROOT / name).read_text(encoding="utf-8")
         named = {Version(version) for match in pins.findall(text) for version in match if version}
         assert named == {latest_release()}, name

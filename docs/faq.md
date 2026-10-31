@@ -53,7 +53,7 @@ No. The integration covers 10,000 orbits of the innermost planet by default (`--
 and Hill criteria reach further but make approximations. See [Methods](methods.md).
 
 **Can I install it with `pip install exostab`?**
-Yes. The [Quickstart](quickstart.md) has the full steps, with a virtual environment.
+Not yet: a release on PyPI is planned. Install from GitHub as shown in the [Quickstart](quickstart.md).
 
 **How do I cite exostab?**
 Use the repository's `CITATION.cff` and cite the methods and the NASA Exoplanet Archive.
