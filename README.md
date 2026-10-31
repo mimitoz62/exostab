@@ -17,6 +17,7 @@
   <a href="https://github.com/mimitoz62/exostab/actions/workflows/ci.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/mimitoz62/exostab/ci.yml?branch=main&amp;label=tests"></a>
   <a href="https://github.com/mimitoz62/exostab/actions/workflows/nightly.yml"><img alt="Nightly validation" src="https://img.shields.io/github/actions/workflow/status/mimitoz62/exostab/nightly.yml?branch=main&amp;label=validation"></a>
   <a href="https://mimitoz62.github.io/exostab/"><img alt="Documentation" src="https://img.shields.io/github/actions/workflow/status/mimitoz62/exostab/docs.yml?branch=main&amp;label=docs"></a>
+  <a href="https://doi.org/10.5281/zenodo.23844658"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.23844658.svg"></a>
   <a href="https://github.com/mimitoz62/exostab/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/mimitoz62/exostab?label=release"></a>
   <a href="https://github.com/mimitoz62/exostab/blob/main/pyproject.toml"><img alt="Python 3.10–3.14" src="https://img.shields.io/badge/python-3.10%E2%80%933.14-blue"></a>
   <a href="https://github.com/mimitoz62/exostab/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
@@ -591,8 +592,8 @@ If you use exostab, please cite the software, the methods behind the indicators 
 Archive.
 
 **The software.** Use [CITATION.cff](https://github.com/mimitoz62/exostab/blob/main/CITATION.cff) (GitHub's
-"Cite this repository" button), and give the version you used; every `report.json` records it. A Zenodo DOI will be
-added. In BibTeX:
+"Cite this repository" button), and give the version you used; every `report.json` records it. The DOI
+[10.5281/zenodo.23844658](https://doi.org/10.5281/zenodo.23844658) always resolves to the latest version, and each version also has its own. In BibTeX:
 
 ```bibtex
 @software{oz_exostab,
@@ -600,6 +601,7 @@ added. In BibTeX:
   title   = {exostab: honest, traceable orbital-stability indicators for known exoplanet systems},
   year    = {2026},
   version = {1.0.1},
+  doi     = {10.5281/zenodo.23844658},
   url     = {https://github.com/mimitoz62/exostab}
 }
 ```

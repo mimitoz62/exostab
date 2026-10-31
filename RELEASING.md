@@ -50,8 +50,8 @@ pre-releases included, and gives it a DOI. Its metadata (title, authors with ORC
 2. Open https://zenodo.org/account/settings/github/, press "Sync now" if the repository is not listed, and switch
    on `mimitoz62/exostab`. Do this before the first release: earlier releases are not archived.
 3. Publish a release (below). The record appears on the same page a few minutes later.
-4. After the first release, add the concept DOI (the one that always resolves to the latest version) to
-   `README.md` ("Citing exostab") and as `doi:` in `CITATION.cff`.
+4. The concept DOI, which always resolves to the latest version, is 10.5281/zenodo.23844658. It is in `README.md`
+   ("Citing exostab"), `docs/citing.md`, `codemeta.json` and, as `doi:`, in `CITATION.cff`.
 
 Do not publish GitHub pre-releases for testing: Zenodo would archive them as versions of exostab.
 

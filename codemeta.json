@@ -4,6 +4,7 @@
   "name": "exostab",
   "description": "exostab reports whether a known multi-planet system is dynamically stable using three indicators: Hill spacing, the angular momentum deficit, and direct N-body integration with the MEGNO chaos indicator, with parameters from the NASA Exoplanet Archive and every data assumption recorded.",
   "version": "1.0.1",
+  "identifier": "https://doi.org/10.5281/zenodo.23844658",
   "datePublished": "2026-10-31",
   "license": "https://spdx.org/licenses/MIT",
   "author": [
