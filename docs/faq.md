@@ -34,7 +34,8 @@ indicators take milliseconds.
 
 **Why does exostab not find a system I know?**
 Names are the archive's, for example KOI-351 (Kepler-90), GJ 876 (Gliese 876), ups And (Upsilon Andromedae) and 55 Cnc
-(55 Cancri). `exostab list` shows them.
+(55 Cancri). `exostab list` shows them. The [catalog](catalog.md)'s filter and the web app's search box also find the
+other names, and `exostab check` suggests the archive's name for most of them.
 
 **Why can the catalog, `exostab check` and the web app give different verdicts for one system?**
 They run different numbers of draws: 10 in the catalog, 20 by default in `exostab check`, and in the web app as

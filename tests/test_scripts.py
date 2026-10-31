@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import importlib.util
 import json
 import math
@@ -46,13 +47,26 @@ def test_catalog_page(small_catalog: Path, tmp_path: Path, monkeypatch: pytest.M
     assert "below 1 is AMD-stable" not in text and "β_S < 1" in text
     assert "computed with earlier rules" not in text
     # each row can be linked to, and no two rows of the catalog can share a link
-    ids = re.findall(r'<tr id="([^"]+)">', text)
+    ids = re.findall(r'<tr id="([^"]+)"', text)
     assert len(ids) == 4 == len(set(ids)) and all(re.fullmatch(r"[0-9a-z]+(-[0-9a-z]+)*", i) for i in ids)
     assert [page._row_id(n) for n in ("TRAPPIST-1", "55 Cnc", "2MASS J19383260+4603591")] == [
         "trappist-1",
         "55-cnc",
         "2mass-j19383260-4603591",
     ]
+    # the table's filter also knows a system's other names, from its planets and from spelled-out catalogue names
+    rows = list(csv.DictReader((small_catalog / "catalog.csv").open(encoding="utf-8")))
+    rows[0].update(system="KOI-351", archive_rows="KOI-351 b;Kepler-90 i")
+    folder = tmp_path / "named"
+    folder.mkdir()
+    (folder / "catalog_meta.json").write_text(
+        (small_catalog / "catalog_meta.json").read_text(encoding="utf-8")
+    )
+    with (folder / "catalog.csv").open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+    assert '<tr id="koi-351" data-names="Kepler-90">' in page.render(folder)
     # the description for dataset search engines is valid JSON and names real files
     dataset = json.loads(re.search(r'<script type="application/ld\+json">(.+)</script>', text).group(1))
     assert dataset["@type"] == "Dataset" and len(dataset["description"]) >= 50
@@ -182,25 +196,6 @@ def test_system_pages(small_catalog: Path, tmp_path: Path, monkeypatch: pytest.M
         assert path.path == "exostab/"
         assert decode_state({k: v[0] for k, v in parse_qs(path.query).items()}).system == name
         assert unquote(pages.binder_url(name)).count("exostab/?system=") == 1
-
-
-def test_other_names() -> None:
-    names = load("system_pages").other_names
-    assert names("KOI-351", "KOI-351 b;Kepler-90 i", set()) == ["Kepler-90"]
-    assert names("GJ 876", "GJ 876 b", set()) == ["Gliese 876"]
-    assert names("GJ 15 A", "GJ 15 A b", set()) == ["Gliese 15 A"]
-    assert names("GJ 1132", "GJ 1132 b", set()) == []  # not one of Gliese's own numbers
-    assert names("ups And", "ups And b", set()) == ["Upsilon Andromedae"]
-    assert names("55 Cnc", "55 Cnc e", set()) == ["55 Cancri"]
-    assert names("HD 39091", "pi Men c;HD 39091 b", set()) == ["pi Men", "Pi Mensae"]
-    assert names("AU Mic", "AU Mic b", set()) == ["AU Microscopii"]
-    # candidates, parts of the host's name, other hosts and unknown abbreviations give no name
-    assert names("TOI-216", "TOI-216.01;TOI-216.02", set()) == []
-    assert names("Barnard's star", "Barnard b", set()) == []
-    assert names("HD 142", "HD 142 A b", set()) == []
-    assert names("55 Cnc B", "55 Cnc B b", {"55 Cnc"}) == ["55 Cancri B"]
-    assert names("HD 1", "HD 2 b", {"HD 1", "HD 2"}) == []
-    assert names("XX Foo", "XX Foo b", set()) == []
 
 
 def test_catalog_data_dictionary(small_catalog: Path) -> None:

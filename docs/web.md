@@ -33,8 +33,8 @@ Then open http://localhost:8501. Options after the command go to
 
 ## Using it
 
-1. **Pick a system** in the sidebar. The search box filters as you type. Names are the archive's: Kepler-90, for
-   example, is listed as KOI-351. Data come from the NASA Exoplanet Archive or from the offline snapshot of 22
+1. **Pick a system** in the sidebar. The search box filters as you type. Names are the archive's, and the box also
+   finds other names: Kepler-90, for example, is listed as KOI-351 (Kepler-90). Data come from the NASA Exoplanet Archive or from the offline snapshot of 22
    systems. The archive table is downloaded on first use and then
    reused from the same cache folder as the command line; the app does not download it again by itself. Running
    `exostab check --refresh` on the same computer updates the cache, and the app picks the new table up within a
