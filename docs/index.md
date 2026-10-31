@@ -142,27 +142,26 @@ answer.
     python3 --version
     python3 -m venv .venv
     source .venv/bin/activate
-    pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.0.0"
+    pip install exostab
     exostab check "TRAPPIST-1"
     exostab list --min-planets 4 --max-period-days 200
     ```
 
-    You need Python 3.10 or newer: the first line shows your version, and `/usr/bin/python3` on macOS is 3.9. The
-    `pip` line needs git; the [Quickstart](quickstart.md#install) has the form without git. Names are the archive's, for example KOI-351 (Kepler-90), GJ 876 (Gliese 876), ups And (Upsilon Andromedae) and 55 Cnc
+    You need Python 3.10 or newer: the first line shows your version, and `/usr/bin/python3` on macOS is 3.9.
+    Names are the archive's, for example KOI-351 (Kepler-90), GJ 876 (Gliese 876), ups And (Upsilon Andromedae) and 55 Cnc
     (55 Cancri); `exostab list` shows them. The first `check` downloads the archive's multi-planet table once
-    (about 2,700 rows) and caches it; `--offline` uses a bundled snapshot of 22 well-known systems. A package on
-    PyPI is planned; until then, install from GitHub.
+    (about 2,700 rows) and caches it; `--offline` uses a bundled snapshot of 22 well-known systems.
 
 === "Web app"
 
     In the virtual environment from the [Quickstart](quickstart.md#install):
 
     ```bash
-    pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.0.0"
+    pip install "exostab[web]"
     python -m exostab.web
     ```
 
-    If Streamlit asks for an email address, press Enter. Then open <http://localhost:8501>. Search a system, edit
+    Then open <http://localhost:8501>. Search a system, edit
     its parameters, try "what if" changes with sliders, choose a time budget, and download the report or a
     shareable link to the run. There is no permanent hosted version: the app runs on your own computer, or for a
     while on Binder or GitHub Codespaces, as the [Quickstart](quickstart.md#try-it-without-installing) describes.
@@ -171,7 +170,7 @@ answer.
 === "Your own parameters"
 
     ```bash
-    curl -fsSLO https://raw.githubusercontent.com/mimitoz62/exostab/v1.0.0/examples/two_planet.yaml
+    curl -fsSLO https://raw.githubusercontent.com/mimitoz62/exostab/v1.0.1/examples/two_planet.yaml
     exostab check --from-file two_planet.yaml
     exostab sweep "HD 127195" --planet b --param e --range 0 0.6 --steps 25
     ```

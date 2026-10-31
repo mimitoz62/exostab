@@ -23,11 +23,11 @@ may not be able to open it.
 In the virtual environment from the [Quickstart](quickstart.md#install):
 
 ```bash
-pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.0.0"
+pip install "exostab[web]"
 python -m exostab.web
 ```
 
-If Streamlit asks for an email address, press Enter. Then open http://localhost:8501. Options after the command go to
+Then open http://localhost:8501. Options after the command go to
 `streamlit run` (for example `python -m exostab.web --server.port 8502`). In a clone of the repository,
 `streamlit run streamlit_app.py` does the same.
 

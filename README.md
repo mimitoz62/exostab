@@ -81,23 +81,22 @@ itself in a browser:
   opens the web app and needs no account; the first start can take several minutes, and the session ends after 10
   minutes without activity.
 
-**Without a permanent install** (needs [uv](https://docs.astral.sh/uv/) and git, and downloads about 350 MB into uv's
+**Without a permanent install** (needs [uv](https://docs.astral.sh/uv/) and downloads about 350 MB into uv's
 cache). `--offline` uses the snapshot of 22 well-known systems that ships with exostab; leave it out to use the live
 archive:
 
 ```bash
-uvx --from git+https://github.com/mimitoz62/exostab@v1.0.0 exostab check "TRAPPIST-1" --offline
+uvx exostab check "TRAPPIST-1" --offline
 ```
 
 **Or install it** and check a multi-planet system from the archive, by host or planet name. You need Python 3.10 or
-newer: the first line shows your version, and `/usr/bin/python3` on macOS is 3.9. [Install](#install) has the form
-without git.
+newer: the first line shows your version, and `/usr/bin/python3` on macOS is 3.9.
 
 ```bash
 python3 --version
 python3 -m venv .venv
 source .venv/bin/activate
-pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.0.0"
+pip install exostab
 exostab check "TRAPPIST-1"
 ```
 
@@ -121,7 +120,7 @@ unknown mutual inclinations carry no more AMD than the eccentricities).
 
 ```text
 $ exostab check "TRAPPIST-1" --offline
-╭───────────────────────────── exostab 1.0.0 — stability report card ──────────────────────────────╮
+╭───────────────────────────── exostab 1.0.1 — stability report card ──────────────────────────────╮
 │ TRAPPIST-1   M* = 0.0898 ± 0.0023 M☉   7 planets   data: snapshot (2026-09-28)                   │
 │                                                                                                  │
 │ Planet        P (d)               Mass (M⊕)      e                  ω (deg)       Phase          │
@@ -209,7 +208,7 @@ exostab, REBOUND, NumPy, astropy, pydantic and Python.
 
 ```text
 $ exostab check "HD 127195" --offline
-╭───────────────────────────── exostab 1.0.0 — stability report card ──────────────────────────────╮
+╭───────────────────────────── exostab 1.0.1 — stability report card ──────────────────────────────╮
 │ HD 127195   M* = 1.34 ± 0.06 M☉   2 planets   data: snapshot (2026-09-28)                        │
 │                                                                                                  │
 │ Planet       P (d)          Mass (M⊕)             e                 ω (deg)           Phase      │
@@ -277,30 +276,18 @@ limit. The Note, which had no energy criterion, found 134 regular, 57 chaotic an
 python3 --version
 python3 -m venv .venv
 source .venv/bin/activate
-pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.0.0"
+pip install exostab
 ```
 
-This installs release 1.0.0 from GitHub. exostab needs Python 3.10 or newer; 3.10–3.14 are tested on Linux and
+exostab needs Python 3.10 or newer; 3.10–3.14 are tested on Linux and
 macOS in continuous integration. The first line shows your version, and `/usr/bin/python3` on macOS is 3.9. If yours
 is older than 3.10, install a newer Python first, for example from [python.org](https://www.python.org/downloads/). In
-a new terminal, run the `source` line again. A package on PyPI is planned; until then, install from GitHub.
-
-The `pip` line needs git. Without git, install the wheel of the release; `uvx --from` takes the same URL:
-
-```bash
-pip install https://github.com/mimitoz62/exostab/releases/download/v1.0.0/exostab-1.0.0-py3-none-any.whl
-```
+a new terminal, run the `source` line again.
 
 | Optional extra | What it adds | Install |
 |---|---|---|
-| `web` | The Streamlit web app (Streamlit, Plotly) | `pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.0.0"` |
-| `catalog` | Parquet output for `exostab catalog build` (pyarrow) | `pip install "exostab[catalog] @ git+https://github.com/mimitoz62/exostab@v1.0.0"` |
-
-Without git, put the wheel's URL after the `@`:
-
-```bash
-pip install "exostab[web] @ https://github.com/mimitoz62/exostab/releases/download/v1.0.0/exostab-1.0.0-py3-none-any.whl"
-```
+| `web` | The Streamlit web app (Streamlit, Plotly) | `pip install "exostab[web]"` |
+| `catalog` | Parquet output for `exostab catalog build` (pyarrow) | `pip install "exostab[catalog]"` |
 
 <details>
 <summary><b>Optional SPOCK indicator</b> (separate environment)</summary>
@@ -313,7 +300,7 @@ compiler, download the setup script (or run it from a clone of the repository), 
 point exostab at the new environment:
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/mimitoz62/exostab/v1.0.0/scripts/make_spock_env.sh
+curl -fsSLO https://raw.githubusercontent.com/mimitoz62/exostab/v1.0.1/scripts/make_spock_env.sh
 bash make_spock_env.sh
 export EXOSTAB_SPOCK_PYTHON=~/.exostab-spock/bin/python
 exostab check "TRAPPIST-1" --spock
@@ -373,7 +360,7 @@ publications) and one inconclusive (HD 10180).
 The `examples/` folder exists only in a clone of the repository. To get the example file without one:
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/mimitoz62/exostab/v1.0.0/examples/two_planet.yaml
+curl -fsSLO https://raw.githubusercontent.com/mimitoz62/exostab/v1.0.1/examples/two_planet.yaml
 exostab check --from-file two_planet.yaml
 ```
 
@@ -432,11 +419,11 @@ copy a **shareable link** that encodes the system, your edits, the seed and the 
 It runs on your own computer, in the virtual environment from [Install](#install):
 
 ```bash
-pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.0.0"
+pip install "exostab[web]"
 python -m exostab.web
 ```
 
-If Streamlit asks for an email address, press Enter. Then open <http://localhost:8501>. In a clone of the repository,
+Then open <http://localhost:8501>. In a clone of the repository,
 `streamlit run streamlit_app.py` does the same. There is no permanent hosted version. To try the app without installing
 it, use the Binder or Codespaces link under [Quickstart](#quickstart). A shareable link made there points at that session: it works only
 while the session runs, and other people may not be able to open it.
@@ -599,7 +586,7 @@ added. In BibTeX:
   author  = {{\"O}z, Mehmet},
   title   = {exostab: honest, traceable orbital-stability indicators for known exoplanet systems},
   year    = {2026},
-  version = {1.0.0},
+  version = {1.0.1},
   url     = {https://github.com/mimitoz62/exostab}
 }
 ```
