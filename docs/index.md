@@ -130,7 +130,9 @@ answer.
     [KOI-351 (Kepler-90)](https://mimitoz62.github.io/exostab/systems/koi-351/),
     [GJ 876 (Gliese 876)](https://mimitoz62.github.io/exostab/systems/gj-876/) and
     [55 Cnc (55 Cancri)](https://mimitoz62.github.io/exostab/systems/55-cnc/).
-    [What the catalog shows](findings.md) describes its results and how firm they are.
+    [What the catalog shows](findings.md) describes its results and how firm they are. The
+    [two-planet calculator](calculator.md) evaluates the Hill and AMD criteria for one pair of planets on the page itself,
+    with no integration.
 
     To run exostab itself in a browser, use
     [Google Colab](https://colab.research.google.com/github/mimitoz62/exostab/blob/main/examples/exostab_quickstart.ipynb)

@@ -26,6 +26,18 @@ All notable changes to this project are documented here. The format follows
   run on TRAPPIST-1 line by line and says what to do next in the common cases. The README, the home page, the
   Quickstart, the web app page, the FAQ and the system pages of the catalog link to it, and `tests/test_report_cli.py`
   checks the lines of its card that do not depend on the integration.
+- A documentation page, Hill stability and AMD calculator for two planets (`docs/calculator.md`), evaluates the Hill and AMD
+  criteria for one pair of planets in the browser, with no install and no server, and says what that does not show. A
+  link keeps the inputs. `tests/test_calculator.py` compares its code with the Python functions on 3,000 seeded random
+  pairs when `node` is on the PATH, and fails in GitHub Actions if it is not.
+- A classroom exercise for a dynamics or exoplanet course: a notebook for Google Colab
+  (`examples/exostab_exercise.ipynb`), in which students compare the Hill, AMD and N-body answers for real systems and
+  explain what a short integration cannot show, and a page for teachers with answer notes (`docs/exercise.md`). It has
+  not yet been tried with a class. The workflow `Browser paths` also runs this notebook, and `tests/test_packaging.py`
+  checks that it has no outputs and installs the latest release.
+- A documentation page, exostab and other tools (`docs/other-tools.md`), with links from the FAQ and the README: what
+  exostab does not do, and how it relates to REBOUND, SPOCK, ExoNAMD, the published AMD-stability catalogues, long-term
+  integrators such as Mercury and SWIFT, the NASA Exoplanet Archive, Exostab 2.0, celmech, the Exo-Striker and ARDENT.
 
 ### Changed
 

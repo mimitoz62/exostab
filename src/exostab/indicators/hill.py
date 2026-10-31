@@ -2,13 +2,13 @@
 
 Two planets
     Gladman (1993) applied the Hill-stability criterion of Marchal & Bozis (1982) for the general
-    three-body problem to two planets: if it holds, the planets can never have a close encounter. For
-    initially circular orbits and small masses it reduces to a separation of 2*sqrt(3) mutual Hill
+    three-body problem to two planets: if it holds, two planets on coplanar orbits can never have a close
+    encounter. For initially circular orbits and small masses it reduces to a separation of 2*sqrt(3) mutual Hill
     radii. We evaluate the eccentric form as restated by Veras & Armitage (2004, their Eqs. 2.5 and
     2.8, without the next-order mass term) and Giuppone et al. (2013, Eq. 3), see :func:`gladman_margin`.
     Petit, Laskar & Boué (2018, Eq. 26) showed that the same inequality can be written with the AMD;
-    ``tests/test_hill.py`` checks that the two forms agree. For two planets this is a rigorous
-    sufficient condition for the absence of close encounters. It does not exclude the escape of the
+    ``tests/test_hill.py`` checks that the two forms agree. For two planets on coplanar orbits this is a
+    rigorous sufficient condition for the absence of close encounters. It does not exclude the escape of the
     outer planet.
 
 Three or more planets

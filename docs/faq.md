@@ -70,3 +70,7 @@ direction, and the commits say so. The [validation](validation.md) results and t
 **Is this the same as Exostab 2.0?**
 No. exostab is not to be confused with [Exostab 2.0](https://exostab2.readthedocs.io), an unrelated web service for the
 stability limits of circumbinary planets, which exostab does not model.
+
+**How does exostab relate to REBOUND, SPOCK and other tools?**
+It uses REBOUND, can run SPOCK as an optional indicator, and replaces neither.
+[exostab and other tools](other-tools.md) says what each tool does, how it differs from exostab, and when to use it.

@@ -735,3 +735,28 @@ Hill radius), time step (P/50) and grid, and is no longer claimed as reproduced 
   28 September, but the Note's own repository says "prepared for", and Crossref and arXiv show no record on 31 October.
   "Prepared for" holds whatever the journal's records show, so it replaces the stronger word until the owner gives a
   status or a DOI.
+
+## D35 — The two-planet calculator (2026-10-31)
+
+- **A port, kept in step by a test.** The documentation site has no Python, so `docs/javascripts/calculator.js` repeats
+  the formulas, constants and two-planet verdicts of `indicators/hill.py` and `indicators/amd.py`.
+  `tests/test_calculator.py` compares the two on random pairs. A few numbers are differences of nearly equal terms (the
+  Gladman margin and C_H, which β_H divides by), and the search for the circular-orbit limit looks for a margin smaller
+  than rounding when the masses are very unequal. There the test allows for rounding, in absolute terms, and nowhere
+  else. Without `node` the test skips, except in GitHub Actions, where it fails, so that CI cannot stay green with the
+  port unchecked.
+- **No overall verdict.** The page gives the verdict of each of the two indicators for the numbers entered, without
+  draws. `overall_verdict` needs an integration and draws, and a combined word would suggest a check that did not take
+  place.
+- **Input limits.** Eccentricities up to `E_MAX`, as in exostab's loaders. Planet masses from 1e-12 stellar masses,
+  because rounding decides `gladman_critical_separation` far below that (for 1e-6 and 1e-18 stellar masses it gives 2.51,
+  and for 1e-6 and 1e-19 it gives 0), and below the stellar mass. The loaders set neither mass limit. Two planets with
+  the same period or semi-major axis are refused, because neither would be the outer planet; exostab accepts equal
+  periods and takes the first planet as the inner one. Values so far out of range that Λ or the period ratio no longer
+  fits in a number (a stellar mass of 1e300 with masses to match) are refused too: `amd.analyse` gives β = NaN there,
+  and the page gives no verdict on that.
+- **Which planet is the outer one.** A semi-major axis becomes a period for the star and that planet alone, as in
+  `data/files.py`, and the planets are sorted by period, as in `sampling.realize`. The Jacobi semi-major axes of
+  `Realization.semi_major_axes` then always grow outwards, so "the larger semi-major axis" holds for the values the page
+  shows. Entered axes closer than about m / 3M★ can come out in the other order; such pairs fail the Hill test either
+  way.
