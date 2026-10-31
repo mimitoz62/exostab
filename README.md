@@ -452,7 +452,8 @@ are listed as skipped, with the reason. It publishes `catalog.csv`, `catalog.par
 `catalog_meta.json` on the branch [`catalog-data`](https://github.com/mimitoz62/exostab/tree/catalog-data), one
 commit per week, and the documentation shows them as a
 [sortable table](https://mimitoz62.github.io/exostab/catalog/). Each row holds the verdicts, the numbers behind
-them, the completion rules applied and the software versions. The catalogs of 16, 19 and 26 October 2026 are computed
+them, the completion rules applied and the software versions, and each system has its own page, for example
+[TRAPPIST-1](https://mimitoz62.github.io/exostab/systems/trappist-1/). The catalogs of 16, 19 and 26 October 2026 are computed
 with 1.0.0, and later ones with the code on `main` at the time, as each row records. The catalogs of 5 and 12 October
 used a development version whose verdict rules differ; they stay on the branch.
 [What the catalog shows](https://mimitoz62.github.io/exostab/findings/) describes the results of the catalog of
@@ -527,8 +528,8 @@ One of the five completion rules that fired for this system:
 
 ### Validation at a glance
 
-A validation suite compares exostab with physics, published solutions and the HD 127195 Research Note (submitted,
-not yet published). It runs nightly in continuous integration (`pytest -m slow`).
+A validation suite compares exostab with physics, published solutions and the HD 127195 Research Note (prepared for
+Research Notes of the AAS, not yet published). It runs nightly in continuous integration (`pytest -m slow`).
 
 | Test | Reference or tolerance | exostab |
 |---|---|---|
@@ -615,7 +616,7 @@ date of every run is stored in its `report.json` (`data.retrieved_utc`).
 ## Related work
 
 exostab grew out of the Research Note *N-body Stability Constraints on the Two Giant Planets of the Red Giant
-HD 127195* (Öz 2026, submitted to Research Notes of the AAS) and its code,
+HD 127195* (Öz 2026, prepared for Research Notes of the AAS) and its code,
 [mimitoz62/hd127195-stability](https://github.com/mimitoz62/hd127195-stability).
 
 exostab is not to be confused with [Exostab 2.0](https://exostab2.readthedocs.io), an unrelated web service for the
@@ -655,6 +656,8 @@ Archive.
 ## License
 
 MIT. See [LICENSE](https://github.com/mimitoz62/exostab/blob/main/LICENSE). Copyright (c) 2026 Mehmet Öz.
+
+The catalog data on the branch `catalog-data` are licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 ---
 

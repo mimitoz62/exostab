@@ -114,7 +114,7 @@ No draw of these four runs is inconclusive. What the tests require (from the pro
 
 ## 4. The HD 127195 Research Note
 
-`examples/hd127195_note.yaml` holds the inputs of the Research Note (Öz 2026, submitted to Research Notes of the
+`examples/hd127195_note.yaml` holds the inputs of the Research Note (Öz 2026, prepared for Research Notes of the
 AAS; code in [mimitoz62/hd127195-stability](https://github.com/mimitoz62/hd127195-stability)). The run uses the
 Note's settings where exostab has them: 20,000 orbits of planet b, 200 draws and MEGNO < 2.2 regular; seed 42.
 The time step is exostab's own, 1/30 of the shortest pericentre-passage time: 16.43 d for the best fit, about 8%

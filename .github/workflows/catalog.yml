@@ -74,6 +74,7 @@ jobs:
           mkdir -p publish/archive
           cp catalog/catalog.csv catalog/catalog.parquet catalog/catalog_meta.json publish/
           cp catalog/catalog.csv "publish/archive/catalog-$day.csv"
+          cp scripts/catalog_data_license.txt publish/LICENSE
           python scripts/catalog_release_notes.py catalog > publish/README.md
           git -C publish add -A
           git -C publish commit -m "Catalog of $day" || echo "nothing changed"

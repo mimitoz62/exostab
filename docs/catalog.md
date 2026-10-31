@@ -14,10 +14,11 @@ exostab's three indicators for the multi-planet systems in the NASA Exoplanet Ar
 Composite Parameters table, recomputed every week by the
 [catalog workflow](https://github.com/mimitoz62/exostab/blob/main/.github/workflows/catalog.yml).
 [What the catalog shows](findings.md) describes the results of the catalog of 26 October 2026 and how firm they are.
-
+Each system has its own page, for example
+[TRAPPIST-1](https://mimitoz62.github.io/exostab/systems/trappist-1/).
 
 !!! warning "Read the verdicts with their caveats"
-    Every system is checked with the same settings. Missing orbital phases are drawn at random,
+    Each system exostab can model is checked with the same settings. Missing orbital phases are drawn at random,
     minimum masses are used as masses, and orbits are coplanar. A resonant system can therefore look marginal or
     unstable here, although the full solution of one paper shows it is stable (GJ 876 is the standard example).
     Masses and eccentricities that are only upper limits are used at the limit, with draws below it; a system

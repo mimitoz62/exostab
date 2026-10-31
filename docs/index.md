@@ -345,7 +345,7 @@ Regular N-body draws for GJ 876 with the published four-planet solution of River
 
 <div class="exo-stat" markdown>
 <span class="exo-stat__value">133 / 200</span>
-Regular draws for HD 127195 with the inputs of the Research Note (submitted, not yet published), which found
+Regular draws for HD 127195 with the inputs of the Research Note (not yet published), which found
 134 / 200.
 </div>
 

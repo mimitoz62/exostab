@@ -43,3 +43,5 @@ exostab-results/
 docs/data/
 # copied from src/exostab/schemas by the docs workflow
 docs/schemas/
+# written by scripts/system_pages.py
+docs/systems/

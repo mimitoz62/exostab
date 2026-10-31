@@ -54,6 +54,6 @@ value. See [Data and assumptions](data-assumptions.md).
 ## Related work
 
 exostab grew out of the Research Note *N-body Stability Constraints on the Two Giant Planets of the Red Giant
-HD 127195* (Öz 2026, submitted to Research Notes of the AAS) and its code,
+HD 127195* (Öz 2026, prepared for Research Notes of the AAS) and its code,
 [mimitoz62/hd127195-stability](https://github.com/mimitoz62/hd127195-stability). The
 [validation](validation.md) compares exostab with its results.
