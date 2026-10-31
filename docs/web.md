@@ -54,6 +54,7 @@ Then open http://localhost:8501. Options after the command go to
    default, and from the [catalog](catalog.md), which uses 10.
 5. **Read the result.** It shows the overall verdict, the indicators with their explanations, the
    data-completion rules that were applied, and interactive figures (orbits, MEGNO over time, all draws).
+   [How to read a report card](reading-a-report.md) explains these indicators and verdicts.
 6. **Download** `report.json`, `orbits.png` and `megno.png`, or copy the **shareable link**.
 
 The run length chosen for a budget and the results are cached by a SHA-256 hash of every input, so a repeated

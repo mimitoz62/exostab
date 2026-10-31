@@ -172,6 +172,7 @@ def test_system_pages(small_catalog: Path, tmp_path: Path, monkeypatch: pytest.M
     assert "not a prediction for the planets" in unstable and "#published-parameter-sets" in unstable
     assert "β = ∞" in unstable and "1,234 years" in unstable and "10 with a close encounter" in unstable
     assert "`a_future_rule`" in unstable and "overview/KOI-351" in unstable
+    assert "](../reading-a-report.md)" in unstable
 
     empty = dict.fromkeys(row, "")
     skipped = {

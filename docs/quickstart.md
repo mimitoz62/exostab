@@ -85,6 +85,8 @@ it. The report card shows:
 - the overall verdict;
 - the data-completion rules that were applied.
 
+[How to read a report card](reading-a-report.md) goes through a real card line by line.
+
 The folder `exostab-results/trappist-1/` then contains `report.json`, `orbits.png` and `megno.png`.
 
 Useful options:

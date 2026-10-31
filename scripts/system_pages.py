@@ -221,6 +221,7 @@ def _verdicts(row: dict[str, str], settings: str) -> str:
         "## What the verdict means\n",
         MEANING.get(row["overall"], "") + "\n",
         CAVEATS.format(draws=row["draws"]) + "\n",
+        "[How to read a report card](../reading-a-report.md) explains these indicators and verdicts step by step.\n",
     ]
     return "\n".join(table)
 

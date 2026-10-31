@@ -13,7 +13,9 @@ is chaotic, or the analytic criteria fail while the integration looks regular. R
 indicator. Resonant systems such as GJ 876 are typically marginal. A system is also marginal when every run is
 regular but the outer planets complete fewer than 100 orbits or WHFast and IAS15 disagree, when one draw within
 the error bars has a close encounter, when an instability rests on values that are only upper limits, when the
-system has more than one star, and with `--draws 0`. The overall summary says which.
+system has more than one star, and with `--draws 0`. The overall summary says which, and
+[How to read a report card](reading-a-report.md#common-cases-and-what-to-do-next) says what to do next in the
+common cases.
 
 **The archive says the planets exist. How can exostab call the system unstable?**
 Usually one of three things is going on: the parameters come from different publications that do not fit
