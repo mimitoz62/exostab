@@ -10,6 +10,9 @@ All notable changes to this project are documented here. The format follows
 
 - A DOI that always resolves to the latest version: [10.5281/zenodo.23844658](https://doi.org/10.5281/zenodo.23844658), in `CITATION.cff`, the README and
   the page on citing exostab.
+- After each weekly catalog, the documentation workflow sends the site's URLs to IndexNow (`scripts/indexnow.py`), so
+  that Bing and other search engines that take part can learn of new pages with no account. Success confirms receipt,
+  not indexing.
 
 ## [1.0.1] - 2026-10-31
 

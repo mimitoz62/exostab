@@ -1,15 +1,19 @@
-"""Scripts: catalog page and findings, release notes, Zenodo upload, snapshot builder, SPOCK environment."""
+"""Scripts: catalog page and findings, release notes, Zenodo upload, IndexNow, snapshot builder, SPOCK environment."""
 
 from __future__ import annotations
 
+import contextlib
 import csv
 import importlib.util
+import io
 import json
 import math
 import os
 import re
 import shutil
 import subprocess
+import urllib.error
+from email.message import Message
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -459,6 +463,102 @@ def test_zenodo_errors(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("ZENODO_TOKEN", raising=False)
     with pytest.raises(SystemExit):
         z.main()
+
+
+class FakeIndexNow:
+    """Stands in for urllib.request.urlopen: answers every request with one status and records it."""
+
+    def __init__(self, status: int = 200, redirected_to: str = ""):
+        self.status = status
+        self.redirected_to = redirected_to
+        self.requests: list[Any] = []
+
+    def geturl(self) -> str:
+        return self.redirected_to or self.requests[-1].full_url
+
+    def __call__(self, request: Any, timeout: float) -> Any:
+        self.requests.append(request)
+        if self.status >= 400:
+            raise urllib.error.HTTPError(
+                request.full_url, self.status, "", Message(), io.BytesIO(b"key not in the file")
+            )
+        return contextlib.nullcontext(self)
+
+
+def run_indexnow(
+    fake: FakeIndexNow, urls: list[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """scripts/indexnow.py on a sitemap written the way mkdocs writes it, with no request reaching the network."""
+    rows = "".join(f"    <url>\n         <loc>{url}</loc>\n    </url>\n" for url in urls)
+    sitemap = tmp_path / "sitemap.xml"
+    sitemap.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{rows}</urlset>\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("urllib.request.urlopen", fake)
+    monkeypatch.setattr("sys.argv", ["indexnow.py", str(sitemap)])
+    load("indexnow").main()
+
+
+def test_indexnow_sends_the_sitemap_in_batches(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    site = "https://mimitoz62.github.io/exostab/"
+    urls = [site, *(f"{site}systems/s{i}/" for i in range(10_000))]
+    fake = FakeIndexNow()
+    run_indexnow(fake, urls, tmp_path, monkeypatch)
+    bodies = [json.loads(request.data) for request in fake.requests]
+    assert [len(body["urlList"]) for body in bodies] == [10_000, 1]  # the protocol's limit for one POST
+    assert [url for body in bodies for url in body["urlList"]] == urls
+    for request, body in zip(fake.requests, bodies):
+        assert request.full_url == "https://api.indexnow.org/indexnow" and request.get_method() == "POST"
+        assert request.get_header("Content-type") == "application/json; charset=utf-8"
+        assert set(body) == {"host", "key", "keyLocation", "urlList"}
+        assert body["host"] == "mimitoz62.github.io" and re.fullmatch(r"[0-9a-f]{32}", body["key"])
+        assert body["keyLocation"] == f"{site}{body['key']}.txt"  # the directory that every URL lies under
+    assert "received 10,000 URLs (HTTP 200)" in capsys.readouterr().out
+
+
+def test_indexnow_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    site = "https://mimitoz62.github.io/exostab/"
+    # 202 means received, with the key still to be validated
+    run_indexnow(FakeIndexNow(202), [site], tmp_path, monkeypatch)
+    assert "(HTTP 202)" in capsys.readouterr().out
+    for status in (400, 403, 422, 429, 500):
+        refused = FakeIndexNow(status)
+        with pytest.raises(SystemExit, match=f"HTTP {status}: key not in the file"):
+            run_indexnow(refused, [site], tmp_path, monkeypatch)
+        assert len(refused.requests) == 1  # not retried
+    # urllib follows a redirect with a GET that has no body, and a 204 is not one of the protocol's answers
+    for fake, shown in (
+        (FakeIndexNow(redirected_to="https://example.org/"), "from https://example.org/: not a receipt"),
+        (FakeIndexNow(204), "HTTP 204 from https://api.indexnow.org/indexnow: not a receipt"),
+    ):
+        with pytest.raises(SystemExit, match=shown):
+            run_indexnow(fake, [site], tmp_path, monkeypatch)
+    assert "received" not in capsys.readouterr().out
+    # a URL that the key does not cover, or no URL at all: nothing is sent
+    unused = FakeIndexNow()
+    for urls, message in (
+        ([site, "https://mimitoz62.github.io/exostab-other/"], "exostab-other"),
+        ([site, "https://example.org/exostab/"], "example.org"),
+        ([], "No URLs"),
+    ):
+        with pytest.raises(SystemExit, match=message):
+            run_indexnow(unused, urls, tmp_path, monkeypatch)
+    assert unused.requests == []
+
+
+@pytest.mark.skipif(not (ROOT / "mkdocs.yml").is_file(), reason="the site's sources are not in the sdist")
+def test_indexnow_key_file_is_served_where_the_script_says() -> None:
+    indexnow = load("indexnow")
+    # mkdocs copies docs/ to the site's root, here /exostab/
+    assert f"site_url: {indexnow.SITE}\n" in (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    # the protocol's FAQ asks that the file's text match the key exactly, so it has no final newline
+    assert (ROOT / "docs" / f"{indexnow.KEY}.txt").read_bytes() == indexnow.KEY.encode("ascii")
 
 
 def test_make_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

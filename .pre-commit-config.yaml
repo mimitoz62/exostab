@@ -6,6 +6,7 @@ repos:
         args: [--unsafe]  # mkdocs.yml uses a !!python tag
       - id: check-toml
       - id: end-of-file-fixer
+        exclude: ^docs/[0-9a-f]{32}\.txt$  # the IndexNow key file holds the key and nothing else
       - id: trailing-whitespace
         exclude: \.md$
       - id: check-added-large-files
