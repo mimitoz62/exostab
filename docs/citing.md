@@ -18,11 +18,13 @@ citation metadata; GitHub's **Cite this repository** button turns it into APA or
   title   = {exostab: honest, traceable orbital-stability indicators for known exoplanet systems},
   year    = {2026},
   version = {1.0.1},
+  doi     = {10.5281/zenodo.23844658},
   url     = {https://github.com/mimitoz62/exostab}
 }
 ```
 
-A Zenodo DOI will be added. Please also give the version you used; every `report.json` records it
+The DOI [10.5281/zenodo.23844658](https://doi.org/10.5281/zenodo.23844658) always resolves to the latest version, and
+[Zenodo](https://zenodo.org/records/23844659) gives each version its own. Please also give the version you used; every `report.json` records it
 (`software.exostab`).
 
 ## The methods

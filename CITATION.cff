@@ -13,6 +13,7 @@ authors:
     email: "mehmet@mehmet-oz.com"
 version: "1.0.1"
 date-released: "2026-10-31"
+doi: "10.5281/zenodo.23844658"
 license: MIT
 repository-code: "https://github.com/mimitoz62/exostab"
 url: "https://github.com/mimitoz62/exostab"

@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A DOI that always resolves to the latest version: [10.5281/zenodo.23844658](https://doi.org/10.5281/zenodo.23844658), in `CITATION.cff`, the README and
+  the page on citing exostab.
+
 ## [1.0.1] - 2026-10-31
 
 ### Added

@@ -57,8 +57,7 @@ Not yet: a release on PyPI is planned. Install from GitHub as shown in the [Quic
 
 **How do I cite exostab?**
 Use the repository's `CITATION.cff` and cite the methods and the NASA Exoplanet Archive.
-[Citing exostab](citing.md) has a BibTeX entry and the references for each indicator. A Zenodo DOI will be added
-with the first archived release.
+[Citing exostab](citing.md) has a BibTeX entry, the DOI and the references for each indicator.
 
 **Was exostab written with AI?**
 Most of the code, tests and documentation were written with an AI coding assistant (Claude Code) under the author's
