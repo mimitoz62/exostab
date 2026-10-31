@@ -75,6 +75,8 @@ All notable changes to this project are documented here. The format follows
   innermost planet raises β_S (BD-06 1339).
 - `report.json` labels a radius that the archive calculated as `estimated`, not `measured`, and any other column the
   archive calculated as `derived`. No number or verdict changes.
+- `exostab check` no longer stops with "root not bracketed" when an inner body is very massive (above about
+  0.7 times the stellar mass): the circular-orbit Gladman limit is now searched beyond a_2 / a_1 = 10 (#26).
 
 ## [1.0.0] - 2026-10-16
 
