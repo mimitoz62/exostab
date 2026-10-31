@@ -29,31 +29,51 @@ HEADER = """---
 hide:
   - navigation
   - toc
+title: Stability catalog of known multi-planet exoplanet systems
+description: >-
+  Hill spacing, AMD and N-body verdicts for the multi-planet systems in the NASA Exoplanet Archive, recomputed every
+  week.
 ---
 
 # Stability catalog
 
-exostab's three indicators for every multi-planet system in the NASA Exoplanet Archive's Planetary Systems
+exostab's three indicators for the multi-planet systems in the NASA Exoplanet Archive's Planetary Systems
 Composite Parameters table, recomputed every week by the
 [catalog workflow](https://github.com/mimitoz62/exostab/blob/main/.github/workflows/catalog.yml).
+[What the catalog shows](findings.md) describes the results of the catalog of 26 October 2026 and how firm they are.
 
 
 !!! warning "Read the verdicts with their caveats"
     Every system is checked with the same settings. Missing orbital phases are drawn at random,
-    minimum masses are used as masses, and orbits are coplanar. A resonant system can therefore look unstable
-    here, although the full solution of one paper shows it is stable (GJ 876 is the standard example).
+    minimum masses are used as masses, and orbits are coplanar. A resonant system can therefore look marginal or
+    unstable here, although the full solution of one paper shows it is stable (GJ 876 is the standard example).
     Masses and eccentricities that are only upper limits are used at the limit, with draws below it; a system
     whose instability rests on them is shown as marginal. Systems exostab cannot model (for example circumbinary
     planets, a planet with neither mass nor radius, or a host whose other planets orbit a companion star) are
     listed as skipped with the reason. A run in which a planet passes within half its Hill radius of the star
-    gets no verdict. Run `exostab check "<name>"` to see every assumption, or `--from-file` with a published
-    solution.
+    gets no verdict. The catalog uses 10 draws and `exostab check` 20 by default, so a verdict can differ
+    (TOI-270 on 26 October 2026: stable here, marginal with the defaults). Add `--draws 10` to match the
+    catalog's settings. With 10 draws, one draw can change a verdict: in three local rebuilds of the catalog of
+    26 October 2026 with different seeds, 50 of the 1,044 verdicts differ, 10 of them between marginal and
+    unstable ([details](findings.md#how-firm-these-numbers-are)). Run `exostab check "<name>"` to see every
+    assumption, or `--from-file` with a published solution.
 """
 
 # Written without a catalog folder, as in the committed docs/catalog.md and in local previews (mkdocs serve).
 PLACEHOLDER = """
 *This copy of the page has no catalog table: it was generated without a catalog. The documentation workflow builds
 the [published page]({page}) from the newest catalog on the branch [`catalog-data`]({branch}).*
+"""
+
+# Next to the filter: a common name such as Gliese 876 finds nothing, and Kepler-90 finds another system.
+FILTER = """Names are the archive's, for example KOI-351 (Kepler-90), GJ 876 (Gliese 876), ups And (Upsilon Andromedae)
+and 55 Cnc (55 Cancri). The filter looks for part of a name and ignores case, spaces and punctuation, so `Kepler-90`
+finds Kepler-903 but not KOI-351. Each row has its own link, for example [TRAPPIST-1](#trappist-1).
+
+<input id="catalog-filter" type="search" placeholder="Filter systems…" aria-label="Filter systems">
+
+<p id="catalog-filter-none" role="status" hidden>No system in the table has this name. It lists the archive's systems
+with at least two planets, under the archive's names.</p>
 """
 
 DOWNLOAD = """**Download:** [`catalog.csv`](data/catalog.csv), [`catalog.parquet`](data/catalog.parquet) and
@@ -89,6 +109,48 @@ OLD_RULES = """
     on upper limits can be listed as unstable, and the column Max. AMD β holds the coplanar value β_p rather than
     the β defined below (β = 2β_p). The next weekly run recomputes the catalog with the current version.
 """
+
+
+def _row_id(system: str) -> str:
+    """The id of a system's row, for a link such as catalog/#trappist-1."""
+    return re.sub(r"[^0-9a-z]+", "-", system.lower()).strip("-")
+
+
+def _dataset(meta: dict[str, object]) -> str:
+    """The catalog as a schema.org Dataset, the form Google Dataset Search reads. No license yet: the owner has not
+    chosen one for the catalog data."""
+    dataset = {
+        "@context": "https://schema.org/",
+        "@type": "Dataset",
+        "name": "exostab stability catalog of known multi-planet exoplanet systems",
+        "description": (
+            "Orbital-stability verdicts for the multi-planet systems in the NASA Exoplanet Archive's Planetary "
+            "Systems Composite Parameters table: Hill spacing, angular momentum deficit and N-body integration "
+            "with MEGNO, with the same settings for all systems, recomputed every week. Systems that exostab "
+            "cannot model are listed as skipped, with the reason."
+        ),
+        "url": PAGE,
+        "sameAs": BRANCH,
+        "keywords": ["exoplanets", "orbital stability", "planetary systems", "N-body", "MEGNO", "AMD"],
+        "creator": {
+            "@type": "Person",
+            "name": "Mehmet Öz",
+            "identifier": "https://orcid.org/0009-0007-1005-7640",
+        },
+        "isBasedOn": "https://doi.org/10.26133/NEA13",
+        "isAccessibleForFree": True,
+        "dateModified": str(meta["created_utc"])[:10],
+        "distribution": [
+            {"@type": "DataDownload", "encodingFormat": "text/csv", "contentUrl": f"{PAGE}data/catalog.csv"},
+            {
+                "@type": "DataDownload",
+                "encodingFormat": "application/vnd.apache.parquet",
+                "contentUrl": f"{PAGE}data/catalog.parquet",
+            },
+        ],
+    }
+    text = json.dumps(dataset, ensure_ascii=False).replace("</", "<\\/")
+    return f'<script type="application/ld+json">{text}</script>\n'
 
 
 def _release(version: str) -> tuple[int, ...]:
@@ -134,7 +196,7 @@ def render(folder: Path | None) -> str:
     meta = json.loads((folder / "catalog_meta.json").read_text(encoding="utf-8"))
     counts = Counter(r["overall"] if r["status"] == "ok" else r["status"] for r in rows)
     s = meta["settings"]
-    parts = [HEADER.format(branch=BRANCH), DOWNLOAD.format(branch=BRANCH)]
+    parts = [HEADER.format(branch=BRANCH), _dataset(meta), DOWNLOAD.format(branch=BRANCH)]
     parts.append(
         f"**This version:** {meta['n_systems']} systems, computed {meta['created_utc'][:10]} with exostab "
         f"{meta['exostab_version']} from archive data of {(meta.get('data_retrieved_utc') or '?')[:10]}. "
@@ -145,9 +207,7 @@ def render(folder: Path | None) -> str:
     parts.append(f"**Overall verdicts:** {summary}.\n")
     if _release(str(meta["exostab_version"])) < RULES_VERSION:
         parts.append(OLD_RULES.format(version=html.escape(str(meta["exostab_version"]))))
-    parts.append(
-        '<input id="catalog-filter" type="search" placeholder="Filter systems…" aria-label="Filter systems">\n'
-    )
+    parts.append(FILTER)
     head = "".join(
         f'<th scope="col" data-col="{i}">{html.escape(t)}</th>' for i, (_, t) in enumerate(COLUMNS)
     )
@@ -163,7 +223,7 @@ def render(folder: Path | None) -> str:
             )
             title = f' title="{html.escape(r["reason"])}"' if key == "overall" and r["status"] != "ok" else ""
             cells.append(f'<td data-sort="{html.escape(sort)}"{cls}{title}>{html.escape(text)}</td>')
-        body.append("<tr>" + "".join(cells) + "</tr>")
+        body.append(f'<tr id="{html.escape(_row_id(r["system"]))}">' + "".join(cells) + "</tr>")
     parts.append(
         '<div class="catalog-wrap"><table id="catalog-table">\n<thead><tr>'
         + head

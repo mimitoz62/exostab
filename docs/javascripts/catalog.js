@@ -28,12 +28,18 @@
       th.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sort(); } });
     });
     var filter = document.getElementById("catalog-filter");
+    var none = document.getElementById("catalog-filter-none");
+    // Case, spaces and punctuation are ignored, as in `exostab check`: "trappist 1" finds TRAPPIST-1.
+    function key(text) { return text.toLowerCase().replace(/[^0-9a-z]+/g, ""); }
     if (filter) {
       filter.addEventListener("input", function () {
-        var q = filter.value.trim().toLowerCase();
+        var q = key(filter.value), shown = 0;
         Array.prototype.forEach.call(tbody.rows, function (r) {
-          r.style.display = r.cells[0].textContent.toLowerCase().indexOf(q) === -1 ? "none" : "";
+          var match = key(r.cells[0].textContent).indexOf(q) !== -1;
+          r.style.display = match ? "" : "none";
+          if (match) shown += 1;
         });
+        if (none) none.hidden = shown > 0;
       });
     }
   }
