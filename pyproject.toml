@@ -87,6 +87,7 @@ include = [
     "README.md",
     "LICENSE",
     "CITATION.cff",
+    "codemeta.json",  # tests/test_packaging.py compares it with CITATION.cff
     "CHANGELOG.md",
 ]
 
