@@ -1,4 +1,5 @@
 ---
+title: Validation against physics and published results
 description: >-
   How exostab is tested against physics and published results: energy conservation, the Hill limit, TRAPPIST-1, GJ 876,
   Kepler-11 and the HD 127195 Research Note, with tolerances and versions.

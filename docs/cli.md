@@ -1,3 +1,10 @@
+---
+title: Command line reference for check, sweep, list and catalog
+description: >-
+  The options of exostab's commands: check for the report card of one system, sweep to vary one parameter of one
+  planet, list to find systems in the NASA Exoplanet Archive, and catalog for batch runs.
+---
+
 # CLI reference
 
 Is this planetary system dynamically stable? Hill spacing, AMD and N-body/MEGNO indicators for known exoplanet systems, with every assumption shown.

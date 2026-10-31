@@ -1,4 +1,5 @@
 ---
+title: "FAQ: what the verdicts mean, system names and run times"
 description: >-
   Common questions about exostab: what marginal, unstable and inconclusive verdicts mean, system names, run times,
   coplanar orbits, installing and citing.

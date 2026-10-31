@@ -28,6 +28,7 @@ _CONSTELLATIONS = {
     "And": "Andromedae",
     "Aqr": "Aquarii",
     "CMa": "Canis Majoris",
+    "Cen": "Centauri",
     "Cet": "Ceti",
     "Cnc": "Cancri",
     "CrB": "Coronae Borealis",
@@ -41,6 +42,7 @@ _CONSTELLATIONS = {
     "Pic": "Pictoris",
     "Ser": "Serpentis",
     "Sex": "Sextantis",
+    "Tau": "Tauri",
     "UMa": "Ursae Majoris",
     "Vir": "Virginis",
 }

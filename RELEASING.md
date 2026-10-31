@@ -51,7 +51,8 @@ pre-releases included, and gives it a DOI. Its metadata (title, authors with ORC
    on `mimitoz62/exostab`. Do this before the first release: earlier releases are not archived.
 3. Publish a release (below). The record appears on the same page a few minutes later.
 4. The concept DOI, which always resolves to the latest version, is 10.5281/zenodo.23844658. It is in `README.md`
-   ("Citing exostab"), `docs/citing.md`, `codemeta.json` and, as `doi:`, in `CITATION.cff`.
+   ("Citing exostab"), `docs/citing.md`, `docs/index.md`, `codemeta.json`, the structured data of `overrides/home.html`
+   and, as `doi:`, in `CITATION.cff`.
 
 Do not publish GitHub pre-releases for testing: Zenodo would archive them as versions of exostab.
 
@@ -122,6 +123,8 @@ workflow so the catalog page is updated. The full log is in the run's `catalog` 
   4. Try it on https://sandbox.zenodo.org first (separate account, token and record): also set the variable
      `ZENODO_URL` = `https://sandbox.zenodo.org`, run the workflow, then delete `ZENODO_URL` and switch the
      token and record id to the real ones.
+  5. Then add the concept DOI of the real record as `identifier` in `_dataset` of `scripts/catalog_page.py`, and put
+     it in `_citation` in place of the sentence that a DOI will follow.
 - A docs run that a catalog starts, or that is started by hand, sends the site's URLs to IndexNow
   (`scripts/indexnow.py`, no account) once the site is deployed; a push sends nothing. The log of the job `indexnow`
   should say `IndexNow received <n> URLs (HTTP 200)` or `(HTTP 202)`, which confirms receipt and not indexing. A 403 or
@@ -148,7 +151,8 @@ workflow so the catalog page is updated. The full log is in the run's `catalog` 
    - `v1.0.1` and `1.0.1` in the wheel URLs of `README.md`, `docs/quickstart.md` and `.binder/requirements.txt`;
    - `v1.0.1` in the `raw.githubusercontent.com` URLs: the example file in `README.md`, `docs/index.md` and
      `docs/quickstart.md`, and the SPOCK script in `README.md`;
-   - "release 1.0.1" in the text of `README.md` and `docs/quickstart.md`, and "Version 1.0.1" in `overrides/home.html`.
+   - "release 1.0.1" in the text of `README.md` and `docs/quickstart.md`, and "Version 1.0.1" in `overrides/home.html`;
+   - `"version": "1.0.1"` in the structured data of `overrides/home.html`.
 
    Re-read the notebook's text: it quotes results and the snapshot date of the release it installs.
    `tests/test_packaging.py` fails until all of these name the version of the newest dated section of `CHANGELOG.md`.

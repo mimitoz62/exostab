@@ -1,4 +1,5 @@
 ---
+title: "Data and assumptions: archive values and completion rules"
 description: >-
   Where exostab's parameters come from and how gaps are filled: the NASA Exoplanet Archive's composite table, the
   completion rules, orbital phases, Monte Carlo draws and YAML input.

@@ -88,6 +88,8 @@ verdict ([how firm the verdicts are](../findings.md#how-firm-these-numbers-are))
 unstable here although the full solution of one paper shows it is stable. The verdict describes the values in the archive's
 composite table, which can combine several publications ([Data and assumptions](../data-assumptions.md))."""
 
+CITE = "## How to cite\n\nTo cite this page, use [the catalog's citation](../catalog.md#how-to-cite-the-catalog).\n"
+
 
 def binder_url(system: str) -> str:
     """The web app on Binder with this system selected (the app's query parameter `system`, encoded for urlpath)."""
@@ -124,7 +126,7 @@ def page(row: dict[str, str], meta: dict[str, object], systems: set[str]) -> str
     date = str(meta["created_utc"])[:10]
     ok = row["status"] == "ok"
     if ok:
-        title = "orbital stability verdicts from exostab"
+        title = "orbital stability verdicts"  # the site's template adds " - exostab" to the page's title
         call = (
             "makes no statement on this published parameter set"
             if row["overall"] == "inconclusive"
@@ -135,7 +137,7 @@ def page(row: dict[str, str], meta: dict[str, object], systems: set[str]) -> str
             "Hill spacing, AMD and N-body verdicts with the numbers behind them."
         )
     else:
-        title = "no verdict in the exostab catalog"
+        title = "no verdict in the stability catalog"
         summary = (
             f"exostab's stability catalog of {date} has no verdict for this system, and gives the reason."
         )
@@ -174,6 +176,7 @@ def page(row: dict[str, str], meta: dict[str, object], systems: set[str]) -> str
     parts.append(
         f"## At the archive\n\n[{_text(system)} at the NASA Exoplanet Archive]({OVERVIEW}{quote(system)}).\n"
     )
+    parts.append(CITE)
     return "\n".join(parts)
 
 

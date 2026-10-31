@@ -25,7 +25,8 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "catalog.md"
 SYSTEMS = ROOT / "docs" / "systems"  # one page per system, written by scripts/system_pages.py
 BRANCH = "https://github.com/mimitoz62/exostab/tree/catalog-data"
-PAGE = "https://mimitoz62.github.io/exostab/catalog/"
+SITE = "https://mimitoz62.github.io/exostab/"
+PAGE = f"{SITE}catalog/"
 
 # The front matter hides the navigation and table-of-contents sidebars (Material for MkDocs): the table has 12
 # columns and needs the full page width; between the sidebars it would scroll sideways.
@@ -70,6 +71,24 @@ PLACEHOLDER = """
 *This copy of the page has no catalog table: it was generated without a catalog. The documentation workflow builds
 the [published page]({page}) from the newest catalog on the branch [`catalog-data`]({branch}).*
 """
+
+# Systems that are widely known, listed for that reason and never because of their verdicts.
+WELL_KNOWN = (
+    "TRAPPIST-1",
+    "KOI-351",
+    "GJ 876",
+    "55 Cnc",
+    "ups And",
+    "Kepler-11",
+    "TOI-178",
+    "HR 8799",
+    "HD 10180",
+    "PSR B1257+12",
+    "Proxima Cen",
+    "tau Cet",
+    "Kepler-186",
+    "TOI-700",
+)
 
 # Next to the filter: a common name such as Gliese 876 finds nothing, and Kepler-90 finds another system.
 FILTER = """Names are the archive's, for example KOI-351 (Kepler-90), GJ 876 (Gliese 876), ups And (Upsilon Andromedae)
@@ -238,8 +257,25 @@ def _row_id(system: str) -> str:
     return re.sub(r"[^0-9a-z]+", "-", system.lower()).strip("-")
 
 
+def _well_known(rows: list[dict[str, str]]) -> str:
+    """A line of links to the pages of WELL_KNOWN, without a system that has no page; empty if none has one."""
+    hosts = {r["system"]: r for r in rows}
+    links = []
+    for system in WELL_KNOWN:
+        if system in hosts and (SYSTEMS / f"{_row_id(system)}.md").exists():
+            names = other_names(system, filter(None, hosts[system]["archive_rows"].split(";")), hosts)
+            shown = f"{system} ({', '.join(names)})" if names else system
+            links.append(f"[{shown}](systems/{_row_id(system)}.md)")
+    return f"**Some well-known systems:** {', '.join(links)}.\n" if links else ""
+
+
 def _dataset(meta: dict[str, object]) -> str:
-    """The catalog as a schema.org Dataset, the form Google Dataset Search reads."""
+    """The catalog as a schema.org Dataset, the form Google Dataset Search reads.
+
+    Of the properties Google recommends, those that do not hold for this dataset are left out: identifier (no DOI
+    yet), citation (no article about it), includedInDataCatalog, funder, and temporal and spatial coverage.
+    """
+    date = str(meta["created_utc"])[:10]
     dataset = {
         "@context": "https://schema.org/",
         "@type": "Dataset",
@@ -247,27 +283,46 @@ def _dataset(meta: dict[str, object]) -> str:
         "description": (
             "Orbital-stability verdicts for the multi-planet systems in the NASA Exoplanet Archive's Planetary "
             "Systems Composite Parameters table: Hill spacing, angular momentum deficit and N-body integration "
-            "with MEGNO, with the same settings for all systems, recomputed every week. Systems that exostab "
-            "cannot model are listed as skipped, with the reason."
+            "with MEGNO, with the same settings for each system that exostab can model, recomputed every week. "
+            "Systems that exostab cannot model are listed as skipped, with the reason. A verdict describes the "
+            "published parameter set under these settings and is not a proof of stability or instability."
         ),
         "url": PAGE,
         "sameAs": BRANCH,
+        "version": date,
         "keywords": ["exoplanets", "orbital stability", "planetary systems", "N-body", "MEGNO", "AMD"],
         "creator": {
             "@type": "Person",
             "name": "Mehmet Öz",
-            "identifier": "https://orcid.org/0009-0007-1005-7640",
+            "givenName": "Mehmet",
+            "familyName": "Öz",
+            "sameAs": "https://orcid.org/0009-0007-1005-7640",  # Google asks for an ORCID iD in this property
         },
         "isBasedOn": "https://doi.org/10.26133/NEA13",
         "isAccessibleForFree": True,
         "license": "https://creativecommons.org/licenses/by/4.0/",
-        "dateModified": str(meta["created_utc"])[:10],
+        "dateModified": date,
+        "measurementTechnique": (
+            "Hill spacing, angular momentum deficit, and N-body integration with REBOUND and the MEGNO chaos "
+            "indicator, with Monte Carlo draws within the published uncertainties"
+        ),
+        "variableMeasured": [
+            "Overall stability verdict",
+            "Hill spacing verdict",
+            "Angular momentum deficit verdict",
+            "N-body verdict",
+            "Smallest separation of adjacent planets, in mutual Hill radii",
+            "Largest AMD-stability coefficient of the adjacent pairs",
+            "MEGNO of the nominal run",
+            "Numbers of draws with regular motion, chaotic motion, a close encounter or escape, or no trusted result",
+        ],
         "distribution": [
-            {"@type": "DataDownload", "encodingFormat": "text/csv", "contentUrl": f"{PAGE}data/catalog.csv"},
+            # docs/data/ on the site, as in the links of DOWNLOAD
+            {"@type": "DataDownload", "encodingFormat": "text/csv", "contentUrl": f"{SITE}data/catalog.csv"},
             {
                 "@type": "DataDownload",
                 "encodingFormat": "application/vnd.apache.parquet",
-                "contentUrl": f"{PAGE}data/catalog.parquet",
+                "contentUrl": f"{SITE}data/catalog.parquet",
             },
         ],
     }
@@ -318,7 +373,7 @@ def render(folder: Path | None) -> str:
     meta = json.loads((folder / "catalog_meta.json").read_text(encoding="utf-8"))
     counts = Counter(r["overall"] if r["status"] == "ok" else r["status"] for r in rows)
     s = meta["settings"]
-    parts = [HEADER.format(branch=BRANCH), _dataset(meta), DOWNLOAD.format(branch=BRANCH)]
+    parts = [HEADER.format(branch=BRANCH), _dataset(meta), _well_known(rows), DOWNLOAD.format(branch=BRANCH)]
     parts.append(
         f"**This version:** {meta['n_systems']} systems, computed {meta['created_utc'][:10]} with exostab "
         f"{meta['exostab_version']} from archive data of {(meta.get('data_retrieved_utc') or '?')[:10]}. "

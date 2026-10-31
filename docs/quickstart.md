@@ -1,4 +1,5 @@
 ---
+title: "Quickstart: check a known multi-planet system"
 description: >-
   Try exostab in a browser or install it, then check a known multi-planet system, vary one parameter and find systems
   in the NASA Exoplanet Archive.
