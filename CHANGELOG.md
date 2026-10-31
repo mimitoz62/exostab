@@ -24,6 +24,11 @@ All notable changes to this project are documented here. The format follows
 - Each row of the catalog page has its own link (`catalog/#trappist-1`), and the published page describes the catalog
   as a schema.org Dataset for dataset search engines. `codemeta.json` describes the software for software catalogs;
   `tests/test_packaging.py` checks it against `CITATION.cff`.
+- Each system in the catalog has its own documentation page (`systems/trappist-1/`), generated at build time by
+  `scripts/system_pages.py` and linked from the System column of the table: its verdicts and the numbers behind them,
+  or the reason for no verdict, its other names, the command to run it and links to the archive and to the web app.
+- The catalog page defines every column of `catalog.csv` and every key of `catalog_meta.json`, and says how to cite
+  the catalog. The catalog data are now licensed under CC BY 4.0 (`LICENSE` on the branch `catalog-data`).
 - The README and the FAQ say that most of the code, tests and documentation were written with an AI coding assistant
   under the author's direction. The FAQ says why the catalog, `exostab check` and the web app can differ for one system.
 

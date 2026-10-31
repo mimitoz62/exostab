@@ -296,7 +296,7 @@ and cross-checked numerically in the tests. Differences from the brief:
 
 Added on 2026-10-13, each checked against its Crossref record: the four MEGNO-threshold sources of D8
 (Goździewski et al. 2007 and 2015, Maffione et al. 2011, Satyal et al. 2013) and, in `paper/paper.bib`, the
-Pu & Wu (2016) erratum. The HD 127195 Research Note is submitted but not published, so it has no record to check
+Pu & Wu (2016) erratum. The HD 127195 Research Note is not published (D34), so it has no record to check
 and no BibTeX entry; it is cited in the text with a link to its code repository.
 
 ## D14 — AMD indicator (final for v0.1; amended 2026-10-03 and 2026-10-04)
@@ -725,3 +725,13 @@ Hill radius), time step (P/50) and grid, and is no longer claimed as reproduced 
 - **Schema `$id`.** The `$id` is https://mimitoz62.github.io/exostab/schemas/report-1.3.json. The docs workflow
   copies the generated schema to that path, so the identifier resolves. Older `$id` values pointed at a GitHub URL
   that did not exist.
+
+## D34 — Licence of the catalog data, and the status of the Research Note (2026-10-31)
+
+- **Catalog data: CC BY 4.0** (the owner's choice). It covers what exostab computes, and reuse has to credit the catalog
+  wherever such rights apply to data. The archive's own acknowledgement request stays. The weekly job copies
+  `scripts/catalog_data_license.txt` to the branch `catalog-data`, because the licence must travel with the files.
+- **Research Note: "prepared for Research Notes of the AAS", not "submitted".** The files said "submitted" from
+  28 September, but the Note's own repository says "prepared for", and Crossref and arXiv show no record on 31 October.
+  "Prepared for" holds whatever the journal's records show, so it replaces the stronger word until the owner gives a
+  status or a DOI.

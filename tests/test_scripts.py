@@ -92,6 +92,133 @@ def test_catalog_page(small_catalog: Path, tmp_path: Path, monkeypatch: pytest.M
     assert written.startswith("---\nhide:") and "\n# Stability catalog\n" in written
 
 
+def test_system_pages(small_catalog: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from urllib.parse import parse_qs, unquote, urlsplit
+
+    from exostab.web.state import decode_state
+
+    pages = load("system_pages")
+    table = load("catalog_page")
+    monkeypatch.setattr(pages, "OUT", tmp_path / "systems")
+    monkeypatch.setattr(table, "SYSTEMS", tmp_path / "systems")
+    # no pages yet: the table has no dead links, and row anchors stay
+    assert "../systems/" not in table.render(small_catalog)
+    assert pages.write_all(small_catalog) == 4
+    text = table.render(small_catalog)
+    links = re.findall(r'<a href="\.\./systems/([^/"]+)/">', text)
+    assert sorted(links) == sorted(p.stem for p in (tmp_path / "systems").glob("*.md")) and len(links) == 4
+    assert len(re.findall(r'<tr id="', text)) == 4
+
+    meta = {"created_utc": "2026-10-26T11:24:44+00:00"}
+    row = {
+        "system": "KOI-351",
+        "n_planets": "2",
+        "status": "ok",
+        "reason": "",
+        "overall": "unstable",
+        "hill": "unstable",
+        "amd": "marginal",
+        "nbody": "unstable",
+        "hill_min_separation": "2.41",
+        "amd_beta_max": "inf",
+        "megno_nominal": "12.5",
+        "nbody_regular": "0",
+        "nbody_chaotic": "0",
+        "nbody_unstable": "10",
+        "nbody_inconclusive": "0",
+        "energy_error_nominal": "1e-6",
+        "t_end_yr": "1234.5",
+        "orbits": "10000.0",
+        "draws": "10",
+        "seed": "0",
+        "completion_rules": "coplanar_assumed;a_future_rule",
+        "archive_rows": "KOI-351 b;Kepler-90 i",
+        "data_retrieved_utc": "2026-10-26T10:17:22+00:00",
+        "exostab_version": "1.0.0",
+    }
+    unstable = pages.page(row, meta, {"KOI-351"})
+    assert 'title: "KOI-351 (Kepler-90): orbital stability verdicts from exostab"' in unstable
+    assert "exclude: true" in unstable and 'exostab check "KOI-351" --draws 10' in unstable
+    assert "not a prediction for the planets" in unstable and "#published-parameter-sets" in unstable
+    assert "β = ∞" in unstable and "1,234 years" in unstable and "10 with a close encounter" in unstable
+    assert "`a_future_rule`" in unstable and "overview/KOI-351" in unstable
+
+    empty = dict.fromkeys(row, "")
+    skipped = {
+        **row,
+        **{
+            k: empty[k]
+            for k in ("overall", "hill", "amd", "nbody", "archive_rows", "completion_rules", "t_end_yr")
+        },
+        "status": "skipped",
+        "reason": "KOI-351 is a circumbinary_system",
+    }
+    no_verdict = pages.page(skipped, meta, {"KOI-351"})
+    assert "circumbinary\\_system" in no_verdict and "verdict-" not in no_verdict
+    assert (
+        "exostab check" not in no_verdict
+        and "mybinder" not in no_verdict
+        and "overview/KOI-351" in no_verdict
+    )
+    assert "2 planet rows" in no_verdict and "could do with them" in no_verdict
+    one_row = pages.page({**skipped, "n_planets": "1"}, meta, {"KOI-351"})
+    assert "1 planet row in" in one_row and "could do with it," in one_row
+    # text with & and < reaches the reader without a stray backslash
+    markdown = pytest.importorskip("markdown")
+    reason = pages.page({**skipped, "reason": "Chen & Kipping <2"}, meta, {"KOI-351"})
+    assert "Chen &amp; Kipping &lt;2" in markdown.markdown(reason)
+    inconclusive = pages.page({**row, "overall": "inconclusive"}, meta, {"KOI-351"})
+    assert (
+        "makes no statement" in inconclusive.split("---")[1] and "the nominal run or a draw" in inconclusive
+    )
+    assert "with 10 draws" in unstable and "`inf`" not in unstable
+    timeout = pages.page({**skipped, "status": "timeout"}, meta, {"KOI-351"})
+    assert "exostab check" in timeout and "verdict-" not in timeout
+
+    # the Binder link survives the two rounds of decoding and selects the system in the app
+    for name in ("GJ 876", "2MASS J19383260+4603591", "Barnard's star"):
+        urlpath = parse_qs(urlsplit(pages.binder_url(name)).query)["urlpath"][0]
+        path = urlsplit(urlpath)
+        assert path.path == "exostab/"
+        assert decode_state({k: v[0] for k, v in parse_qs(path.query).items()}).system == name
+        assert unquote(pages.binder_url(name)).count("exostab/?system=") == 1
+
+
+def test_other_names() -> None:
+    names = load("system_pages").other_names
+    assert names("KOI-351", "KOI-351 b;Kepler-90 i", set()) == ["Kepler-90"]
+    assert names("GJ 876", "GJ 876 b", set()) == ["Gliese 876"]
+    assert names("GJ 15 A", "GJ 15 A b", set()) == ["Gliese 15 A"]
+    assert names("GJ 1132", "GJ 1132 b", set()) == []  # not one of Gliese's own numbers
+    assert names("ups And", "ups And b", set()) == ["Upsilon Andromedae"]
+    assert names("55 Cnc", "55 Cnc e", set()) == ["55 Cancri"]
+    assert names("HD 39091", "pi Men c;HD 39091 b", set()) == ["pi Men", "Pi Mensae"]
+    assert names("AU Mic", "AU Mic b", set()) == ["AU Microscopii"]
+    # candidates, parts of the host's name, other hosts and unknown abbreviations give no name
+    assert names("TOI-216", "TOI-216.01;TOI-216.02", set()) == []
+    assert names("Barnard's star", "Barnard b", set()) == []
+    assert names("HD 142", "HD 142 A b", set()) == []
+    assert names("55 Cnc B", "55 Cnc B b", {"55 Cnc"}) == ["55 Cancri B"]
+    assert names("HD 1", "HD 2 b", {"HD 1", "HD 2"}) == []
+    assert names("XX Foo", "XX Foo b", set()) == []
+
+
+def test_catalog_data_dictionary(small_catalog: Path) -> None:
+    from exostab.catalog.build import COLUMNS, CatalogSettings
+
+    page = load("catalog_page")
+    assert list(page.CSV_COLUMNS) == COLUMNS
+    meta = json.loads((small_catalog / "catalog_meta.json").read_text())
+    keys = {f"settings.{k}" for k in vars(CatalogSettings())} | (set(meta) - {"settings"})
+    assert set(page.META_KEYS) == keys
+    text = page.render(small_catalog)
+    assert all(f"| `{name}` |" in text for name in [*COLUMNS, *keys])
+    # how to cite: the version's date, the archive's DOI and the licence, also for dataset search engines
+    assert f"version of\n> {meta['created_utc'][:10]}" in text and "doi:[10.26133/NEA13]" in text
+    assert "A DOI for the catalog will follow" in text and "(citing.md)" in text
+    assert "CC BY 4.0" in text and '"license": "https://creativecommons.org/licenses/by/4.0/"' in text
+
+
 def test_cell_formatting() -> None:
     page = load("catalog_page")
     row = {

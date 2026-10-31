@@ -117,7 +117,7 @@ so those tests assert only outcomes that cannot depend on it.
 # Research impact statement
 
 `exostab` grew out of an N-body study of the two giant planets of the red giant HD 127195 [@figueira2026],
-submitted by the author to Research Notes of the AAS. With the inputs and settings of that study, `exostab`
+prepared by the author for Research Notes of the AAS. With the inputs and settings of that study, `exostab`
 reproduces its geometry exactly and, in the study's convention, its AMD limits, and its Monte Carlo
 classification within the statistical tolerance: 133 of 200 draws are regular and 5 have close encounters,
 compared with 134 and 9 in the study. Of the remaining draws, 51 are chaotic and 11 are chaotic but inconclusive,
