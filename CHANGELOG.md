@@ -6,15 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-### Added
-
-- The catalog's filter and the web app's search box also find a system by its other names: `Kepler-90` finds KOI-351,
-  `Gliese 876` finds GJ 876 and `Upsilon Andromedae` finds ups And.
-
 ## [1.0.1] - 2026-10-31
 
 ### Added
 
+- The catalog's filter and the web app's search box also find a system by its other names: `Kepler-90` finds KOI-351,
+  `Gliese 876` finds GJ 876 and `Upsilon Andromedae` finds ups And.
 - Each release gets a DOI from Zenodo.
 - Three ways to try exostab in a browser with no install: a notebook for Google Colab
   (`examples/exostab_quickstart.ipynb`), a dev container for GitHub Codespaces (`.devcontainer/`) and a Binder
