@@ -10,8 +10,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
-- exostab is on PyPI: `pip install exostab`, `pip install "exostab[web]"` and `uvx exostab`. The first version there is
-  this one. Each release also gets a DOI from Zenodo.
+- Each release gets a DOI from Zenodo.
 - Three ways to try exostab in a browser with no install: a notebook for Google Colab
   (`examples/exostab_quickstart.ipynb`), a dev container for GitHub Codespaces (`.devcontainer/`) and a Binder
   configuration (`.binder/`) that serves the web app at `<session URL>/exostab/`. The notebook and Binder install the
