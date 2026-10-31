@@ -22,6 +22,11 @@ Mass
     non-transiting planet is a minimum mass; "M-R relationship" was estimated by the archive from the
     radius ("estimated"). An upper limit is used as the value in the nominal run. A missing mass is
     estimated from the radius with the Chen & Kipping (2017) relation where that relation can be inverted.
+Archive-calculated values
+    A ``*_reflink`` of "Calculated Value" (the link to ``pscp_calc.html``) means the archive computed the
+    number. Planet mass and radius filled from the Chen & Kipping (2017) mass-radius relation are labelled
+    "estimated"; every other calculated column is computed from measured quantities and is labelled
+    "derived". ``_value`` applies the same rule to every column.
 Eccentricity
     Missing -> 0 ("assumed"). Published as exactly 0 without an uncertainty -> also "assumed" and
     flagged: such a value is a circular orbit fixed in the source's fit, not a measurement. An upper
@@ -79,9 +84,26 @@ def parse_reflink(html: str | None) -> tuple[str | None, str | None]:
     return text, (urljoin(ARCHIVE_URL, unescape(m.group(1))) if m else None)
 
 
+# pscp_calc.html fills planet mass and radius from the Chen & Kipping (2017) mass-radius relation.
+# Every other quantity on that page is computed from measured inputs.
+_MASS_RADIUS_COLUMNS = frozenset({"pl_bmasse", "pl_bmassj", "pl_rade", "pl_radj"})
+
+
+def _archive_calculated(ref: str | None, url: str | None) -> bool:
+    """True when the cell's reference is the archive's own calculated value."""
+    return ref == "Calculated Value" or (url is not None and "pscp_calc.html" in url)
+
+
 def _value(row: Row, base: str, *, provenance: Provenance = Provenance.MEASURED) -> Value:
-    """Value with archive errors (err1 >= 0 is the upper error, err2 <= 0 the lower one)."""
+    """Value with archive errors (err1 >= 0 is the upper error, err2 <= 0 the lower one).
+
+    A reference of "Calculated Value" is not a measurement. For every column, the label follows
+    ``pscp_calc.html``: "estimated" when the archive filled the column from a mass-radius relation,
+    "derived" when it computed the column from other measured quantities.
+    """
     ref, url = parse_reflink(row.get(base + "_reflink"))
+    if _archive_calculated(ref, url):
+        provenance = Provenance.ESTIMATED if base in _MASS_RADIUS_COLUMNS else Provenance.DERIVED
     e1, e2 = row.get(base + "err1"), row.get(base + "err2")
     return Value(
         value=row.get(base),

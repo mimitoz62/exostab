@@ -268,6 +268,54 @@ def test_mass_kind_uses_transit_and_limit_flags() -> None:
     assert list_systems(rows)[0].minimum_masses == 1
 
 
+def test_archive_calculated_value_provenance() -> None:
+    # The archive cell for a value it computed itself (pscp_calc.html). A radius is filled from the
+    # Chen & Kipping mass-radius relation ("estimated"); any other column is computed from measured
+    # quantities ("derived"). HD 127195 b and c in the snapshot are this kind of radius.
+    calc = "<a refstr=CALCULATED_VALUE href=/docs/pscp_calc.html target=_blank>Calculated Value</a>"
+    s = system_from_rows(
+        pair(
+            pl_bmassprov="Msini",
+            pl_rade=14.0,
+            pl_rade_reflink=calc,
+            pl_orbsmax=1.25,
+            pl_orbsmax_reflink=calc,
+        ),
+        INFO,
+    )
+    c = s.planets[1]
+    assert c.radius_earth is not None and c.semimajor_axis_au is not None
+    assert c.radius_earth.value == 14.0
+    assert c.radius_earth.provenance is Provenance.ESTIMATED
+    assert c.radius_earth.reference == "Calculated Value"
+    assert c.radius_earth.reference_url == "https://exoplanetarchive.ipac.caltech.edu/docs/pscp_calc.html"
+    assert c.radius_earth.err_plus is None and c.radius_earth.err_minus is None
+    assert c.semimajor_axis_au.provenance is Provenance.DERIVED
+    assert c.semimajor_axis_au.reference == "Calculated Value"
+    # the published mass is untouched: these radii never feed the Chen & Kipping mass
+    assert c.mass_kind is MassKind.MINIMUM and c.mass_earth.provenance is Provenance.MEASURED
+    published = system_from_rows(
+        pair(pl_rade=1.2, pl_radeerr1=0.1, pl_radeerr2=-0.1, pl_rade_reflink=REF_B), INFO
+    )
+    assert published.planets[1].radius_earth is not None
+    assert published.planets[1].radius_earth.provenance is Provenance.MEASURED
+    # the rule lives in _value, so it covers columns the planet builder does not special-case
+    r = row("Host b")
+    r.update(pl_radj=1.1, pl_radj_reflink=calc, pl_orbincl=89.0, pl_orbincl_reflink=calc)
+    assert completion._value(r, "pl_radj").provenance is Provenance.ESTIMATED
+    assert completion._value(r, "pl_bmasse").provenance is Provenance.MEASURED  # literature reference
+    assert completion._value(r, "pl_orbincl").provenance is Provenance.DERIVED
+    assert completion._value({"pl_bmassj": 1.0, "pl_bmassj_reflink": calc}, "pl_bmassj").provenance is (
+        Provenance.ESTIMATED
+    )
+    hd = load_system("HD 127195")
+    calculated = [p for p in hd.planets if p.radius_earth and p.radius_earth.reference == "Calculated Value"]
+    assert [p.name for p in calculated] == ["HD 127195 b", "HD 127195 c"]
+    assert all(
+        p.radius_earth is not None and p.radius_earth.provenance is Provenance.ESTIMATED for p in calculated
+    )
+
+
 def test_mass_from_radius_and_failures() -> None:
     s = system_from_rows(pair(pl_bmasse=None, pl_rade=2.0), INFO)
     assert s.planets[1].mass_kind is MassKind.ESTIMATED
