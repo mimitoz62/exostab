@@ -12,6 +12,7 @@ from typing import Annotated
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from . import __version__
@@ -71,6 +72,11 @@ def slug(name: str) -> str:
     return re.sub(r"[^0-9A-Za-z]+", "-", name).strip("-").lower() or "system"
 
 
+def _print_error(message: object) -> None:
+    # The message can quote what was typed, and "[/red]" in a name is text here, not markup.
+    err_console.print(f"[red]{escape(str(message))}[/red]")
+
+
 def _load(name: str | None, from_file: Path | None, refresh: bool, offline: bool) -> System:
     from .data import (
         IncompleteSystemError,
@@ -90,7 +96,7 @@ def _load(name: str | None, from_file: Path | None, refresh: bool, offline: bool
         assert name is not None
         return load_system(name, refresh=refresh, offline=offline)
     except (SystemNotFoundError, IncompleteSystemError, SystemFileError, ArchiveError) as exc:
-        err_console.print(f"[red]{exc}[/red]")
+        _print_error(exc)
         raise typer.Exit(1) from exc
 
 
@@ -104,7 +110,12 @@ OrbitsOpt = Annotated[
 SeedOpt = Annotated[
     int,
     # numpy's SeedSequence takes only non-negative integers
-    typer.Option("--seed", help="Random seed: the same seed gives the same draws and results.", min=0),
+    typer.Option(
+        "--seed",
+        help="Random seed: the same seed gives the same draws and, on the same platform and software "
+        "versions, the same results.",
+        min=0,
+    ),
 ]
 JobsOpt = Annotated[
     int | None, typer.Option("--jobs", "-j", help="Worker processes (default: all cores but one).", min=1)
@@ -230,7 +241,7 @@ def check(
         try:
             seconds = parse_budget(budget)
         except ValueError as exc:
-            err_console.print(f"[red]{exc}[/red]")
+            _print_error(exc)
             raise typer.Exit(2) from exc
         with console.status(f"Measuring integration speed for a {seconds:g} s budget…"):
             settings, p = settings_for_budget(system, seconds, settings)
@@ -248,7 +259,7 @@ def check(
         try:
             result = check_system(system, settings, command=_command())
         except SpockUnavailableError as exc:
-            err_console.print(f"[red]{exc}[/red]")
+            _print_error(exc)
             raise typer.Exit(1) from exc
     out_dir = out or Path("exostab-results") / slug(system.name)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -298,13 +309,13 @@ def sweep(
         for end in value_range:
             check_value(param.value, end)
     except ValueError as exc:
-        err_console.print(f"[red]--range: {exc}.[/red]")
+        _print_error(f"--range: {exc}.")
         raise typer.Exit(2) from exc
     system = _load(name, from_file, refresh, offline)
     try:
         system.planet(planet)
     except KeyError as exc:
-        err_console.print(f"[red]{exc.args[0]}[/red]")
+        _print_error(exc.args[0])
         raise typer.Exit(1) from exc
     with console.status(f"Sweeping {param.value} of {planet} over {steps} values…"):
         rows = run_sweep(system, planet, param.value, value_range, steps, orbits=orbits, seed=seed, jobs=jobs)
@@ -361,7 +372,7 @@ def list_cmd(
     try:
         rows, info = load_rows(refresh=refresh, offline=offline)
     except ArchiveError as exc:
-        err_console.print(f"[red]{exc}[/red]")
+        _print_error(exc)
         raise typer.Exit(1) from exc
     systems = list_systems(rows, min_planets=min_planets, max_period_days=max_period_days)
     shown = systems[:limit] if limit else systems
@@ -427,7 +438,7 @@ def catalog_build(
     refresh: RefreshOpt = False,
     offline: OfflineOpt = False,
 ) -> None:
-    """Compute indicators for every multi-planet system and write catalog.csv (+ catalog.parquet)."""
+    """Compute indicators for the multi-planet systems and write catalog.csv (+ catalog.parquet)."""
     from .catalog.build import CatalogSettings, build_catalog
 
     settings = CatalogSettings(orbits=orbits, draws=draws, seed=seed, max_seconds=max_seconds, jobs=jobs)
