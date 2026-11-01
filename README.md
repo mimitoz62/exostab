@@ -49,8 +49,8 @@
 
 ## What exostab answers
 
-Name a known multi-planet system, and exostab tells you whether its planets are likely to keep their orbits, and
-how firmly the data support that answer.
+Name a known multi-planet system, and exostab reports whether its published parameters pass three stability tests,
+and how that answer holds up within the published error bars.
 
 It takes the system's parameters from the [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/)
 (the Planetary Systems Composite Parameters table, `pscomppars`) or from a YAML file you write. Every missing value
@@ -539,7 +539,7 @@ Research Notes of the AAS, not yet published). It runs nightly in continuous int
 | Inner Solar System, 10,000 years: relative energy error | WHFast (dt = 1.891 d) below 10⁻⁷; IAS15 below 10⁻¹² | 1.44 × 10⁻⁹; 5.25 × 10⁻¹⁵ |
 | Gladman limit, two planets of 10⁻⁵ M☉ on circular orbits | tends to 2√3 = 3.4641 mutual Hill radii for small masses | 3.4624 |
 | The same pair started at 2.2, 3.0, 4.0 and 4.5 mutual Hill radii, 8 starting phases each | every phase meets at 2.2; none is regular at 3.0; none meets at 4.0 or 4.5 | as expected |
-| TRAPPIST-1, a resonant chain (archive snapshot) | stable or marginal, never unstable | Hill marginal, AMD stable, N-body marginal: overall **marginal**; nominal ⟨Y⟩ 2.1709 (WHFast) / 2.1685 (IAS15); draws 18 regular, 2 chaotic, 0 encounters |
+| TRAPPIST-1, a resonant chain (archive snapshot) | stable or marginal, never unstable | Hill marginal, AMD stable, N-body marginal: overall **marginal**; nominal ⟨Y⟩ 2.1709 (WHFast) / 2.1685 (IAS15) with seed 0 (seeds 0-7 give 2.16-2.49); draws 18 regular, 2 chaotic, 0 encounters |
 | GJ 876, a Laplace resonance (Rivera et al. 2010 fit) | N-body stable | N-body **stable**, ⟨Y⟩ 1.9925 / 1.9951, all 20 draws regular; overall marginal by design, because Hill spacing (unstable) and AMD (marginal) fail |
 | Kepler-11, six compact planets (archive snapshot) | the nominal configuration is regular over the test horizon | nominal run regular with both integrators over 282.1 years (⟨Y⟩ 1.7855 / 1.7857); draws 10 regular, 8 chaotic, 2 encounters: N-body **marginal**, reported as found |
 | HD 127195 Research Note inputs (20,000 orbits, 200 draws, seed 42) | 134 regular, 57 chaotic, 9 encounters; best-fit ⟨Y⟩ 2.000 | 133 regular, 51 chaotic, 5 encounters, 11 inconclusive (regular and encounter fractions within 3 binomial σ); best fit ⟨Y⟩ 1.9994 |
@@ -596,7 +596,7 @@ Archive.
 
 **The software.** Use [CITATION.cff](https://github.com/mimitoz62/exostab/blob/main/CITATION.cff) (GitHub's
 "Cite this repository" button), and give the version you used; every `report.json` records it. The DOI
-[10.5281/zenodo.23844658](https://doi.org/10.5281/zenodo.23844658) always resolves to the latest version, and each version also has its own. In BibTeX:
+[10.5281/zenodo.23844658](https://doi.org/10.5281/zenodo.23844658) always resolves to the latest version, and each version also has its own. In BibTeX, with the DOI of version 1.0.1:
 
 ```bibtex
 @software{oz_exostab,
@@ -604,7 +604,7 @@ Archive.
   title   = {exostab: honest, traceable orbital-stability indicators for known exoplanet systems},
   year    = {2026},
   version = {1.0.1},
-  doi     = {10.5281/zenodo.23844658},
+  doi     = {10.5281/zenodo.23844659},
   url     = {https://github.com/mimitoz62/exostab}
 }
 ```

@@ -91,11 +91,11 @@ with a planet that has neither a mass nor a usable radius and 1 without a stella
 Where each planet is along its orbit at the start of the integration matters a lot for resonant systems.
 
 1. **Transiting planets:** the phase follows from the mid-transit time. At mid-transit the true anomaly is
-   f = 90° − ω (Winn 2010), with ω the argument of periastron of the planet's orbit. It is propagated to a common
+   f = 90° − ω (Winn 2010). It is propagated to a common
    epoch with the period, and the uncertainties of both enter every draw. The archive does not standardize ω:
    some publications give the planet's ω, others that of the star's reflex orbit, which differs by 180°, and the
-   values are "as-reported for each publication" (archive column documentation). exostab takes every ω as the
-   planet's. For an eccentric planet a wrong convention is not a rotation of the whole system: the planet stays
+   values are "as-reported for each publication" (archive column documentation). exostab uses every ω as published,
+   in f = 90° − ω. For an eccentric planet a wrong convention is not a rotation of the whole system: the planet stays
    where its transit puts it while its periastron flips, so the starting configuration changes and an eccentric
    system near a resonance can get a different N-body verdict.
 2. **Non-transiting planets with a time of conjunction or of periastron:** used only if it comes from the same
@@ -141,6 +141,6 @@ other value is refused.
 | `mass_earth` / `mass_jupiter` / `mass_msun` | M⊕ / M♃ / M☉ | one of them; or only `radius_earth` (R⊕), and the mass comes from Chen & Kipping (2017) (`mass_from_radius_chen_kipping`) |
 | `mass_kind` | — | `true` (default), `minimum` (m sin i, `minimum_mass`) or `estimated` (`mass_estimated_in_file`); a radius-only planet takes no other kind than `estimated` |
 | `eccentricity` | — | missing → 0 (`eccentricity_assumed_zero`); above 0.95 refused |
-| `omega_deg` | deg | argument of periastron; missing → random in every run (`omega_randomized`) |
+| `omega_deg` | deg | argument of periastron; missing → random in every run (`omega_randomized`). With `transit_time_jd`, the planet is placed at true anomaly f = 90° − ω at that time. Type ω unchanged if your source uses f = 90° − ω (Winn 2010, Eq. 6; EXOFAST's ω★, Eastman et al. 2013, Eq. 11), and add 180° if it uses f = 270° − ω (NbodyGradient, used by Agol et al. 2021; see `examples/trappist1_agol2021.yaml`). The words planet's and star's do not settle it: each source defines its own reference direction |
 | `mean_longitude_deg`, `mean_anomaly_deg`, `transit_time_jd`, `periastron_time_jd` | deg / JD | at most one; the mean anomaly and the time of periastron need `omega_deg`; none → random phase (`phase_randomized`) |
 | `reference` | — | citation for every value of the planet that has none of its own |

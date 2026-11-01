@@ -266,3 +266,9 @@ def test_upper_limit_must_be_a_boolean(tmp_path: Path) -> None:
     assert s.planet("c").eccentricity.provenance is Provenance.MEASURED
     s = load_system_file(write(tmp_path, text.replace('"no"', "true")))
     assert s.planet("c").eccentricity.provenance is Provenance.UPPER_LIMIT
+
+
+def test_solar_system_example_loads():
+    s = load_system_file(EXAMPLES / "solar_system.yaml")
+    assert s.planets[0].name == "Mercury" and len(s.planets) == 8
+    assert "nssdc.gsfc.nasa.gov" in (EXAMPLES / "solar_system.yaml").read_text(encoding="utf-8")

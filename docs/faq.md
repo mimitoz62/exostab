@@ -30,6 +30,16 @@ The N-body integrations could not be trusted, in the nominal run or in more than
 energy error exceeded 10⁻⁵, or a planet passed so close to the star that tides, general relativity and the size
 of the star, none of which exostab models, can decide what happens. No overall verdict is given then.
 
+**What does exostab say about the Solar System?**
+It is not in the archive, so `exostab check "Solar System"` finds nothing.
+[`examples/solar_system.yaml`](https://github.com/mimitoz62/exostab/blob/main/examples/solar_system.yaml) has the eight
+planets from NASA's fact sheets, with no uncertainties, so the draws repeat the same values. Hill spacing says unstable,
+because Mars / Jupiter is inside the two-planet limit, and AMD says marginal (largest β = 357, Earth / Mars). The N-body
+verdict is marginal at the default length, where Neptune completes only 15 orbits. With `--orbits 70000` (16,859 years,
+about 100 orbits of Neptune) every run is regular and the N-body verdict is stable. Overall, exostab calls it marginal
+at both lengths. Failing Hill spacing or AMD means that stability is not guaranteed, not that the planets meet.
+The orbits are coplanar here, with no moons or general relativity, and a run of 16,859 years is short for this system.
+
 **How long does a check take?**
 About 3–8 seconds for 2–7 planets with the defaults on a recent laptop with many cores, and about 7 s (3 planets)
 to 15 s (7 planets) on a single core. A smaller machine, such as a free cloud session, takes longer. The analytic
@@ -42,7 +52,9 @@ other names, and `exostab check` suggests the archive's name for most of them.
 
 **Why can the catalog, `exostab check` and the web app give different verdicts for one system?**
 They run different numbers of draws: 10 in the catalog, 20 by default in `exostab check`, and in the web app as
-many as fit the time budget. A stable verdict needs at least 95% of the draws to agree, so one draw can decide it.
+many as fit the time budget, which also chooses the run length: 2,000 orbits at the shortest setting, against 10,000 in
+the other two. With the bundled snapshot, TRAPPIST-1's N-body verdict is stable at 2,000 orbits with 8 draws and marginal at 10,000 with 10 draws.
+A stable verdict needs at least 95% of the draws to agree, so one draw can decide it.
 TOI-270, for example, is stable in the catalog of 26 October 2026 and marginal with the defaults. Add `--draws 10`
 to match the catalog's settings. On another platform, floating-point rounding can also change chaotic runs.
 

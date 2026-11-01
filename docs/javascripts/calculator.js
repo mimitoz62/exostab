@@ -486,6 +486,7 @@
     "jupiter-saturn": { star: "1", a: planet("317.83", "4332.589", "0.0487"), b: planet("95.16", "10755.699", "0.052") },
     "kepler-36": { star: "1.034", a: planet("3.83", "13.86825", "0"), b: planet("7.13", "16.21865", "0") },
     "gj-876": { star: "0.32", a: planet("723.2235", "61.1166", "0.0324"), b: planet("226.9846", "30.0881", "0.25591") },
+    "trappist-1-fg": { star: "0.0898", a: planet("1.039", "9.20754", "0.01007"), b: planet("1.321", "12.352446", "0.00208") },
   };
 
   // The inputs in a link, for example ?star=1&a_mass=3.8&a_unit=earth&a_period=13.9&a_e=0&b_mass=...&b_axis=0.13&b_e=0.

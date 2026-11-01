@@ -2,9 +2,10 @@ cff-version: 1.2.0
 message: "If you use exostab, please cite it as below, together with the methods and data it relies on (see docs/references.bib)."
 title: "exostab: honest, traceable orbital-stability indicators for known exoplanet systems"
 abstract: >-
-  exostab reports whether a known multi-planet system is dynamically stable using three indicators:
-  Hill spacing, the angular momentum deficit, and direct N-body integration with the MEGNO chaos
-  indicator, with parameters from the NASA Exoplanet Archive and every data assumption recorded.
+  exostab reports whether the published parameters of a known multi-planet system pass three tests of
+  dynamical stability: Hill spacing, the angular momentum deficit, and direct N-body integration with the
+  MEGNO chaos indicator. It repeats the tests within the published uncertainties, takes its parameters
+  from the NASA Exoplanet Archive or a file, and records every data assumption.
 type: software
 authors:
   - family-names: "Öz"

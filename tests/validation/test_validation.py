@@ -11,13 +11,14 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import yaml
 
 from exostab._numerics import bisect
 from exostab.analysis import CheckSettings, check_system
 from exostab.data import load_system, load_system_file
 from exostab.indicators import Verdict, amd, hill
 from exostab.indicators.megno import MEGNO_CHAOTIC, classify_run
-from exostab.integrate import RunConfig, run
+from exostab.integrate import RunConfig, build_simulation, run
 from exostab.sampling import Body, Realization, realizations
 
 pytestmark = pytest.mark.slow
@@ -154,6 +155,47 @@ def test_gj876_laplace_resonance_is_stable_with_published_phases() -> None:
     # is marginal, never unstable (see docs/validation.md).
     assert rep.indicators["hill"].verdict is Verdict.UNSTABLE
     assert rep.overall.verdict is Verdict.MARGINAL
+
+
+# Mean transit periods of Ducrot et al. (2020, A&A 640, A112), Table 4, in days.
+DUCROT_2020_PERIODS = (1.51088432, 2.42179346, 4.04978035, 6.09956479, 9.20659399, 12.3535557, 18.7672745)
+
+
+def _largest_transit_period_difference(path: Path) -> float:
+    """Largest difference, in days, between a planet's mean transit period over 1,500 d (IAS15) and Ducrot et al."""
+    real = realizations(load_system_file(path), 0, 0)[0]
+    sim = build_simulation(real, RunConfig(integrator="ias15"))
+    dt = 0.05  # days
+    times: list[list[float]] = [[] for _ in real.bodies]
+    last = [math.inf] * len(real.bodies)
+    for step in range(1, int(1500 / dt) + 1):
+        sim.integrate(step * dt / 365.25, exact_finish_time=1)
+        star = sim.particles[0]
+        for i in range(len(real.bodies)):
+            planet = sim.particles[i + 1]
+            x = planet.x - star.x
+            # exostab's line of sight points along +y, where every planet transits (sampling.py)
+            if last[i] > 0 >= x and last[i] != math.inf and planet.y > star.y:
+                times[i].append((step - 1 + last[i] / (last[i] - x)) * dt)
+            last[i] = x
+    fitted = [np.polyfit(np.arange(len(t)), t, 1)[0] for t in times]
+    return max(abs(p - q) for p, q in zip(fitted, DUCROT_2020_PERIODS, strict=True))
+
+
+def test_trappist1_agol2021_file_fits_the_transits_and_is_regular(tmp_path: Path) -> None:
+    path = EXAMPLES / "trappist1_agol2021.yaml"
+    system = load_system_file(path)
+    for seed in (0, 1, 2):
+        res = check_system(system, CheckSettings(draws=0, seed=seed, ias15_check=False))
+        assert classify_run(res.runs[0]) == "regular"
+    assert _largest_transit_period_difference(path) < 2e-3  # measured: 8.5e-4 d
+    # The table's own omega, typed unchanged, misses it (f = 90 deg - omega against their 270 deg - omega).
+    table = yaml.safe_load(path.read_text(encoding="utf-8"))
+    for planet in table["planets"]:
+        planet["omega_deg"]["value"] = (planet["omega_deg"]["value"] + 180) % 360
+    as_typed = tmp_path / "as_typed.yaml"
+    as_typed.write_text(yaml.safe_dump(table), encoding="utf-8")
+    assert _largest_transit_period_difference(as_typed) > 1e-2  # measured: 0.019 d
 
 
 def test_kepler11_nominal_configuration_is_stable_over_the_test_horizon() -> None:

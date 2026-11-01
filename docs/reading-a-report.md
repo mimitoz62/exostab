@@ -561,7 +561,12 @@ not a prediction for the planets.
   run is labelled chaotic. A ⟨Y⟩ this close to 2.2 is not a firm label. The overall verdict is marginal in all three.
 - The list under `Data completion` says that transit times and periods come from different papers. To test the solution
   of one paper, write it in a YAML file and run it with `--from-file`
-  ([your own parameters](data-assumptions.md#your-own-parameters)).
+  ([your own parameters](data-assumptions.md#your-own-parameters)). For TRAPPIST-1 the repository has one:
+  `exostab check --from-file examples/trappist1_agol2021.yaml`, the solution of Agol et al. (2021). Over the same 41
+  years, with seed 0, its nominal ⟨Y⟩ is 1.27 and 19 of 20 draws are regular; its overall verdict stays marginal, because Hill spacing
+  does not depend on the orbital phases. The header of
+  [the file](https://github.com/mimitoz62/exostab/blob/main/examples/trappist1_agol2021.yaml) says why every ω in it has
+  180° added.
 
 ### Stable, with assumed eccentricities
 
@@ -641,9 +646,10 @@ stable verdicts have every eccentricity assumed 0
 │   chaotic, 0 close encounter/escape of 20.                                                       │
 │                                                                                                  │
 │ Overall: MARGINAL  The N-body integration shows regular motion for the nominal parameters and    │
-│ all 20 draws. The other indicators cannot guarantee stability (Hill spacing: marginal). This is  │
-│ typical of systems protected by mean-motion resonances or of compact systems whose long-term     │
-│ stability is uncertain.                                                                          │
+│ all 20 draws. The other indicators cannot guarantee stability (Hill spacing: marginal). Every    │
+│ pair passes the two-planet limit, but Kepler-9 b / Kepler-9 c is only 11.1 mutual Hill radii     │
+│ apart, where the heuristic threshold for its eccentricities is 14.1 (Pu & Wu 2015, extrapolated  │
+│ beyond σ_e = 0.05); long-term stability is not guaranteed by spacing alone.                      │
 ```
 
 **What it means.** The integration found no sign of instability within 43.6 years, but the analytic test cannot back

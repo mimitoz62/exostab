@@ -548,9 +548,15 @@ def test_the_presets_are_what_the_page_says() -> None:
         "jupiter-saturn": ("stable", "stable", False),
         "kepler-36": ("stable", "stable", False),
         "gj-876": ("unstable", "marginal", True),
+        "trappist-1-fg": ("stable", "stable", False),
     }
-    assert [o["amd"]["outside_domain"] for o in out.values()] == [None, None, "eps_above_limit"]
-    assert [o["amd"]["critical_branch"] for o in out.values()] == ["collision", "mmr_overlap", "collision"]
+    assert [o["amd"]["outside_domain"] for o in out.values()] == [None, None, "eps_above_limit", None]
+    assert [o["amd"]["critical_branch"] for o in out.values()] == [
+        "collision",
+        "mmr_overlap",
+        "collision",
+        "collision",
+    ]
     for name, fields in presets.items():
         real = realization_of(fields)
         assert out[name]["hill"]["verdict"] == hill.classify(real).value
@@ -564,13 +570,20 @@ def test_the_presets_are_what_the_page_says() -> None:
     }
 
 
-@pytest.mark.parametrize(("preset", "host"), [("kepler-36", "Kepler-36"), ("gj-876", "GJ 876")])
-def test_the_presets_from_the_snapshot_have_its_values(preset: str, host: str) -> None:
+@pytest.mark.parametrize(
+    ("preset", "host", "letters"),
+    [
+        ("kepler-36", "Kepler-36", "bc"),
+        ("gj-876", "GJ 876", "bc"),
+        ("trappist-1-fg", "TRAPPIST-1", "fg"),
+    ],
+)
+def test_the_presets_from_the_snapshot_have_its_values(preset: str, host: str, letters: str) -> None:
     fields = node("calc.PRESETS")[preset]
     system = load_system(host, offline=True)
     assert system.source.kind == "snapshot" and str(system.source.retrieved_utc).startswith("2026-09-28")
     assert float(fields["star"]) == system.star.mass_msun.value
-    for key, letter in (("a", "b"), ("b", "c")):
+    for key, letter in zip("ab", letters, strict=True):
         planet = system.planet(letter)
         assert fields[key]["unit"] == "earth" and fields[key]["kind"] == "period"
         assert float(fields[key]["mass"]) == planet.mass_earth.value

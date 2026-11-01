@@ -30,6 +30,7 @@ Hill radii apart. For eccentric orbits the limit grows, and the calculator inclu
 <button type="button" class="md-button" data-preset="jupiter-saturn">Jupiter and Saturn</button>
 <button type="button" class="md-button" data-preset="kepler-36">Kepler-36 b and c</button>
 <button type="button" class="md-button" data-preset="gj-876">GJ 876 b and c</button>
+<button type="button" class="md-button" data-preset="trappist-1-fg">TRAPPIST-1 f and g</button>
 <a href="#where-the-examples-come-from">Where they come from</a>
 </div>
 <div class="calc-field">
@@ -91,7 +92,8 @@ Hill radii apart. For eccentric orbits the limit grows, and the calculator inclu
 <p>These are the verdicts of exostab's Hill and AMD indicators for exactly these numbers, with nothing integrated and
 no uncertainties. A stable verdict is not a proof that the pair is long-lived. Marginal does not mean unstable, and
 unstable means that a criterion fails, not that the planets meet. See <a href="#what-this-does-not-show">what this
-does not show</a>.</p>
+does not show</a>. This is for these two planets alone. With three or more planets, exostab also asks for at least 12
+mutual Hill radii, a heuristic, so the same pair can be marginal on a system page.</p>
 <p data-calc="order"></p>
 <h3>The orbits used</h3>
 <dl class="calc-results">
@@ -119,7 +121,7 @@ the Gladman (1993) limit is <span data-calc="gladman_critical_hill"></span>; for
 &amp; Armitage (2004) and Giuppone et al. (2013), minus 1. Positive means Hill stable: for two planets on coplanar
 orbits, a rigorous sufficient condition against close encounters (Marchal &amp; Bozis 1982; Gladman 1993), which does
 not exclude the escape of the outer planet. Zero or below means that close encounters are not excluded, not that they
-happen.</dd></div>
+happen. For small masses both sides are close to 1, so compare Δ with the limit, not the margins of different pairs.</dd></div>
 <div><dt>Can the orbits cross?</dt><dd class="calc-value" data-calc="orbits_cross"></dd>
 <dd class="calc-meaning"><span data-calc="apsides"></span> The orbits can cross, for some orientation, if the inner
 apocentre reaches the outer pericentre. The Hill indicator then says unstable.</dd></div>
@@ -202,6 +204,9 @@ parameters. [Methods](methods.md) explains the indicators.
   (2010) and its orbital phases, these two indicators say the same, yet all 20 N-body draws of `exostab check` are
   regular, because the planets are locked in a resonance. The snapshot has no usable phases, and with random phases most
   draws are not regular ([Validation](validation.md)).
+- **TRAPPIST-1 f and g**: the same snapshot. The other planets are left out. The Hill test here passes at about 6.57 mutual Hill radii, above the limit
+  of 3.46. The [system's page](https://mimitoz62.github.io/exostab/systems/trappist-1/) is marginal on spacing for the
+  same pair, because with seven planets exostab also asks for at least 12 mutual Hill radii, a heuristic.
 
 `exostab check "Kepler-36" --offline` and `exostab check "GJ 876" --offline` use the same snapshot and show the same
 values, for the whole system.

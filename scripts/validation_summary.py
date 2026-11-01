@@ -129,6 +129,18 @@ def main() -> None:
         f"mutual Hill radii (2 sqrt 3 = {2 * math.sqrt(3):.4f})"
     )
     summary("TRAPPIST-1 (snapshot)", check_system(load_system("TRAPPIST-1"), CheckSettings(draws=20, seed=0)))
+    print("\n## TRAPPIST-1 (snapshot), nominal <Y> with seeds 0 to 7 (WHFast)")
+    for seed in range(8):
+        nominal = check_system(
+            load_system("TRAPPIST-1"), CheckSettings(draws=0, seed=seed, ias15_check=False)
+        ).runs[0]
+        print(f"  seed {seed}: <Y> = {nominal.megno:.3f}, {classify_run(nominal)}")
+    summary(
+        "TRAPPIST-1 (Agol et al. 2021, Table 2)",
+        check_system(
+            load_system_file(ROOT / "examples/trappist1_agol2021.yaml"), CheckSettings(draws=20, seed=0)
+        ),
+    )
     summary(
         "GJ 876 (Rivera et al. 2010)",
         check_system(

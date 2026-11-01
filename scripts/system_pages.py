@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 import re
 import shutil
 import sys
@@ -17,6 +18,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from exostab.data.names import other_names
+from exostab.indicators import AGREEMENT
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from catalog_page import CSV_COLUMNS, RULES_VERSION, _num, _release, _row_id
@@ -83,17 +85,48 @@ MEANING = {
     ),
 }
 
+# For a catalog with the report card's sentences, which _why prints above this text.
+MARGINAL_WITH_REASONS = (
+    "exostab cannot call this published parameter set stable under these settings, for the reasons above. "
+    f"[Marginal does not mean unstable]({STABLE})."
+)
+
 CAVEATS = """The catalog checks each system it can model with the same settings, and with {draws} draws, one draw can change a
 verdict ([how firm the verdicts are](../findings.md#how-firm-these-numbers-are)). A resonant system can look marginal or
 unstable here although the full solution of one paper shows it is stable. The verdict describes the values in the archive's
 composite table, which can combine several publications ([Data and assumptions](../data-assumptions.md))."""
 
+# Hand-written notes for well-known systems, only from papers someone has read. They state what these runs show.
+NOTES = {
+    "TRAPPIST-1": """**About the real planets.** This page tests the archive's composite values, which for TRAPPIST-1 combine three
+papers: periods and masses from [Agol et al. (2021)](https://doi.org/10.3847/psj/abd022), eccentricities and ω from
+[Grimm et al. (2018)](https://doi.org/10.1051/0004-6361/201732233), and transit times from
+[Ducrot et al. (2020)](https://doi.org/10.1051/0004-6361/201937392). What follows is about exostab's runs on the bundled snapshot (`--offline`) with seed 0, not a statement that the planets
+are stable or unstable. Over 100,000 orbits of planet b (414 years) these values are chaotic in the nominal run and in all 20 draws, with
+no close encounter or escape. The solution of one paper, Agol et al. (2021), in
+[this file](https://github.com/mimitoz62/exostab/blob/main/examples/trappist1_agol2021.yaml), behaves differently: over the
+same 414 years its nominal run and 19 of 20 draws are regular (18 and 20 of 20 with seeds 1 and 2), and its nominal run stays regular over 1,000,000 orbits
+(about 4,100 years; seeds 0 to 3, WHFast). exostab's overall verdict for that file stays marginal, because Hill spacing does not depend on run
+length.
+
+Published dynamical studies run far longer. Agol et al. (2021) integrated 10,000
+samples of their posterior for 10 Myr and report all of them stable. [Tamayo et al. (2017)](https://doi.org/10.3847/2041-8213/aa70ea)
+find that about 42% of configurations drawn from the posterior then available become unstable within 5 Myr, against about 3%
+of resonant configurations generated through disk migration; of 21 of the latter run to 50 Myr, four become unstable.""",
+}
+
 CITE = "## How to cite\n\nTo cite this page, use [the catalog's citation](../catalog.md#how-to-cite-the-catalog).\n"
 
 
-def binder_url(system: str) -> str:
-    """The web app on Binder with this system selected (the app's query parameter `system`, encoded for urlpath)."""
-    return BINDER + quote(f"exostab/?system={quote(system, safe='')}", safe="")
+def binder_url(system: str, row: dict[str, str] | None = None) -> str:
+    """The web app on Binder with this system selected (the app's query parameter `system`, encoded for urlpath).
+
+    With a row, the link also carries the row's settings, and the app starts the run by itself.
+    """
+    query = f"system={quote(system, safe='')}"
+    if row is not None:
+        query += f"&budget=60&seed={row['seed']}&orbits={float(row['orbits']):g}&draws={row['draws']}&run=1"
+    return BINDER + quote(f"exostab/?{query}", safe="")
 
 
 def _text(value: str) -> str:
@@ -170,14 +203,30 @@ def page(row: dict[str, str], meta: dict[str, object], systems: set[str]) -> str
             f'```bash\nexostab check "{system}" --draws 10\n```\n\n'
             "The numbers can differ with the archive's table, the platform and the software versions; chaotic runs are "
             "sensitive to these.\n\n"
-            f"Or [open it in the web app on Binder]({binder_url(system)}), which runs the latest release; the first "
-            "start can take some minutes. The app has its own run length, so its verdict can differ.\n"
+            "This needs exostab installed: see the [Quickstart](../quickstart.md#install), or its "
+            "[one-line uvx command](../quickstart.md#try-it-without-installing).\n\n"
+            + _binder_sentence(row, ok)
         )
     parts.append(
         f"## At the archive\n\n[{_text(system)} at the NASA Exoplanet Archive]({OVERVIEW}{quote(system)}).\n"
     )
     parts.append(CITE)
     return "\n".join(parts)
+
+
+def _binder_sentence(row: dict[str, str], ok: bool) -> str:
+    system = row["system"]
+    if not ok:  # a row over the time limit must not start a run by itself
+        return (
+            f"Or [open it in the web app on Binder]({binder_url(system)}), which runs the latest release; the first "
+            "start can take some minutes. The app has its own run length, so its verdict can differ.\n"
+        )
+    return (
+        f"Or [open it in the web app on Binder]({binder_url(system, row)}), with the catalog's run length and draws; "
+        "the run starts by itself once the session opens, and the first start can take some minutes. The app runs the "
+        "latest release on the archive's current table. If that run would take too long on the server, the app says so "
+        "and chooses a shorter one, and a shorter run can change the N-body verdict.\n"
+    )
 
 
 def _no_verdict(row: dict[str, str]) -> str:
@@ -192,22 +241,70 @@ def _no_verdict(row: dict[str, str]) -> str:
     )
 
 
+def _card_sentence(text: str) -> str:
+    """A report card's sentence for a page, which has no notes of its own to point to."""
+    return _text(re.sub(r"see the (N-body )?notes", r"see the \1notes of exostab check", text))
+
+
+def _why(row: dict[str, str]) -> str:
+    """The card's own sentences for this row; nothing for a catalog built before they were columns."""
+    if not row.get("overall_summary"):
+        return ""
+    lines = ["## Why this verdict\n"]
+    if row["hill"] != "stable":
+        lines.append(f"- **Hill spacing, for the published values:** {_card_sentence(row['hill_summary'])}")
+    if row["amd"] != "stable":
+        lines.append(f"- **AMD, for the published values:** {_card_sentence(row['amd_summary'])}")
+    lines.append(f"- **Overall:** {_card_sentence(row['overall_summary'])}")
+    lines.append("")
+    n = int(row["draws"])
+    if n:
+        lines.append(
+            f"An indicator's verdict for the published values stands only if at least {AGREEMENT:.0%} of the draws share "
+            f"it: with {n} draws, {math.ceil(AGREEMENT * n)} of {n}.\n"
+        )
+    # A nominal run stopped by a close encounter has no such label. An unstable N-body verdict rests on that, an
+    # inconclusive one on a run that was not trusted, and in a marginal one it can be so: the CSV does not record it.
+    if row["nbody"] in ("stable", "marginal") and 2.1 <= float(row.get("megno_nominal") or "nan") < 2.3:
+        lines.append(
+            "The nominal run's ⟨Y⟩ is close to the threshold of 2.2. Unless that run was stopped by a close encounter, "
+            "its label of regular or chaotic can change with the seed or the platform this close to it, so it is not "
+            "firm.\n"
+        )
+    return "\n".join(lines) + "\n"
+
+
+def _meaning(row: dict[str, str]) -> str:
+    if row["overall"] == "marginal" and row.get("overall_summary"):
+        return MARGINAL_WITH_REASONS
+    return MEANING.get(row["overall"], "")
+
+
 def _verdicts(row: dict[str, str], settings: str) -> str:
+    # What separates a pair on this page from the same pair in the calculator, which looks at two planets alone.
+    try_pair = "Try a pair in the [calculator](../calculator.md)"
+    if int(row["n_planets"]) >= 3:
+        try_pair += (
+            ", which looks at two planets alone: with three or more, exostab also asks for at least 12 mutual Hill radii, "
+            "a heuristic, so the calculator can call stable a pair that is marginal here"
+        )
     table = [
         "## Verdicts\n",
         "| Indicator | Verdict | Number | What the number means |",
         "|---|---|---|---|",
         f"| Overall | {_verdict(row['overall'])} | — | Combines the three, by the rule in "
         "[Methods](../methods.md#step-3-the-overall-verdict). |",
-        f"| Hill spacing | {_verdict(row['hill'])} | {_num(row['hill_min_separation'], '.2f')} mutual Hill radii | "
-        f"{_explain('hill_min_separation')} |",
-        f"| AMD | {_verdict(row['amd'])} | β = {_num(row['amd_beta_max'], '.3g')} | {_explain('amd_beta_max')} |",
-        f"| N-body | {_verdict(row['nbody'])} | ⟨Y⟩ = {_num(row['megno_nominal'], '.3f')} | "
+        f"| [Hill spacing](../reading-a-report.md#hill-spacing) | {_verdict(row['hill'])} | {_num(row['hill_min_separation'], '.2f')} mutual Hill radii | "
+        f"{_explain('hill_min_separation')} {try_pair}. |",
+        f"| [Angular momentum deficit (AMD)](../reading-a-report.md#angular-momentum-deficit-amd) | "
+        f"{_verdict(row['amd'])} | β = {_num(row['amd_beta_max'], '.3g')} | {_explain('amd_beta_max')} |",
+        f"| [N-body and MEGNO](../reading-a-report.md#n-body-integration-and-megno) | {_verdict(row['nbody'])} | ⟨Y⟩ = {_num(row['megno_nominal'], '.3f')} | "
         f"{_explain('megno_nominal')} |",
         "",
         f"**Draws** ({row['draws']}): {row['nbody_regular']} regular, {row['nbody_chaotic']} chaotic, "
         f"{row['nbody_unstable']} with a close encounter or escape, {row['nbody_inconclusive']} inconclusive.\n",
         f"**Largest energy error of the nominal run:** {_num(row['energy_error_nominal'], '.1e')} (relative).\n",
+        _why(row),
         "## Planets\n",
         ", ".join(_text(n) for n in row["archive_rows"].split(";")) + "\n",
         "## Completion rules applied\n",
@@ -219,8 +316,9 @@ def _verdicts(row: dict[str, str], settings: str) -> str:
     table += [
         "",
         "## What the verdict means\n",
-        MEANING.get(row["overall"], "") + "\n",
+        _meaning(row) + "\n",
         CAVEATS.format(draws=row["draws"]) + "\n",
+        *([NOTES[row["system"]] + "\n"] if row["system"] in NOTES else []),
         "[How to read a report card](../reading-a-report.md) explains these indicators and verdicts step by step.\n",
     ]
     return "\n".join(table)

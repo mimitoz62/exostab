@@ -167,6 +167,13 @@ but the verdict does not. Only for phases from a time of periastron is a common 
 How many archive values use the star's convention is unknown, so nothing is converted automatically; recording
 or testing the convention is tracked in issue #11.
 
+*Amended 2026-11-01.* "exostab takes every ω as the planet's" said more than the code does, and "the planet's" does not
+fix the number. The code is unchanged: it uses every ω as published, with mid-transit at f = π/2 − ω. Winn (2010, Eq. 6)
+calls that ω the planet's, with +Z towards the observer. EXOFAST has the same equation for what it calls the star's ω
+(Eastman et al. 2013, Eq. 11), and a footnote that its ω_P differs by π. NbodyGradient, the code of Agol et al. (2021), has
+f = 3π/2 − ω (`kepler_init.jl`). A source's own equation decides, not the label, and a file's author types ω accordingly
+(`data-assumptions.md`, `examples/trappist1_agol2021.yaml`). What to do for the archive's values stays with issue #11.
+
 ## D10 — HD 127195 validation target (final; amended 2026-10-13)
 
 The validation uses `examples/hd127195_note.yaml`, which holds the Note's own inputs (`paper_analysis.py`

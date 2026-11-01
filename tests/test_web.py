@@ -234,6 +234,16 @@ def test_app_runs_headless() -> None:
     assert "exostab list" not in at2.error[0].value
 
 
+def test_app_says_when_a_run_is_shorter_than_the_catalogs() -> None:
+    at = AppTest.from_file(APP, default_timeout=120)
+    at.query_params.update(
+        {"system": "Kepler-36", "source": "snapshot", "orbits": "300", "draws": "2", "run": "1"}
+    )
+    at.run()
+    assert not at.exception, at.exception
+    assert any("covers 300 orbits" in w.value for w in at.warning)
+
+
 def test_search_box_shows_other_names() -> None:
     at = AppTest.from_file(APP, default_timeout=60)
     at.query_params.update({"source": "snapshot"})

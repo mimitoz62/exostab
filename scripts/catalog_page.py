@@ -163,7 +163,9 @@ CSV_COLUMNS = {
     "amd_beta_max": (
         "—",
         "Largest AMD-stability coefficient β of the adjacent pairs, with twice the coplanar AMD for the unknown "
-        "inclinations. Below 1 excludes collisions between planets; the AMD verdict is stable only if, in addition, "
+        "inclinations. Below 1 excludes collisions between planets in the secular (orbit-averaged) approximation, which "
+        "leaves out mean-motion resonances, if the unknown inclinations carry no more AMD than the eccentricities; the "
+        "AMD verdict is stable only if, in addition, "
         "the innermost planet cannot reach the star (β_S < 1) and every pair lies in the domain of the critical AMD. "
         "`inf` (∞ on the pages) means that resonances overlap even for circular orbits. Empty without a verdict.",
     ),
@@ -171,6 +173,20 @@ CSV_COLUMNS = {
         "—",
         "MEGNO ⟨Y⟩ of the nominal run: it settles at 2 for regular motion, and exostab counts 2.2 or more as chaotic. "
         "A run stopped by a close encounter still has a value. Empty without a verdict.",
+    ),
+    "hill_summary": (
+        "—",
+        "The report card's sentence on the Hill spacing. Empty without a verdict, and not in catalogs built before "
+        "November 2026.",
+    ),
+    "amd_summary": (
+        "—",
+        "The report card's sentence on the AMD. Empty without a verdict, and not in catalogs built before November 2026.",
+    ),
+    "overall_summary": (
+        "—",
+        "The report card's sentence on the overall verdict. Empty without a verdict, and not in catalogs built before "
+        "November 2026.",
     ),
     "nbody_regular": ("draws", "Draws with regular motion. Empty without a verdict."),
     "nbody_chaotic": ("draws", "Draws with chaotic motion. Empty without a verdict."),
@@ -246,6 +262,9 @@ def _citation(meta: dict[str, object]) -> str:
 > {str(meta["created_utc"])[:10]}, <{PAGE}>. Based on the NASA Exoplanet Archive's Planetary Systems Composite
 > Parameters table, doi:[10.26133/NEA13](https://doi.org/10.26133/NEA13), accessed
 > {str(meta.get("data_retrieved_utc") or "?")[:10]}.
+
+The file of this version stays at
+<{BRANCH.replace("/tree/", "/blob/")}/archive/catalog-{str(meta["created_utc"])[:10]}.csv>.
 
 A DOI for the catalog will follow. [Citing exostab](citing.md) lists what to cite for the software, the methods and
 the data. The catalog data are licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); the software is under the MIT license.
