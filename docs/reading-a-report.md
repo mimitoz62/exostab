@@ -500,7 +500,7 @@ The lines you will see most often:
 | `Mass not measured; the archive estimated it …` or `Mass not published; estimated …` | The mass comes from the radius, not from a measurement of the mass. |
 | `Only an upper limit … is published; …` | The nominal run uses the limit, and the draws lie below it. An instability found this way gives an overall marginal. |
 | `The system has 2 stars; only the host star is modelled. …` | A companion could change the orbits. An instability gives an overall marginal. |
-| `The planet rows give different stellar masses …` | The rows of one host disagree, and the line says which value a written rule chose. |
+| `The planet rows give different stellar masses …` or `The planet rows give one stellar mass with different errors or sources …` | The rows of one host disagree, and the line says which value a written rule chose. |
 | `The archive flags this planet as controversial …` | Its existence has been questioned. It is kept in the run. |
 
 [Data and assumptions](data-assumptions.md#completion-rules) lists every rule. The line `Note:` is not a rule: it says
@@ -677,13 +677,13 @@ of the 413 marginal verdicts look like. `extrapolated beyond σ_e = 0.05` says t
 │ N-body + MEGNO  MARGINAL   draws: 20 stable, 0 marginal, 0 unstable                              │
 │   Nominal run regular (<Y> = 2.00) over 126 yr (10,000 inner orbits); draws: 20 regular, 0       │
 │   chaotic, 0 close encounter/escape of 20.                                                       │
-│   • The outermost planet completes only 36 orbits in this run, fewer than 100; increase --orbits │
-│   for a meaningful test of the outer planets.                                                    │
+│   • The outermost planet completes only 36.1 orbits in this run, fewer than 100; a longer run is │
+│   needed for a meaningful test of the outer planets.                                             │
 │                                                                                                  │
 │ Overall: MARGINAL  Every WHFast run is regular (the nominal parameters and all 20 draws), but    │
-│ the N-body verdict is only marginal: the outermost planet completes only 36 orbits, fewer than   │
-│ the 100 needed to judge it (increase --orbits). The other indicators cannot guarantee stability  │
-│ (Hill spacing: marginal, AMD: marginal).                                                         │
+│ the N-body verdict is only marginal: the outermost planet completes only 36.1 orbits, fewer than │
+│ the 100 needed to judge it (a longer run is needed). The other indicators cannot guarantee       │
+│ stability (Hill spacing: marginal, AMD: marginal).                                               │
 ```
 
 **What it means.** The run is counted in orbits of the innermost planet. In a wide system the outer planets then
@@ -718,8 +718,8 @@ eccentricities are assumed 0, so read that verdict as in [the case above](#stabl
 │   regular, 1 chaotic, 19 close encounter/escape of 20.                                           │
 │   • The orbital phases of HD 82943 c, HD 82943 b are not published and are drawn at random in    │
 │   every run (the nominal run included). A system protected by a mean-motion resonance can look   │
-│   chaotic or unstable for random phases; supply measured phases with --from-file to test the     │
-│   real configuration.                                                                            │
+│   chaotic or unstable for random phases; a YAML system file with measured phases can be used to  │
+│   test the real configuration.                                                                   │
 │                                                                                                  │
 │ Overall: UNSTABLE  Direct integration finds close encounters or escapes for the nominal          │
 │ parameters and for 19 of 20 draws within the published uncertainties.                            │
@@ -762,8 +762,8 @@ If the N-body heading says `UNSTABLE` but the overall verdict is marginal, then 
 │   Nominal run inconclusive over 158 yr (10,000 inner orbits); draws: 1 regular, 9 chaotic, 4     │
 │   close encounter/escape, 6 inconclusive of 20.                                                  │
 │   • WHFast and IAS15 disagree on the nominal run (inconclusive vs chaotic).                      │
-│   • The outermost planet completes only 26 orbits in this run, fewer than 100; increase --orbits │
-│   for a meaningful test of the outer planets.                                                    │
+│   • The outermost planet completes only 26.1 orbits in this run, fewer than 100; a longer run is │
+│   needed for a meaningful test of the outer planets.                                             │
 │   • nominal: relative energy error 1.8e-05 exceeds 1e-05; no verdict for this run.               │
 │                                                                                                  │
 │ Overall: INCONCLUSIVE  The N-body integrations could not be trusted (see the N-body notes), so   │

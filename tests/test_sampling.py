@@ -9,7 +9,17 @@ from hypothesis import strategies as st
 from conftest import V, two_planet_system
 from exostab import sampling
 from exostab.integrate import RunConfig, build_simulation
-from exostab.models import DataSource, MassKind, Phase, PhaseKind, Planet, Provenance, Star, System
+from exostab.models import (
+    DataSource,
+    MassKind,
+    Phase,
+    PhaseKind,
+    Planet,
+    Provenance,
+    Star,
+    System,
+    UnusableParametersError,
+)
 from exostab.units import days_to_years, mearth_to_msun
 
 
@@ -230,3 +240,16 @@ def test_upper_limits_outside_masses_and_eccentricities_are_refused() -> None:
     p = s.planets[1].model_copy(update={"period_days": V(250.0, provenance=Provenance.UPPER_LIMIT)})
     with pytest.raises(ValueError, match="Test c period"):
         sampling.realizations(s.model_copy(update={"planets": (s.planets[0], p)}), 3, seed=0)
+
+
+def test_a_draw_that_is_not_finite_is_refused() -> None:
+    # An omega error of 1e308 overflows in about 7% of the draws. The NaN angle stopped those runs at once, and 5 of 60
+    # were reported as unstable.
+    p = two_planet_system().planets[0]
+    wild = p.model_copy(update={"omega_deg": V(90.0, 1e308)})
+    system = two_planet_system().model_copy(update={"planets": (wild, two_planet_system().planets[1])})
+    with pytest.raises(UnusableParametersError, match="Test b: an error bar is so large"):
+        sampling.realizations(system, 60, seed=0)
+    assert all(
+        math.isfinite(b.M) for r in sampling.realizations(two_planet_system(), 60, seed=0) for b in r.bodies
+    )

@@ -8,9 +8,14 @@ come with a distinct marker shape and a legend label, so no information is carri
 from __future__ import annotations
 
 import math
+import os
+import warnings
 from collections.abc import Sequence
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any, TypeVar, cast
+
+# matplotlib validates this variable when it is imported, and exostab only ever uses Agg (below).
+os.environ.pop("MPLBACKEND", None)
 
 import matplotlib
 
@@ -75,6 +80,23 @@ def _plotted_beta(betas: npt.ArrayLike) -> tuple[npt.NDArray[np.float64], float,
     return np.where(np.isposinf(b), hi, np.where(b == 0, lo, b)), lo, hi
 
 
+def _plain(text: str) -> str:
+    """A name in a title or a label: "$" is not mathtext here, which would fail or change the name."""
+    return text.replace("$", r"\$")
+
+
+def _label(name: str) -> str:
+    """A legend label: matplotlib leaves out labels that start with an underscore."""
+    return _plain(" " + name if name.startswith("_") else name)
+
+
+def _save(fig: Any, path: Any, **kwargs: Any) -> None:
+    """Save without one warning per character the font lacks: a non-Latin name still gets its figure."""
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="Glyph .* missing from font", category=UserWarning)
+        fig.savefig(path, **kwargs)
+
+
 def planet_color(k: int) -> str:
     return PLANET_COLORS[k % len(PLANET_COLORS)]
 
@@ -96,7 +118,7 @@ def orbits_figure(nominal: Realization, run: RunResult, title: str, path: Target
         for k, b in enumerate(nominal.bodies):
             c = planet_color(k)
             x, y = _ellipse(float(a[k]), b.e, b.pomega)
-            ax.plot(x, y, color=c, lw=1.4, label=b.name, zorder=3)
+            ax.plot(x, y, color=c, lw=1.4, label=_label(b.name), zorder=3)
             xs, ys = run.series.get(f"x{k}"), run.series.get(f"y{k}")
             if xs and ys:
                 ax.scatter(xs, ys, s=4, color=c, alpha=0.35, lw=0, zorder=2)
@@ -117,14 +139,14 @@ def orbits_figure(nominal: Realization, run: RunResult, title: str, path: Target
             "escape": " — stopped at an escape",
         }
         ax.set_title(
-            f"{title}: nominal orbits (lines) and positions over {format_years(run.t_end)} (dots)"
+            f"{_plain(title)}: nominal orbits (lines) and positions over {format_years(run.t_end)} (dots)"
             f"{status.get(run.status, '')}",
             fontsize=9,
             color=INK,
             loc="left",
         )
         ax.legend(loc="upper right", fontsize=8, ncol=1 if len(nominal.bodies) <= 4 else 2)
-        fig.savefig(path, format="png")
+        _save(fig, path, format="png")
         plt.close(fig)
     return path
 
@@ -179,7 +201,7 @@ def megno_figure(runs: Sequence[RunResult], ias15: RunResult | None, title: str,
             transform=ax_y.get_yaxis_transform(),
         )
         ax_y.set_ylabel("MEGNO <Y>")
-        ax_y.set_title(f"{title}: nominal run", fontsize=9, loc="left", color=INK)
+        ax_y.set_title(f"{_plain(title)}: nominal run", fontsize=9, loc="left", color=INK)
         ax_y.legend(loc="lower right", fontsize=7.5)
         plt.setp(ax_y.get_xticklabels(), visible=False)
         ax_e.set_ylabel("|ΔE / E|")
@@ -212,13 +234,13 @@ def megno_figure(runs: Sequence[RunResult], ias15: RunResult | None, title: str,
             ax_d.text(
                 0.5,
                 0.5,
-                "no draws (--draws 0)",
+                "no draws",
                 ha="center",
                 va="center",
                 transform=ax_d.transAxes,
                 color=MUTED,
             )
-        fig.savefig(path, format="png")
+        _save(fig, path, format="png")
         plt.close(fig)
     return path
 
@@ -245,7 +267,7 @@ def sweep_figure(rows: Sequence[dict[str, Any]], param_label: str, title: str, p
                 )
         ax.axhline(MEGNO_CHAOTIC, color=MUTED, lw=0.8, ls="--")
         ax.set_ylabel(f"MEGNO <Y>\n(encounters at {MEGNO_CLIP:g})")
-        ax.set_title(title, fontsize=9, loc="left", color=INK)
+        ax.set_title(_plain(title), fontsize=9, loc="left", color=INK)
         ax.legend(fontsize=7.5, loc="upper left")
         ax = axes[1]
         ax.plot(x, [r["hill_margin_min"] for r in rows], color=PLANET_COLORS[0], lw=1.6, marker="o", ms=3)
@@ -277,8 +299,8 @@ def sweep_figure(rows: Sequence[dict[str, Any]], param_label: str, title: str, p
         ax.set_ylabel("largest AMD ratio β = 2β_p\n(no collisions below 1)")
         if np.isposinf(beta).any() or (beta == 0).any():
             ax.legend(fontsize=7.5, loc="best")
-        ax.set_xlabel(param_label)
-        fig.savefig(path)
+        ax.set_xlabel(_plain(param_label))
+        _save(fig, path)
         plt.close(fig)
     return path
 

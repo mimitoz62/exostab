@@ -55,6 +55,18 @@ def spock_python(explicit: str | None = None) -> str | None:
     return explicit or os.environ.get("EXOSTAB_SPOCK_PYTHON") or None
 
 
+def probe(python: str, *, timeout: float = 60.0) -> None:
+    """Raise SpockUnavailableError unless ``python`` runs, so that a wrong path is found before any integration."""
+    try:
+        proc = subprocess.run([python, "-c", "pass"], capture_output=True, timeout=timeout, check=False)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise SpockUnavailableError(f"could not run the SPOCK environment {python!r}: {exc}") from exc
+    if proc.returncode != 0:
+        raise SpockUnavailableError(
+            f"could not run the SPOCK environment {python!r}: it exited with code {proc.returncode}"
+        )
+
+
 def _request(real: Realization) -> dict[str, Any]:
     return {
         "m_star": real.m_star,

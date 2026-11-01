@@ -13,7 +13,17 @@ from dataclasses import asdict, dataclass, field, replace
 from typing import Any
 
 from ..budget import PRESETS
-from ..models import CompletionFlag, MassKind, Provenance, System, Value
+from ..models import (
+    MASS_MAX_EARTH,
+    PERIOD_MAX_DAYS,
+    PERIOD_MIN_DAYS,
+    CompletionFlag,
+    MassKind,
+    PhaseKind,
+    Provenance,
+    System,
+    Value,
+)
 from ..sampling import E_MAX
 
 BUDGET_MIN, BUDGET_MAX, BUDGET_DEFAULT = 5, 120, 10
@@ -21,8 +31,9 @@ MASS_FACTORS = (0.1, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 5.0, 7.0, 10.0)
 SEED_MAX = 2**31 - 1  # range of the seed widget
 # A link can ask for at most the longest run that a time budget can choose (the last preset in budget.py).
 ORBITS_MAX, DRAWS_MAX = PRESETS[-1]
-# Smallest values the parameter table accepts (app.py), also required of the edits in a link.
-PERIOD_MIN_DAYS, MASS_MIN_EARTH = 1e-3, 1e-6
+# Smallest mass the parameter table accepts (app.py), also required of the edits in a link, as are PERIOD_MIN_DAYS and
+# the upper limits PERIOD_MAX_DAYS and MASS_MAX_EARTH (runs at those values take about a second).
+MASS_MIN_EARTH = 1e-6
 # Largest what-if period ratio a link may carry. The slider reaches 1.2 times the table's ratio (at least 10),
 # and the widest adjacent pair in the archive is about 1.1e4 apart in period (GJ 2030, 2026-09-28 cache).
 PERIOD_RATIO_MAX = 1e5
@@ -59,9 +70,18 @@ class AppState:
     draws: int | None = None
     spock: bool = False  # optional SPOCK indicator (only offered when a SPOCK environment is configured)
     run: bool = False
+    # What decode_state could not use from a link and left at the default, for a notice on the page.
+    dropped: list[str] = field(default_factory=list, compare=False)
 
 
 EDITABLE = ("period_days", "mass_earth", "eccentricity", "omega_deg")
+# The parameter names of the completion flags about a column's value (archive rows and user files).
+_FLAG_PARAMETERS = {
+    "period_days": ("pl_orbper", "period"),
+    "mass_earth": ("pl_bmasse", "mass"),
+    "eccentricity": ("pl_orbeccen", "eccentricity"),
+    "omega_deg": ("pl_orblper", "omega"),
+}
 
 
 def planet_rows(system: System) -> list[dict[str, Any]]:
@@ -73,7 +93,10 @@ def planet_rows(system: System) -> list[dict[str, Any]]:
                 "planet": p.name,
                 "period_days": p.period_days.value,
                 "mass_earth": p.mass_earth.value,
-                "mass_kind": p.mass_kind.value,
+                # only shown: an upper limit is no true mass, whatever the archive says the limit is on
+                "mass_kind": "upper limit"
+                if p.mass_earth.provenance is Provenance.UPPER_LIMIT
+                else p.mass_kind.value,
                 "eccentricity": p.eccentricity.value,
                 "omega_deg": p.omega_deg.value if p.omega_deg.is_known else None,
                 "phase": p.phase.kind.value.replace("_", " "),
@@ -114,7 +137,12 @@ def _edited(v: Value, new: float | None, *, randomize_if_none: bool = False) -> 
             return Value(provenance=Provenance.RANDOMIZED, reference="set to random in the web app")
         raise ValueError("a value is missing")
     return v.model_copy(
-        update={"value": new, "provenance": Provenance.MEASURED, "reference": "edited in the web app"}
+        update={
+            "value": new,
+            "provenance": Provenance.MEASURED,
+            "reference": "edited in the web app",
+            "reference_url": None,  # the link of the publication is not the source of a typed value
+        }
     )
 
 
@@ -122,6 +150,7 @@ def apply_changes(system: System, edits: dict[str, dict[str, float | None]], wha
     """The system with table edits and "what if" adjustments applied, each recorded as a completion flag."""
     planets = {p.name: p for p in system.planets}
     flags: list[CompletionFlag] = []
+    replaced: set[tuple[str, str]] = set()  # (planet, parameter) of the flags that no longer hold
     for name, cols in edits.items():
         p = planets.get(name)
         if p is None:
@@ -131,16 +160,33 @@ def apply_changes(system: System, edits: dict[str, dict[str, float | None]], wha
             if col not in EDITABLE:
                 raise ValueError(f"column {col!r} cannot be edited")
             update[col] = _edited(getattr(p, col), new, randomize_if_none=col == "omega_deg")
+            replaced.update((name, parameter) for parameter in _FLAG_PARAMETERS[col])
             shown = "random" if new is None else f"{new:g}"
             flags.append(
                 CompletionFlag(
                     planet=name,
                     parameter=col,
                     rule="edited_in_web_app",
-                    message=f"{col.replace('_', ' ')} set to {shown} in the web app (published: "
-                    f"{_fmt(getattr(p, col))}).",
+                    message=f"{col.replace('_', ' ')} set to {shown} in the web app ({_was(getattr(p, col))}).",
                 )
             )
+            if (
+                col == "omega_deg"
+                and new is None
+                and p.phase.kind in (PhaseKind.PERIASTRON, PhaseKind.MEAN_ANOMALY)
+            ):
+                # The phase places the planet relative to its periastron, whose direction is now random in every
+                # run. The phase kind stays, because changing it would change the random numbers of the run.
+                replaced.add((name, "pl_orbtper"))
+                flags.append(
+                    CompletionFlag(
+                        planet=name,
+                        parameter="phase",
+                        rule="phase_random_without_omega",
+                        message="The argument of periastron was cleared, so the planet's longitude is random in every "
+                        f"run, although its phase still comes from its {p.phase.kind.value.replace('_', ' ')}.",
+                    )
+                )
         planets[name] = p.model_copy(update=update)
     if whatif.is_active():
         assert whatif.planet is not None
@@ -152,11 +198,13 @@ def apply_changes(system: System, edits: dict[str, dict[str, float | None]], wha
         if whatif.mass_factor != 1.0:
             m = p.mass_earth.require() * whatif.mass_factor
             update["mass_earth"] = _edited(p.mass_earth, m)
+            replaced.update((p.name, parameter) for parameter in _FLAG_PARAMETERS["mass_earth"])
             if p.mass_kind is MassKind.ESTIMATED:
                 update["mass_kind"] = MassKind.TRUE
             notes.append(f"mass × {whatif.mass_factor:g} = {m:.4g} Earth masses")
         if whatif.eccentricity is not None:
             update["eccentricity"] = _edited(p.eccentricity, whatif.eccentricity)
+            replaced.update((p.name, parameter) for parameter in _FLAG_PARAMETERS["eccentricity"])
             notes.append(f"e = {whatif.eccentricity:g}")
         if whatif.period_ratio is not None:
             ordered = sorted(planets.values(), key=lambda q: q.period_days.require())
@@ -165,6 +213,7 @@ def apply_changes(system: System, edits: dict[str, dict[str, float | None]], wha
                 raise ValueError("the period ratio applies to a planet outside another one")
             inner = ordered[k - 1].period_days.require()
             update["period_days"] = _edited(p.period_days, inner * whatif.period_ratio)
+            replaced.update((p.name, parameter) for parameter in _FLAG_PARAMETERS["period_days"])
             notes.append(f"period ratio to {ordered[k - 1].name} = {whatif.period_ratio:g}")
         planets[p.name] = p.model_copy(update=update)
         flags.append(
@@ -179,14 +228,32 @@ def apply_changes(system: System, edits: dict[str, dict[str, float | None]], wha
     ordered_planets = sorted(planets.values(), key=lambda q: q.period_days.require())
     data = system.model_dump()
     data["planets"] = [q.model_dump() for q in ordered_planets]
-    data["flags"] = [f.model_dump() for f in (*system.flags, *flags)]
+
+    def still_holds(f: CompletionFlag) -> bool:
+        # A minimum mass stays one with another value: the inclination prior still scales it.
+        minimum = f.planet in planets and planets[f.planet].mass_kind is MassKind.MINIMUM
+        return (f.planet, f.parameter) not in replaced or (
+            f.rule in ("minimum_mass", "mass_lower_limit") and minimum
+        )
+
+    data["flags"] = [f.model_dump() for f in (*filter(still_holds, system.flags), *flags)]
     return System.model_validate(data)
 
 
-def _fmt(v: Value) -> str:
+_WAS = {
+    Provenance.MEASURED: "published",
+    Provenance.DERIVED: "derived",
+    Provenance.ASSUMED: "assumed",
+    Provenance.ESTIMATED: "estimated",
+    Provenance.UPPER_LIMIT: "published upper limit",
+}
+
+
+def _was(v: Value) -> str:
+    """The value a table edit replaced, for what it was: "published upper limit: 565.417"."""
     if v.provenance is Provenance.RANDOMIZED or v.value is None:
-        return "random"
-    return f"{v.value:g}"
+        return "was random"
+    return f"{_WAS[v.provenance]}: {v.value:g}"
 
 
 # ------------------------------------------------------------------------------------------ shareable links
@@ -224,16 +291,22 @@ def encode_state(state: AppState) -> dict[str, str]:
 
 
 def _number(v: Any) -> float:
-    """A finite number from a decoded link (ValueError otherwise)."""
-    if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v):
-        raise ValueError(f"not a finite number: {v!r}")
-    return float(v)
+    """A finite number from a decoded link (ValueError otherwise, also for an integer too large for a float)."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        raise ValueError("not a number")
+    try:
+        x = float(v)
+    except OverflowError as exc:
+        raise ValueError("not a finite number") from exc
+    if not math.isfinite(x):
+        raise ValueError("not a finite number")
+    return x
 
 
 # What the table's columns accept (app.py): bounds of each editable value in a link.
 _EDIT_RANGES = {
-    "period_days": (PERIOD_MIN_DAYS, math.inf),
-    "mass_earth": (MASS_MIN_EARTH, math.inf),
+    "period_days": (PERIOD_MIN_DAYS, PERIOD_MAX_DAYS),
+    "mass_earth": (MASS_MIN_EARTH, MASS_MAX_EARTH),
     "eccentricity": (0.0, E_MAX),
     "omega_deg": (-math.inf, math.inf),
 }
@@ -257,21 +330,34 @@ def decode_state(params: dict[str, str]) -> AppState:
     budget (clamped to the slider's range), a seed in the seed widget's range, table edits within the
     columns' ranges (an eccentricity at most ``E_MAX``), a what-if within the sliders' choices (a period ratio
     at most ``PERIOD_RATIO_MAX``), and a run length no longer than the longest preset a budget can choose.
+    ``dropped`` names what fell back, so that the page can say so.
     """
     s = AppState()
     s.system = params.get("system", s.system)[:200]
     if params.get("source") in ("archive", "snapshot"):
         s.source = params["source"]
+    elif "source" in params:
+        s.dropped.append("the data source")
     if params.get("prior") in ("none", "isotropic"):
         s.prior = params["prior"]
+    elif "prior" in params:
+        s.dropped.append("the treatment of minimum masses")
+    budget_read = False
     with contextlib.suppress(ValueError):
         budget = float(params.get("budget", s.budget_s))
         if math.isfinite(budget):
             s.budget_s = min(max(budget, BUDGET_MIN), BUDGET_MAX)
+            budget_read = True
+    if not budget_read:
+        s.dropped.append("the time budget")
+    seed_read = False
     with contextlib.suppress(ValueError):
         seed = int(params.get("seed", s.seed))
         if 0 <= seed <= SEED_MAX:
             s.seed = seed
+            seed_read = True
+    if not seed_read:
+        s.dropped.append("the seed")
     try:
         if "edits" in params:
             raw = _unb64(params["edits"])
@@ -296,12 +382,15 @@ def decode_state(params: dict[str, str]) -> AppState:
                 eccentricity=e,
                 period_ratio=ratio,
             )
-    except (ValueError, TypeError, AttributeError):
+    except (ValueError, TypeError, AttributeError, OverflowError, RecursionError):
         s.edits, s.whatif = {}, WhatIf()
+        s.dropped.append("the table edits and what-if changes")
     with contextlib.suppress(ValueError, KeyError):
         orbits, draws = float(params["orbits"]), int(params["draws"])
         if 10 <= orbits <= ORBITS_MAX and 0 <= draws <= DRAWS_MAX:
             s.orbits, s.draws = orbits, draws
+    if s.orbits is None and ("orbits" in params or "draws" in params):
+        s.dropped.append("the run length")
     s.spock = params.get("spock") == "1"
     s.run = params.get("run") == "1"
     return s

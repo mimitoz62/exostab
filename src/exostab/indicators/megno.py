@@ -25,6 +25,8 @@ short to judge it and the indicator cannot be "stable" either.
 from __future__ import annotations
 
 import os
+import signal
+import threading
 from collections.abc import Sequence
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, replace
@@ -34,7 +36,7 @@ import numpy as np
 
 from ..integrate import RunConfig, RunResult, run
 from ..sampling import Realization
-from ..units import format_count, format_years
+from ..units import format_count, format_orbits, format_years
 from . import DrawStats, IndicatorResult, Verdict, combine
 
 # <Y> at or above this value counts as chaotic. Same threshold as the HD 127195 Research Note;
@@ -88,15 +90,46 @@ def _run(job: tuple[Realization, RunConfig]) -> RunResult:
     return run(*job)
 
 
+def _worker_signals() -> None:
+    """In a worker: leave Ctrl-C to the main process, which stops the workers, and let SIGTERM end it at once
+    (a forked worker would otherwise inherit the handler of the command line)."""
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
+    if hasattr(signal, "SIGHUP"):
+        signal.signal(signal.SIGHUP, signal.SIG_DFL)
+
+
+def _python_handles_ctrl_c() -> None:
+    """REBOUND installs a C handler for SIGINT when it integrates and leaves it there, so after a run in this process
+    (the speed measurement of --budget, for example) Ctrl-C would no longer reach Python."""
+    handler = signal.getsignal(signal.SIGINT)
+    if threading.current_thread() is threading.main_thread() and handler is not None:
+        signal.signal(signal.SIGINT, handler)
+
+
 def run_many(jobs: Sequence[tuple[Realization, RunConfig]], n_workers: int | None) -> list[RunResult]:
-    """Run integrations, in parallel worker processes when more than one worker is allowed."""
+    """Run integrations, in parallel worker processes when more than one worker is allowed.
+
+    When the wait is interrupted (Ctrl-C, SIGTERM or a worker that died), the workers are stopped at once: the
+    pool's own shutdown would wait for jobs it has already queued, which can take minutes.
+    """
     if n_workers is None:
         n_workers = max(1, (os.cpu_count() or 2) - 1)
     n_workers = min(n_workers, len(jobs))
     if n_workers <= 1:
         return [_run(j) for j in jobs]
-    with ProcessPoolExecutor(max_workers=n_workers) as pool:
-        return list(pool.map(_run, jobs, chunksize=1))
+    _python_handles_ctrl_c()
+    pool = ProcessPoolExecutor(max_workers=n_workers, initializer=_worker_signals)
+    try:
+        results = list(pool.map(_run, jobs, chunksize=1))
+    except BaseException:
+        processes = list((pool._processes or {}).values())
+        pool.shutdown(wait=False, cancel_futures=True)
+        for process in processes:
+            process.terminate()
+        raise
+    pool.shutdown()
+    return results
 
 
 def megno_seed(seed: int, k: int) -> int:
@@ -123,12 +156,21 @@ def integrate_all(
 
 
 def evaluate(
-    results: Sequence[RunResult], ias15: RunResult | None, *, random_phases: Sequence[str] = ()
+    results: Sequence[RunResult],
+    ias15: RunResult | None,
+    *,
+    random_phases: Sequence[str] = (),
+    from_file: bool = False,
 ) -> IndicatorResult:
     """N-body verdict from the nominal run (``results[0]``), the draws and the IAS15 check.
 
-    ``random_phases`` names the planets whose orbital phase is unknown and drawn at random.
+    ``random_phases`` names the planets whose orbital phase is unknown and drawn at random; ``from_file`` says
+    that the system comes from a user file, not from published values.
     """
+    phases_unknown = "not given in the file" if from_file else "not published"
+    phases_remedy = (
+        "add them to the file" if from_file else "a YAML system file with measured phases can be used"
+    )
     nominal, draws = results[0], list(results[1:])
     c_nom = classify_run(nominal)
     c_draws = [classify_run(r) for r in draws]
@@ -145,16 +187,16 @@ def evaluate(
             verdict = Verdict.MARGINAL
     if nominal.status == "completed" and nominal.n_orbits_outermost < MIN_OUTER_ORBITS:
         notes.append(
-            f"The outermost planet completes only {nominal.n_orbits_outermost:.0f} orbits in this run, "
-            f"fewer than {MIN_OUTER_ORBITS}; increase --orbits for a meaningful test of the outer planets."
+            f"The outermost planet completes only {format_orbits(nominal.n_orbits_outermost)} orbits in this run, "
+            f"fewer than {MIN_OUTER_ORBITS}; a longer run is needed for a meaningful test of the outer planets."
         )
         if verdict is Verdict.STABLE:
             verdict = Verdict.MARGINAL
     if random_phases:
         notes.append(
-            f"The orbital phases of {', '.join(random_phases)} are not published and are drawn at random in every "
+            f"The orbital phases of {', '.join(random_phases)} are {phases_unknown} and are drawn at random in every "
             "run (the nominal run included). A system protected by a mean-motion resonance can look chaotic or "
-            "unstable for random phases; supply measured phases with --from-file to test the real configuration."
+            f"unstable for random phases; {phases_remedy} to test the real configuration."
         )
     for r, c in zip([nominal, *draws], [c_nom, *c_draws], strict=True):
         if c == "inconclusive" and r.status not in ("error", "star_approach"):

@@ -1,6 +1,9 @@
 """The N-body/MEGNO indicator, the verdict combination rules and the overall verdict."""
 
 import math
+import signal
+import threading
+import time
 from dataclasses import replace
 
 import pytest
@@ -11,11 +14,12 @@ from exostab.data import archive, system_from_rows
 from exostab.data.store import TableInfo
 from exostab.indicators import AGREEMENT, DrawStats, IndicatorResult, Verdict, combine
 from exostab.indicators import megno as nb
-from exostab.integrate import RunResult
-from exostab.models import Provenance
+from exostab.integrate import RunConfig, RunResult
+from exostab.models import Phase, PhaseKind, Provenance, Value
 from exostab.sampling import realizations
 
 S, M, U, INC = Verdict.STABLE, Verdict.MARGINAL, Verdict.UNSTABLE, Verdict.INCONCLUSIVE
+LONG_RUN_ORBITS = 2e6  # about 25 s for two planets on an Apple M4 Pro
 
 
 def result(**kw: object) -> RunResult:
@@ -318,11 +322,11 @@ def test_hd215152_with_upper_limit_masses_is_not_overall_unstable() -> None:
 def test_no_draws_never_give_a_confident_overall_verdict() -> None:
     """With --draws 0 nothing was tested against the uncertainties."""
     o = overall_verdict({"hill": ind("hill", S, []), "amd": ind("amd", S, []), "nbody": nbody_ind(0)})
-    assert o.verdict is M and "--draws 0" in o.summary and o.reasons
+    assert o.verdict is M and "No Monte Carlo draws" in o.summary and o.reasons
     o = overall_verdict(
         {"hill": ind("hill", U, []), "amd": ind("amd", U, []), "nbody": nbody_ind(0, status="encounter")}
     )
-    assert o.verdict is M and "--draws 0" in o.summary
+    assert o.verdict is M and "No Monte Carlo draws" in o.summary
     assert "draws within" not in o.summary and "almost all draws" not in o.summary
     o = overall_verdict(
         {"hill": ind("hill", S, []), "amd": ind("amd", S, []), "nbody": nbody_ind(0, energy_error=1e-3)}
@@ -407,6 +411,95 @@ def test_marginal_summary_names_the_actual_reason() -> None:
     assert o.verdict is M and "Mars / Jupiter is too close." in o.summary
     assert "amd is stable for the nominal parameters, but the draws disagree." in o.summary
     assert "AMD-stable." not in o.summary
+
+
+def test_ctrl_c_stops_queued_integrations_at_once() -> None:
+    # With more runs than workers, the pool waited for its queue: `check` went on 22 s after Ctrl-C, and with --jobs 3
+    # it took four presses and ended in a traceback.
+    long_runs = realizations(two_planet_system(), 6, seed=0)
+    jobs = [(r, RunConfig(n_orbits=LONG_RUN_ORBITS)) for r in long_runs]
+    main = threading.main_thread().ident
+    assert main is not None
+    threading.Timer(4.0, signal.pthread_kill, (main, signal.SIGINT)).start()
+    t0 = time.monotonic()
+    with pytest.raises(KeyboardInterrupt):
+        nb.run_many(jobs, 2)
+    assert time.monotonic() - t0 < 25  # waiting for the queue of 7 runs takes over a minute
+
+
+def test_messages_do_not_assume_the_command_line() -> None:
+    # In the browser: "increase --orbits", "supply measured phases with --from-file", "(--draws 0)".
+    nbi = nb.evaluate([result(n_orbits_outermost=36.0)], None, random_phases=["X b"])
+    o = overall_verdict({"hill": ind("hill", S, []), "amd": ind("amd", S, []), "nbody": nbi})
+    for text in (*nbi.notes, nbi.summary, o.summary, *o.reasons):
+        assert "--" not in text
+    assert any("a YAML system file with measured phases" in n and "not published" in n for n in nbi.notes)
+
+
+def test_phases_missing_from_a_file_are_said_to_be_missing_from_the_file() -> None:
+    # "The orbital phases of T b, T c are not published ... supply measured phases with --from-file" about a file.
+    nbi = nb.evaluate([result()], None, random_phases=["T b"], from_file=True)
+    note = next(n for n in nbi.notes if "T b" in n)
+    assert "not given in the file" in note and "add them to the file" in note and "published" not in note
+    res = check_system(
+        two_planet_system(phases=None), CheckSettings(orbits=100, draws=0, jobs=1, ias15_check=False)
+    )
+    assert any("not given in the file" in n for n in res.report.indicators["nbody"].notes)
+
+
+@pytest.mark.parametrize(
+    ("orbits", "shown"), [(99.96, "99.9"), (99.6, "99.6"), (36.0, "36"), (36.44, "36.4")]
+)
+def test_an_orbit_count_below_the_limit_is_not_rounded_up_to_it(orbits: float, shown: str) -> None:
+    # TOI-2345: "completes only 100 orbits, fewer than the 100 needed"
+    nbi = nb.evaluate([result(n_orbits_outermost=orbits)], None)
+    assert f"only {shown} orbits" in " ".join(nbi.notes)
+    o = overall_verdict({"hill": ind("hill", S, []), "amd": ind("amd", S, []), "nbody": nbi})
+    assert f"only {shown} orbits" in o.summary
+
+
+def test_one_draw_is_singular() -> None:
+    o = overall_verdict({"hill": ind("hill", S), "amd": ind("amd", S), "nbody": nbody_ind(1)})
+    assert o.verdict is S and "the 1 draw." in o.summary and "1 draws" not in o.summary
+    o = overall_verdict({"hill": ind("hill", M), "amd": ind("amd", S), "nbody": nbody_ind(1)})
+    assert "all 1 draws" not in o.summary and "the 1 draw" in o.summary
+
+
+def test_edited_values_are_not_called_published() -> None:
+    # Kepler-36 b edited to 300 M_earth: "... within the published uncertainties", on the page and in report.json.
+    unstable = nbody_ind(0, 20, status="encounter")
+    for edited, n in ((True, 1), (False, 0)):
+        o = overall_verdict({"hill": ind("hill", U), "amd": ind("amd", U), "nbody": unstable}, edited=edited)
+        assert o.verdict is U
+        assert o.summary.count("values changed in the web app") == n
+        assert ("published" not in o.summary.replace("not the published ones", "")) is edited
+    no_draws = overall_verdict(
+        {"hill": ind("hill", S, []), "amd": ind("amd", S, []), "nbody": nbody_ind(0)}, edited=True
+    )
+    assert no_draws.verdict is M and "published uncertainties" not in no_draws.summary
+    marginal = overall_verdict(
+        {"hill": ind("hill", M), "amd": ind("amd", S), "nbody": nbody_ind(10, 5, 5)}, edited=True
+    )
+    assert marginal.verdict is M and "allowed by the uncertainties" in marginal.summary
+
+
+def test_a_phase_lost_with_its_omega_gets_the_random_phase_note() -> None:
+    # A phase from a time of periastron, with omega unknown: the longitude is random in every run (D9, rule 3), which
+    # the report did not say.
+    s = two_planet_system()
+    b = s.planets[0].model_copy(
+        update={
+            "phase": Phase(kind=PhaseKind.PERIASTRON, value=V(2450000.0)),
+            "omega_deg": Value(provenance=Provenance.RANDOMIZED),
+        }
+    )
+    c = s.planets[1].model_copy(update={"phase": Phase(kind=PhaseKind.PERIASTRON, value=V(2450001.0))})
+    res = check_system(
+        s.model_copy(update={"planets": (b, c)}),
+        CheckSettings(orbits=100, draws=0, jobs=1, ias15_check=False),
+    )
+    note = next(n for n in res.report.indicators["nbody"].notes if "drawn at random" in n)
+    assert "Test b" in note and "Test c" not in note
 
 
 def test_check_system_end_to_end_small() -> None:

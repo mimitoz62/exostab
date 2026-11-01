@@ -6,6 +6,7 @@ from hypothesis import strategies as st
 
 from conftest import hill_limit_ratio, two_planet_system
 from exostab.indicators import Verdict, amd, hill
+from exostab.models import UnusableParametersError
 from exostab.sampling import Body, Realization, realizations
 from exostab.units import MEARTH_IN_MSUN, MJUP_IN_MSUN
 
@@ -171,3 +172,11 @@ def test_evaluate_summaries_and_draw_disagreement() -> None:
     assert "heuristic" in " ".join(res.notes)
     res = hill.evaluate(real_of([3e-6] * 3, [1.0, 2.0, 4.0]), [])
     assert res.verdict is Verdict.STABLE and "at least" in res.summary
+
+
+@pytest.mark.parametrize("m_earth", [1e-13, 1e-16, 1e-20])
+def test_a_mass_ratio_too_small_for_the_limit_is_named(m_earth: float) -> None:
+    # "root not bracketed: f(1.000000000001)=-6.28e-08" used to end in a traceback, after every integration of a sweep
+    real = real_of([m_earth * MEARTH_IN_MSUN, 5 * MEARTH_IN_MSUN], [0.1, 0.3])
+    with pytest.raises(UnusableParametersError, match="p0 / p1: the Hill limit cannot be evaluated"):
+        hill.pair_table(real)

@@ -71,6 +71,7 @@ lists every flag exostab can set.
 | Other mass lower limit | the limit is used as the value | `mass_lower_limit` |
 | Mass computed by the archive from m sin i and a measured inclination | used as the true mass | `mass_from_msini_and_inclination` |
 | Mass estimated by the archive from the radius | used, labelled "estimated" | `mass_estimated_by_archive` |
+| The archive's label for a mass (`pl_bmassprov`) is missing or not one exostab knows | used as a true mass | `mass_kind_unknown` |
 | Mass marked `mass_kind: estimated` in a YAML file | used, labelled "estimated" | `mass_estimated_in_file` |
 | No mass at all, radius known | Chen & Kipping (2017) relation, for radii up to 11.3 R⊕; refused above, where the relation gives no unique mass | `mass_from_radius_chen_kipping` |
 | No period, semi-major axis known | Kepler's third law, except for planets found by microlensing or direct imaging (see the last row) | `period_from_semimajor_axis` |
@@ -79,7 +80,10 @@ lists every flag exostab can set.
 | Several stars in the system | only the host star is modelled; an N-body instability then gives an overall "marginal", because the planets may orbit different stars or a companion may change their orbits | `companion_stars_ignored` |
 | Planet flagged controversial | kept, flagged | `controversial_planet` |
 | Orbital phase | from a transit, conjunction or periastron time, or drawn at random (below) | `phase_from_transit`, `phase_from_conjunction`, `phase_from_periastron`, `phase_randomized` |
-| Value changed in the web app | used as edited; listed in the report | `edited_in_web_app`, `what_if_in_web_app` |
+| Reference time so far from the common epoch that the propagated uncertainty of the phase is above one full turn | used, with the numbers unchanged; in the draws the phase is effectively random | `phase_uncertain_at_epoch` |
+| A single-star host has fewer rows than the archive's count of its planets (`sy_pnum`) | the rows there are, are used. If more than 1% of such hosts lack rows, the archive's answer counts as cut and does not replace the cache | `planet_rows_missing` |
+| Value changed in the web app | used as edited; listed in the report. The flags about the value it replaces no longer apply and are dropped, except that a minimum mass stays one | `edited_in_web_app`, `what_if_in_web_app` |
+| Argument of periastron cleared in the web app for a planet whose phase comes from a time of periastron | the planet's longitude is random in every run | `phase_random_without_omega` |
 | Circumbinary planets; a planet with no mass and no radius, or only a radius above 11.3 R⊕; no period and no semi-major axis; no period for a planet found by microlensing or direct imaging (the archive's `pl_orbsmax` is then "the projected separation in the plane of the sky", which gives neither the orbit nor the spacing of the planets); a published eccentricity above 0.95; no stellar mass, or only a limit on it; only one planet row for the host (its other planets orbit a companion star) | the system is rejected with the reason | — |
 
 On the table of 2026-10-31, 1,044 of the 1,079 hosts with `sy_pnum >= 2` can be modelled. The 35 rejected hosts
@@ -124,8 +128,18 @@ The same `--seed` gives the same draws.
 key, with the alternatives in comments; the [Quickstart](quickstart.md#check-a-system) has the line that downloads it.
 [`examples/hd127195_note.yaml`](https://github.com/mimitoz62/exostab/blob/main/examples/hd127195_note.yaml) contains
 the inputs of the HD 127195 Research Note. The same
-completion rules apply to anything left out. Unknown keys, values that are not finite numbers and contradictory
-input are refused with a message that names the field.
+completion rules apply to anything left out. Unknown keys, repeated keys, values that are not finite numbers and
+contradictory input are refused with a message that names the field. So are:
+
+- values no real system has: a stellar mass outside 0.001–1000 M☉, a planet not below its star, a period outside
+  0.001–1e12 d, a semi-major axis above 1e7 AU, a time beyond 1e7 in absolute value, and a value whose upper error
+  reaches past these limits;
+- an error on one side only (`err_plus` without `err_minus`), `err` next to `err_plus` or `err_minus`, and an error bar
+  or a value of 0 on an upper limit;
+- booleans or text where a number belongs, and integers with a leading zero, a base prefix or colons, which YAML 1.1
+  reads as other numbers (`010` as 8, `1:30` as 90). `3e-6` is a number;
+- names and notes that are not text. YAML reads an unquoted `No`, `Yes`, `On` or `Off` as a boolean, so put such a name
+  in quotes. Control characters are refused too, and planet names must differ by more than case or surrounding spaces.
 
 A value is a number or a mapping `{value, err}` / `{value, err_plus, err_minus}`, optionally with `reference`.
 Planet masses and eccentricities can also be `{value, upper_limit: true}` (a YAML boolean); an upper limit on any
