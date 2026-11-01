@@ -32,7 +32,7 @@ from typing import Literal
 import numpy as np
 import numpy.typing as npt
 
-from .models import MassKind, PhaseKind, Planet, Provenance, System, Value
+from .models import MassKind, PhaseKind, Planet, Provenance, System, UnusableParametersError, Value
 from .units import G_SIM, days_to_years, mearth_to_msun
 
 InclinationPrior = Literal["none", "isotropic"]
@@ -254,9 +254,13 @@ def realize(
         else:
             omega = float(rng.uniform(0.0, TWO_PI))
         M = _mean_anomaly(p, rng, t0, P_days=P_days, e=e, omega=omega, draw=draw)
-        bodies.append(
-            Body(name=p.name, m=mearth_to_msun(m_earth), P=days_to_years(P_days), e=e, pomega=omega, M=M)
-        )
+        body = Body(name=p.name, m=mearth_to_msun(m_earth), P=days_to_years(P_days), e=e, pomega=omega, M=M)
+        if not all(math.isfinite(x) for x in (m_star, body.m, body.P, body.e, body.pomega, body.M)):
+            # A NaN angle stops an integration at once, which would be reported as a close encounter.
+            raise UnusableParametersError(
+                f"{p.name}: an error bar is so large that a {label} is not a finite number; use a smaller one"
+            )
+        bodies.append(body)
     # Drawn periods can change the order of planets with overlapping period uncertainties; keep the
     # bodies ordered from the inside out so that "adjacent pair" always means adjacent orbits.
     bodies.sort(key=lambda b: b.P)

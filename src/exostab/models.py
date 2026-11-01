@@ -17,6 +17,18 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+# What input is accepted at all. These limits only refuse impossible values: on 2026-10-31 the archive's periods run
+# from 0.18 to 1.7e5 d, its stellar masses from 0.09 to 4.3 Msun and its semi-major axes up to 840 AU.
+PERIOD_MIN_DAYS, PERIOD_MAX_DAYS = 1e-3, 1e12
+STAR_MASS_MIN_MSUN, STAR_MASS_MAX_MSUN = 1e-3, 1e3
+AXIS_MAX_AU = 1e7
+MASS_MAX_EARTH = 1e7  # in the web app's table; a user file only has to keep a planet below its star
+JD_MAX = 1e7  # absolute value of a Julian date; JD 1e7 is about the year 22,700
+
+
+class UnusableParametersError(ValueError):
+    """The values are valid numbers, but the indicators or the integrator cannot evaluate them."""
+
 
 class Provenance(str, Enum):
     """Where a value came from."""
@@ -125,10 +137,10 @@ class Planet(BaseModel):
     def _check(self) -> Planet:
         p = self.period_days.value
         if p is None or not p > 0:
-            raise ValueError(f"{self.name}: orbital period must be positive, got {p}")
+            raise ValueError(f"{self.name}: orbital period must be positive, got {p} d")
         m = self.mass_earth.value
         if m is None or not m > 0:
-            raise ValueError(f"{self.name}: mass must be positive, got {m}")
+            raise ValueError(f"{self.name}: mass must be positive, got {m} Earth masses")
         e = self.eccentricity.value
         if e is None or not 0 <= e < 1:
             raise ValueError(f"{self.name}: eccentricity must be in [0, 1), got {e}")
@@ -189,14 +201,27 @@ class System(BaseModel):
         if periods != sorted(periods):
             raise ValueError(f"{self.name}: planets must be ordered by period")
         names = [p.name for p in self.planets]
-        if len(set(names)) != len(names):
-            raise ValueError(f"{self.name}: planet names must be unique")
+        repeated = sorted({n for n in names if names.count(n) > 1})
+        if repeated:
+            raise ValueError(f"{self.name}: planet names must be unique, but {repeated[0]!r} is used twice")
         return self
 
     def planet(self, name_or_letter: str) -> Planet:
-        """Look up a planet by full name ("HD 127195 b") or by letter ("b")."""
+        """Look up a planet by full name ("HD 127195 b") or by letter ("b").
+
+        The exact name wins. Otherwise case is ignored, and a name or letter that fits several planets is refused
+        (KeyError), because varying the first of them would vary a planet the user may not have meant.
+        """
+        exact = [p for p in self.planets if p.name == name_or_letter.strip()]
+        if exact:
+            return exact[0]
         key = name_or_letter.strip().lower()
-        for p in self.planets:
-            if p.name.lower() == key or p.name.lower().endswith(" " + key):
-                return p
+        found = [p for p in self.planets if p.name.lower() == key or p.name.lower().endswith(" " + key)]
+        if len(found) > 1:
+            raise KeyError(
+                f"{name_or_letter!r} fits several planets of {self.name}: {[p.name for p in found]}; "
+                "give the full name"
+            )
+        if found:
+            return found[0]
         raise KeyError(f"no planet {name_or_letter!r} in {self.name}; have {[p.name for p in self.planets]}")

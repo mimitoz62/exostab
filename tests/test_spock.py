@@ -191,3 +191,31 @@ def test_real_spock_worker() -> None:
     probs, versions = sp.predict(reals, os.environ["EXOSTAB_SPOCK_PYTHON"])
     assert versions["spock"] == "2.1.1" and versions["rebound"].startswith("4.")
     assert all(0.0 <= p <= 1.0 for p in probs)
+
+
+def test_a_wrong_interpreter_is_found_before_any_integration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # It failed after the whole integration (15 s for TRAPPIST-1 at 20,000 orbits), with no folder saved.
+    def integrate(*args: object, **kwargs: object) -> None:
+        raise AssertionError("the run should have been refused before any integration")
+
+    monkeypatch.setattr("exostab.indicators.megno.run_many", integrate)
+    out = tmp_path / "o"
+    r = CliRunner().invoke(
+        app, ["check", "TRAPPIST-1", "--spock-python", "/nonexistent/python", "--out", str(out)]
+    )
+    assert r.exit_code == 2 and "could not run the SPOCK environment" in " ".join(r.output.split())
+    assert not out.exists()
+    failing = tmp_path / "fails"
+    failing.write_text("#!/bin/sh\nexit 3\n")
+    failing.chmod(0o755)
+    with pytest.raises(sp.SpockUnavailableError, match="exited with code 3"):
+        sp.probe(str(failing))
+    sp.probe(sys.executable)
+
+
+def test_an_empty_interpreter_is_refused(tmp_path: Path) -> None:
+    # An unset shell variable in --spock-python "$PY": a run without SPOCK and no message.
+    r = CliRunner().invoke(app, ["check", "TRAPPIST-1", "--spock-python", "", "--out", str(tmp_path / "o")])
+    assert r.exit_code == 2 and "--spock-python is empty" in " ".join(r.output.split())

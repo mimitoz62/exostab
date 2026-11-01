@@ -76,3 +76,18 @@ def test_cli_budget(tmp_path: Path) -> None:
     assert r.exit_code == 2 and "either --budget" in r.output
     r = runner.invoke(app, ["check", "Kepler-36", "--budget", "later"])
     assert r.exit_code == 2 and "budget must be" in r.output
+
+
+@pytest.mark.parametrize("value", ["inf", "nan", "-5", "0"])
+def test_budget_message_says_what_is_wanted(value: str) -> None:
+    # "budget must be positive, got 'inf'"
+    with pytest.raises(ValueError, match=f"positive, finite number of seconds, got '{value}'"):
+        budget.parse_budget(value)
+
+
+def test_a_small_budget_is_not_rounded_to_zero(monkeypatch: pytest.MonkeyPatch) -> None:
+    # "needs about 2 s, more than the 0 s budget"
+    nominal = realizations(two_planet_system(), 0, 0)[0]
+    monkeypatch.setattr(budget, "_seconds_per_orbit", lambda real, integ, **kw: 1e-3)
+    p = budget.plan(nominal, 0.4, jobs=1)
+    assert p.warning and "more than the 0.4 s budget" in p.warning

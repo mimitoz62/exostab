@@ -54,8 +54,10 @@ from html import unescape
 from typing import Any
 from urllib.parse import urljoin
 
-from ..models import CompletionFlag, MassKind, Phase, PhaseKind, Planet, Provenance, Star, Value
-from ..sampling import E_MAX
+from pydantic import ValidationError
+
+from ..models import CompletionFlag, MassKind, Phase, PhaseKind, Planet, Provenance, Star, System, Value
+from ..sampling import E_MAX, TWO_PI, choose_epoch, phase_sigma_rad
 from ..units import MEARTH_IN_MSUN, period_from_semimajor_axis, years_to_days
 from .archive import ARCHIVE_URL
 from .massradius import MassRadiusError, mass_from_radius
@@ -65,6 +67,13 @@ Row = dict[str, Any]
 
 class IncompleteSystemError(ValueError):
     """The published data are not sufficient to model the system."""
+
+
+def invalid_message(exc: ValueError) -> str:
+    """The messages of a model validation error, without pydantic's boilerplate."""
+    if isinstance(exc, ValidationError):
+        return "; ".join(str(e["msg"]).removeprefix("Value error, ") for e in exc.errors())
+    return str(exc)
 
 
 _HREF = re.compile(r"href=\s*['\"]?([^\s'\">]+)")
@@ -197,6 +206,7 @@ def _star_mass_flag(rows: Sequence[Row], chosen: Row) -> CompletionFlag | None:
         groups.setdefault(_star_mass_key(r), []).append(r)
     if len(groups) < 2:
         return None
+    same = len({float(r["st_mass"]) for r in usable}) == 1  # only the errors or the citations differ
     entries = [
         f"{_star_mass_entry(rs[0])} ({', '.join(sorted(str(r['pl_name']) for r in rs))})"
         for _, rs in sorted(groups.items())
@@ -220,7 +230,8 @@ def _star_mass_flag(rows: Sequence[Row], chosen: Row) -> CompletionFlag | None:
         None,
         "st_mass",
         "star_mass_inconsistent",
-        f"The planet rows give different stellar masses in solar masses: {'; '.join(entries)}. Used: "
+        f"The planet rows give {'one stellar mass with different errors or sources' if same else 'different stellar masses'} "
+        f"in solar masses: {'; '.join(entries)}. Used: "
         f"{_star_mass_entry(chosen)}, {why}. Planet masses derived with another stellar mass are not "
         "rescaled.",
     )
@@ -240,11 +251,15 @@ def complete_star(rows: Sequence[Row]) -> tuple[Star, list[CompletionFlag]]:
     chosen = star_mass_row(rows)
     if chosen is None and limits:
         raise IncompleteSystemError(
-            f"{host}: the archive gives only a limit on the stellar mass; supply a measured stellar mass "
-            "with --from-file."
+            f"{host}: the archive gives only a limit on the stellar mass; a YAML system file with a measured "
+            "stellar mass can be checked instead."
         )
     if chosen is None:
-        raise IncompleteSystemError(f"{host}: the stellar mass is missing; supply it with --from-file.")
+        raise IncompleteSystemError(
+            f"{host}: the stellar mass is missing; a YAML system file that gives it can be checked instead."
+        )
+    if not chosen["st_mass"] > 0:
+        raise IncompleteSystemError(f"{host}: the archive's stellar mass (st_mass) is {chosen['st_mass']:g}.")
     mass = _value(chosen, "st_mass")
     inconsistent = _star_mass_flag(rows, chosen)
     if inconsistent is not None:
@@ -301,7 +316,7 @@ def _period(row: Row, name: str, m_star: float, flags: list[CompletionFlag]) -> 
             f"{name}: no orbital period is published, and for a planet found by "
             f"{str(row['discoverymethod']).lower()} the archive's pl_orbsmax = {a:g} AU can be the "
             "projected separation on the sky rather than the semi-major axis, so the orbit cannot be placed. "
-            "Supply the orbit with --from-file if a published orbit fit exists."
+            "A YAML system file can give the orbit if a published orbit fit exists."
         )
     m_p = (row.get("pl_bmasse") or 0.0) * MEARTH_IN_MSUN
     P = years_to_days(period_from_semimajor_axis(a, m_star + m_p))
@@ -385,7 +400,7 @@ def _mass(row: Row, name: str, flags: list[CompletionFlag]) -> tuple[Value, Mass
                 "msini_of_transiting_planet",
                 "The archive gives m sin i, but the planet transits"
                 + (f" (i = {incl:g} deg)" if incl is not None else "")
-                + ", so sin i is close to 1: used as the true mass, not scaled by --inclination-prior.",
+                + ", so sin i is close to 1: used as the true mass, not scaled by an inclination prior.",
             )
         )
     elif kind is MassKind.MINIMUM and prov_text == "Msini":
@@ -394,8 +409,8 @@ def _mass(row: Row, name: str, flags: list[CompletionFlag]) -> tuple[Value, Mass
                 name,
                 "pl_bmasse",
                 "minimum_mass",
-                "Only the minimum mass m sin i is known; it is used as the mass (sin i = 1) unless "
-                "--inclination-prior is set.",
+                "Only the minimum mass m sin i is known; it is used as the mass (sin i = 1) unless an "
+                "inclination prior is chosen.",
             )
         )
     elif kind is MassKind.ESTIMATED:
@@ -417,6 +432,16 @@ def _mass(row: Row, name: str, flags: list[CompletionFlag]) -> tuple[Value, Mass
                 "Mass computed by the archive from m sin i and a measured inclination.",
             )
         )
+    elif prov_text not in _PROV or row.get("pl_bmassprov") is None:
+        said = f"gives {prov_text!r}" if row.get("pl_bmassprov") else "says nothing"
+        flags.append(
+            _flag(
+                name,
+                "pl_bmasse",
+                "mass_kind_unknown",
+                f"The archive's pl_bmassprov {said} about what this mass is; it is used as a true mass.",
+            )
+        )
     if row.get("pl_bmasselim") == 1:
         value = value.model_copy(update={"provenance": Provenance.UPPER_LIMIT})
         flags.append(
@@ -435,8 +460,8 @@ def _mass(row: Row, name: str, flags: list[CompletionFlag]) -> tuple[Value, Mass
                 "pl_bmasse",
                 "mass_lower_limit",
                 "The mass is a lower limit and the planet does not transit (inclination unknown); the "
-                "limit is treated as a minimum mass m sin i: used as the mass (sin i = 1) unless "
-                "--inclination-prior is set.",
+                "limit is treated as a minimum mass m sin i: used as the mass (sin i = 1) unless an "
+                "inclination prior is chosen.",
             )
         )
     elif row.get("pl_bmasselim") == -1:
@@ -444,6 +469,13 @@ def _mass(row: Row, name: str, flags: list[CompletionFlag]) -> tuple[Value, Mass
             _flag(name, "pl_bmasse", "mass_lower_limit", "The mass is a lower limit; the limit is used.")
         )
     return value, kind
+
+
+def eccentricity_is_assumed(row: Row) -> bool:
+    """A missing eccentricity, or exactly 0 without an uncertainty or a limit: labelled "assumed" (see below)."""
+    no_errors = not (row.get("pl_orbeccenerr1") or row.get("pl_orbeccenerr2"))  # missing or zero
+    e = row.get("pl_orbeccen")
+    return e is None or (e == 0 and no_errors and row.get("pl_orbeccenlim") not in (1, -1))
 
 
 def _eccentricity(row: Row, name: str, flags: list[CompletionFlag]) -> Value:
@@ -460,8 +492,7 @@ def _eccentricity(row: Row, name: str, flags: list[CompletionFlag]) -> Value:
             f"{name}: published eccentricity {v.value:g} is above {E_MAX:g}, the largest eccentricity "
             "exostab integrates; the system is not checked rather than checked with a different orbit."
         )
-    no_errors = not (row.get("pl_orbeccenerr1") or row.get("pl_orbeccenerr2"))  # missing or zero
-    if v.value == 0 and no_errors and row.get("pl_orbeccenlim") not in (1, -1):
+    if eccentricity_is_assumed(row):
         # A measured eccentricity has an uncertainty; exactly 0 without one is a circular orbit that the
         # source fixed in its fit (all eccentricities of the DR25 KOI table, for example). Same as a
         # missing eccentricity: e = 0 in every run, labelled "assumed".
@@ -579,41 +610,99 @@ def _phase(row: Row, name: str, duplicated_tper: bool, flags: list[CompletionFla
     return Phase(kind=PhaseKind.RANDOM)
 
 
-def complete_planets(rows: Sequence[Row], m_star: float) -> tuple[list[Planet], list[CompletionFlag]]:
-    """Planets (ordered by period) and the completion flags raised while building them."""
-    flags: list[CompletionFlag] = []
-    tpers = [r.get("pl_orbtper") for r in rows if r.get("pl_orbtper") is not None]
-    planets = []
-    for r in rows:
-        name = str(r["pl_name"])
-        period = _period(r, name, m_star, flags)
-        mass, kind = _mass(r, name, flags)
-        planets.append(
-            Planet(
-                name=name,
-                archive_name=name,
-                period_days=period,
-                mass_earth=mass,
-                mass_kind=kind,
-                eccentricity=_eccentricity(r, name, flags),
-                omega_deg=_omega(r, name, flags),
-                phase=_phase(r, name, tpers.count(r.get("pl_orbtper")) > 1, flags),
-                radius_earth=_value(r, "pl_rade") if r.get("pl_rade") is not None else None,
-                inclination_deg=_value(r, "pl_orbincl") if r.get("pl_orbincl") is not None else None,
-                semimajor_axis_au=_value(r, "pl_orbsmax") if r.get("pl_orbsmax") is not None else None,
+_POSITIVE_COLUMNS = (
+    ("pl_orbper", "orbital period"),
+    ("pl_orbsmax", "semi-major axis"),
+    ("pl_bmasse", "mass"),
+    ("pl_rade", "radius"),
+)
+
+
+def _planet_from_row(r: Row, m_star: float, duplicated_tper: bool, flags: list[CompletionFlag]) -> Planet:
+    name = str(r["pl_name"])
+    for column, what in _POSITIVE_COLUMNS:
+        if r.get(column) is not None and not r[column] > 0:
+            raise IncompleteSystemError(f"{name}: the archive's {what} ({column}) is {r[column]:g}.")
+    period = _period(r, name, m_star, flags)
+    mass, kind = _mass(r, name, flags)
+    try:
+        planet = Planet(
+            name=name,
+            archive_name=name,
+            period_days=period,
+            mass_earth=mass,
+            mass_kind=kind,
+            eccentricity=_eccentricity(r, name, flags),
+            omega_deg=_omega(r, name, flags),
+            phase=_phase(r, name, duplicated_tper, flags),
+            radius_earth=_value(r, "pl_rade") if r.get("pl_rade") is not None else None,
+            inclination_deg=_value(r, "pl_orbincl") if r.get("pl_orbincl") is not None else None,
+            semimajor_axis_au=_value(r, "pl_orbsmax") if r.get("pl_orbsmax") is not None else None,
+        )
+    except ValidationError as exc:
+        raise IncompleteSystemError(invalid_message(exc)) from exc
+    if r.get("pl_controv_flag") == 1:
+        flags.append(
+            _flag(
+                name,
+                "pl_controv_flag",
+                "controversial_planet",
+                "The archive flags this planet as controversial (its existence has been questioned).",
             )
         )
-        if r.get("pl_controv_flag") == 1:
-            flags.append(
-                _flag(
-                    name,
-                    "pl_controv_flag",
-                    "controversial_planet",
-                    "The archive flags this planet as controversial (its existence has been questioned).",
-                )
-            )
+    return planet
+
+
+def complete_planets(rows: Sequence[Row], m_star: float) -> tuple[list[Planet], list[CompletionFlag]]:
+    """Planets (ordered by period) and the completion flags raised while building them."""
+    tpers = [r.get("pl_orbtper") for r in rows if r.get("pl_orbtper") is not None]
+    # The archive returns rows in no fixed order. Going through them by name first makes the reason for a
+    # rejection, which goes into the catalog, independent of that order; an accepted system keeps its flags' order.
+    for r in sorted(rows, key=lambda r: str(r["pl_name"])):
+        _planet_from_row(r, m_star, tpers.count(r.get("pl_orbtper")) > 1, [])
+    flags: list[CompletionFlag] = []
+    planets = [_planet_from_row(r, m_star, tpers.count(r.get("pl_orbtper")) > 1, flags) for r in rows]
     planets.sort(key=lambda p: p.period_days.require())
     return planets, flags
+
+
+def missing_rows_flag(rows: Sequence[Row]) -> CompletionFlag | None:
+    """Flag for a single-star host with fewer rows than the archive's count of its planets (``sy_pnum``)."""
+    n_planets, n_stars = rows[0].get("sy_pnum"), rows[0].get("sy_snum")
+    if n_stars != 1 or n_planets is None or len(rows) >= n_planets:
+        return None
+    return _flag(
+        None,
+        "sy_pnum",
+        "planet_rows_missing",
+        f"The archive counts {n_planets} planets around this star, but the table has {len(rows)} rows for it; "
+        "the other planets are not in the integrations.",
+    )
+
+
+def phase_spread_flags(system: System) -> list[CompletionFlag]:
+    """Flags for planets whose phase is lost on the way from its reference time to the common epoch.
+
+    The uncertainties of the reference time and the period are propagated to the epoch in every draw. Above one
+    full turn the phase of a draw is effectively random, although the report says it comes from that time.
+    """
+    timed = (PhaseKind.TRANSIT, PhaseKind.PERIASTRON)
+    t0 = choose_epoch(system) if any(p.phase.kind in timed for p in system.planets) else None
+    flags = []
+    for p in system.planets:
+        if t0 is not None and p.phase.kind in timed and phase_sigma_rad(p, t0) > TWO_PI:
+            turns = phase_sigma_rad(p, t0) / TWO_PI
+            flags.append(
+                _flag(
+                    p.name,
+                    "phase",
+                    "phase_uncertain_at_epoch",
+                    f"The orbital phase comes from a {p.phase.kind.value} time, but carried to the common epoch "
+                    f"(JD {t0:.1f}) its uncertainty is {turns:.3g} full turns: in the draws it is effectively "
+                    "random.",
+                )
+            )
+    return flags
 
 
 def coplanar_flag() -> CompletionFlag:

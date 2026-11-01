@@ -64,7 +64,7 @@ def parse_budget(value: str | float) -> float:
                 f"budget must be 'fast', 'thorough' or a number of seconds, got {value!r}"
             ) from exc
     if not seconds > 0 or not math.isfinite(seconds):
-        raise ValueError(f"budget must be positive, got {value!r}")
+        raise ValueError(f"budget must be a positive, finite number of seconds, got {value!r}")
     return seconds
 
 
@@ -105,7 +105,7 @@ def plan(nominal: Realization, budget_s: float, *, jobs: int | None = None, ias1
     if estimate > remaining:
         warning = (
             f"Even the smallest run ({PRESETS[0][0]:,.0f} orbits, {PRESETS[0][1]} draws) needs about "
-            f"{estimate:.0f} s, more than the {budget_s:.0f} s budget; it is used anyway."
+            f"{estimate:.0f} s, more than the {budget_s:g} s budget; it is used anyway."
         )
     return Plan(
         orbits=chosen[0],

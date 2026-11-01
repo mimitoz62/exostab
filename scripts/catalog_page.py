@@ -233,6 +233,10 @@ META_KEYS = {
     "settings.jobs": ("—", "Worker processes; `null` means one fewer than the CPUs of the machine."),
     "data_source": ("—", "`archive`, `archive-cache` or `snapshot`, as in the CSV."),
     "data_retrieved_utc": ("UTC, ISO 8601", "When the table was downloaded; `null` if that is not known."),
+    "data_note": (
+        "text",
+        "Why the data are not the archive table, if so; or `null`. Example: the archive could not be reached.",
+    ),
     "n_systems": ("—", "Rows in the catalog."),
     "columns": ("—", "The names of the CSV columns, in order."),
 }

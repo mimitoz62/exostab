@@ -39,8 +39,8 @@ Then open http://localhost:8501. Options after the command go to
    systems. The archive table is downloaded on first use and then
    reused from the same cache folder as the command line; the app does not download it again by itself. Running
    `exostab check --refresh` on the same computer updates the cache, and the app picks the new table up within a
-   day or when it is restarted. If the archive cannot be reached and there is no cache, the app uses the snapshot
-   and says so. The data date is shown above the parameter table.
+   day or when it is restarted. If the archive cannot be reached and there is no cache, the app uses the snapshot,
+   says so, and tries the archive again after about five minutes. The data date is shown above the parameter table.
 2. **Edit parameters** in the table if you want: period, mass, eccentricity (up to 0.95), argument of periastron.
    Leave ω empty to draw it at random. The published uncertainties are kept for the Monte Carlo draws, and every
    change is listed in the report.
@@ -65,14 +65,16 @@ view, a reload or the same link opened again on the same server is instant.
 A link encodes the system name, the data source (archive or snapshot), your table edits and what-if changes, the
 time budget, the seed, the treatment of minimum masses, whether SPOCK was added, and the run length (orbits and
 draws). Values that the app's own controls cannot produce are not used: the budget is clamped to 5–120 s, and an
-invalid seed, run length, table edit or what-if change falls back to the default.
+invalid seed, run length, table edit or what-if change falls back to the default, with a notice on the page. A link
+that asks for SPOCK runs without it, and says so, on a server that has no SPOCK environment.
 
 A link does not pin:
 
 - **the data.** It holds no parameter values and no download date, so it runs on the archive table of the server
   that opens it. On another computer, or after the cache was refreshed, the table can differ. The data date and
-  the input hash shown with the result tell whether two runs used the same inputs. For a fixed data set, choose
-  the offline snapshot; the published values used in a run are in its `report.json`.
+  the input hash are shown with the result. The same input hash means the same inputs. A different hash can still
+  mean the same run, because the hash also covers the budget when a budget chose the run length. For a fixed data
+  set, choose the offline snapshot; the published values used in a run are in its `report.json`.
 - **the run length, if it is too expensive.** The link's run length is used only if, at the speed measured on the
   server that opens it, it is estimated to take at most 120 s (the largest budget). Otherwise the run length is
   chosen for the link's budget on that server, and a note says so. When a link's run length is used as given,

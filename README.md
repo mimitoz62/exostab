@@ -240,8 +240,8 @@ $ exostab check "HD 127195" --offline
 │   chaotic, 1 close encounter/escape of 20.                                                       │
 │   • The orbital phases of HD 127195 b, HD 127195 c are not published and are drawn at random in  │
 │   every run (the nominal run included). A system protected by a mean-motion resonance can look   │
-│   chaotic or unstable for random phases; supply measured phases with --from-file to test the     │
-│   real configuration.                                                                            │
+│   chaotic or unstable for random phases; a YAML system file with measured phases can be used to  │
+│   test the real configuration.                                                                   │
 │                                                                                                  │
 │ Overall: MARGINAL  Direct integration: the nominal run is chaotic; of 20 draws, 13 are regular,  │
 │ 6 chaotic and 1 had close encounters or escapes. Part of the parameter range allowed by the      │
@@ -251,8 +251,8 @@ $ exostab check "HD 127195" --offline
 │ IAS15; 20 Monte Carlo draws; seed 0; MEGNO chaotic at <Y> ≥ 2.2; energy-error limit 1e-05.       │
 │                                                                                                  │
 │ Data completion (applied automatically):                                                         │
-│ b, c    Only the minimum mass m sin i is known; it is used as the mass (sin i = 1) unless        │
-│         --inclination-prior is set.                                                              │
+│ b, c    Only the minimum mass m sin i is known; it is used as the mass (sin i = 1) unless an     │
+│         inclination prior is chosen.                                                             │
 │ b, c    Orbital phase drawn uniformly for every run: no transit, conjunction or periastron time  │
 │         is published.                                                                            │
 │ system  All orbits are placed in one plane. Mutual inclinations are not published (sky-plane     │
@@ -523,7 +523,7 @@ One of the five completion rules that fired for this system:
   "planet": "HD 127195 c",
   "parameter": "pl_bmasse",
   "rule": "minimum_mass",
-  "message": "Only the minimum mass m sin i is known; it is used as the mass (sin i = 1) unless --inclination-prior is set."
+  "message": "Only the minimum mass m sin i is known; it is used as the mass (sin i = 1) unless an inclination prior is chosen."
 }
 ```
 
