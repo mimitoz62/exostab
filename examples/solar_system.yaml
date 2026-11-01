@@ -1,0 +1,72 @@
+# The eight planets of the Solar System, for comparison with exoplanet systems.
+# Source: NASA Goddard's planetary fact sheets, https://nssdc.gsfc.nasa.gov/planetary/factsheet/ (mercuryfact.html,
+# venusfact.html, earthfact.html, marsfact.html, jupiterfact.html, saturnfact.html, uranusfact.html, neptunefact.html;
+# read 1 November 2026). Sidereal periods, and masses as ratios to Earth's 5.9722e24 kg (the fact-sheet mass in
+# 1e24 kg is in each comment). Eccentricity, longitude of perihelion and mean longitude are the mean orbital
+# elements at J2000. The Sun's mass is 1 by definition of the unit.
+# No errors are given, so the Monte Carlo draws repeat these values. exostab models the orbits as coplanar, so the
+# real inclinations and nodes are not used, and there are no moons and no general relativity.
+name: Solar System
+notes: >-
+  Eight planets from NASA's planetary fact sheets, with mean orbital elements at J2000.
+epoch_jd: 2451545.0
+star:
+  name: Sun
+  mass_msun: 1.0
+planets:
+  - name: Mercury
+    period_days: 87.969
+    mass_earth: 0.0552728    # 0.3301e24 kg
+    mass_kind: true
+    eccentricity: 0.20563069
+    omega_deg: 77.45645
+    mean_longitude_deg: 252.25084
+  - name: Venus
+    period_days: 224.701
+    mass_earth: 0.814993    # 4.8673e24 kg
+    mass_kind: true
+    eccentricity: 0.00677323
+    omega_deg: 131.53298
+    mean_longitude_deg: 181.97973
+  - name: Earth
+    period_days: 365.256
+    mass_earth: 1    # 5.9722e24 kg
+    mass_kind: true
+    eccentricity: 0.01671022
+    omega_deg: 102.94719
+    mean_longitude_deg: 100.46435
+  - name: Mars
+    period_days: 686.98
+    mass_earth: 0.107446    # 0.64169e24 kg
+    mass_kind: true
+    eccentricity: 0.09341233
+    omega_deg: 336.04084
+    mean_longitude_deg: 355.45332
+  - name: Jupiter
+    period_days: 4332.589
+    mass_earth: 317.828    # 1898.13e24 kg
+    mass_kind: true
+    eccentricity: 0.04839266
+    omega_deg: 14.75385
+    mean_longitude_deg: 34.40438
+  - name: Saturn
+    period_days: 10755.699
+    mass_earth: 95.1609    # 568.32e24 kg
+    mass_kind: true
+    eccentricity: 0.0541506
+    omega_deg: 92.43194
+    mean_longitude_deg: 49.94432
+  - name: Uranus
+    period_days: 30685.4
+    mass_earth: 14.5358    # 86.811e24 kg
+    mass_kind: true
+    eccentricity: 0.04716771
+    omega_deg: 170.96424
+    mean_longitude_deg: 313.23218
+  - name: Neptune
+    period_days: 60189.018
+    mass_earth: 17.1476    # 102.409e24 kg
+    mass_kind: true
+    eccentricity: 0.00858587
+    omega_deg: 44.97135
+    mean_longitude_deg: 304.88003

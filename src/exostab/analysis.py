@@ -152,7 +152,11 @@ def _nbody_sentences(nb: IndicatorResult, allowed: str) -> list[str]:
     out = [text + "."]
     found = [w for w, k in (("chaotic", d.marginal), ("unstable", d.unstable)) if k] if d is not None else []
     if found:
-        out.append(f"Part of the parameter range allowed by the {allowed} is {' or '.join(found)}.")
+        out.append(
+            f"No draw within the {allowed} is regular."
+            if d is not None and d.stable == 0
+            else f"Part of the parameter range allowed by the {allowed} is {' or '.join(found)}."
+        )
     if held:
         out.append(f"In addition, {_join(held)}.")
     return out
@@ -269,9 +273,12 @@ def overall_verdict(
     if bad:
         sentences.append(f"The other indicators cannot guarantee stability ({', '.join(bad)}).")
         if nb.verdict is Verdict.STABLE and _all_regular(nb):
-            sentences.append(
-                "This is typical of systems protected by mean-motion resonances or of compact systems whose "
-                "long-term stability is uncertain."
+            sentences.extend(
+                r.summary
+                if r.nominal_verdict is not Verdict.STABLE
+                else f"{r.title} is stable for the nominal parameters, but the draws disagree."
+                for r in others
+                if r.verdict is not Verdict.STABLE
             )
     if upper_limits:
         sentences.append(

@@ -173,6 +173,46 @@ def test_system_pages(small_catalog: Path, tmp_path: Path, monkeypatch: pytest.M
     assert "β = ∞" in unstable and "1,234 years" in unstable and "10 with a close encounter" in unstable
     assert "`a_future_rule`" in unstable and "overview/KOI-351" in unstable
     assert "](../reading-a-report.md)" in unstable
+    # a catalog from before the card's sentences were columns keeps the general text
+    assert "## Why this verdict" not in unstable
+    assert "for example, the indicators" in pages.page({**row, "overall": "marginal"}, meta, {"KOI-351"})
+    assert "(../reading-a-report.md#angular-momentum-deficit-amd)" in unstable
+    assert "(../quickstart.md#install)" in unstable and "leaves out mean-motion resonances" in unstable
+    assert "at least 12 mutual Hill radii" not in unstable.replace("\n", " ")  # this row has two planets
+    assert "at least 12 mutual Hill radii" in pages.page({**row, "n_planets": "3"}, meta, {"KOI-351"})
+    # a catalog with them gives this row's reasons, and says when ⟨Y⟩ is too close to the threshold to be firm
+    why = pages.page(
+        {
+            **row,
+            "overall": "marginal",
+            "hill": "marginal",
+            "amd": "stable",
+            "nbody": "marginal",
+            "megno_nominal": "2.190",
+            "hill_summary": "Every pair passes, but f / g is only 6.6 apart, for β_S.",
+            "amd_summary": "AMD-stable.",
+            "overall_summary": "The N-body verdict is only marginal: see the N-body notes.",
+        },
+        meta,
+        {"KOI-351"},
+    )
+    assert "## Why this verdict" in why and "f / g is only 6.6 apart, for β\\_S." in why
+    assert "AMD-stable." not in why and "see the N-body notes of exostab check" in why
+    assert "with 10 draws, 10 of 10" in why and "not firm" in why
+    assert "for the reasons above" in why and "for example, the indicators" not in why
+    # a run stopped by a close encounter has no label of regular or chaotic
+    assert "not firm" not in pages.page(
+        {
+            **row,
+            "hill": "stable",
+            "amd": "stable",
+            "nbody": "unstable",
+            "megno_nominal": "2.190",
+            "overall_summary": "x",
+        },
+        meta,
+        {"KOI-351"},
+    )
 
     empty = dict.fromkeys(row, "")
     skipped = {
@@ -215,6 +255,28 @@ def test_system_pages(small_catalog: Path, tmp_path: Path, monkeypatch: pytest.M
         assert path.path == "exostab/"
         assert decode_state({k: v[0] for k, v in parse_qs(path.query).items()}).system == name
         assert unquote(pages.binder_url(name)).count("exostab/?system=") == 1
+    # with a row of the catalog, the link carries its settings and starts the run
+    urlpath = parse_qs(urlsplit(pages.binder_url("GJ 876", row)).query)["urlpath"][0]
+    state = decode_state({k: v[0] for k, v in parse_qs(urlsplit(urlpath).query).items()})
+    assert (state.system, state.seed, state.orbits, state.draws, state.run) == (
+        "GJ 876",
+        0,
+        10000.0,
+        10,
+        True,
+    )
+    assert "run%3D1" in unstable.replace("%253D", "%3D") and "starts by itself" in unstable
+    assert "run%3D1" not in timeout and "starts by itself" not in timeout
+
+
+def test_system_page_note_is_for_the_named_system_only(small_catalog: Path) -> None:
+    pages = load("system_pages")
+    meta = json.loads((small_catalog / "catalog_meta.json").read_text(encoding="utf-8"))
+    rows = csv.DictReader((small_catalog / "catalog.csv").open(encoding="utf-8"))
+    row = next(r for r in rows if r["status"] == "ok")
+    note = "About the real planets"
+    assert note in pages.page({**row, "system": "TRAPPIST-1"}, meta, set())
+    assert note not in pages.page({**row, "system": "Not TRAPPIST-1"}, meta, set())
 
 
 @pytest.mark.skipif(not (ROOT / "docs" / "index.md").is_file(), reason="this page is not in the sdist")
@@ -253,6 +315,7 @@ def test_catalog_data_dictionary(small_catalog: Path) -> None:
     # how to cite: the version's date, the archive's DOI and the licence, also for dataset search engines
     assert f"version of\n> {meta['created_utc'][:10]}" in text and "doi:[10.26133/NEA13]" in text
     assert "A DOI for the catalog will follow" in text and "(citing.md)" in text
+    assert f"blob/catalog-data/archive/catalog-{meta['created_utc'][:10]}.csv>" in text
     assert "CC BY 4.0" in text and '"license": "https://creativecommons.org/licenses/by/4.0/"' in text
 
 

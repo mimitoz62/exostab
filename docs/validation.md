@@ -86,16 +86,24 @@ that number.
 | System | Data | Hill | AMD | N-body | Overall | Nominal ⟨Y⟩ (WHFast / IAS15) | Draws: regular / chaotic / encounter |
 |---|---|---|---|---|---|---|---|
 | TRAPPIST-1 | archive snapshot | marginal | stable | marginal | **marginal** | 2.1709 / 2.1685 | 18 / 2 / 0 |
+| TRAPPIST-1 | Agol et al. (2021), Table 2 | marginal | stable | stable | **marginal** | 1.2696 / 1.2695 | 19 / 1 / 0 |
 | GJ 876 | Rivera et al. (2010) coplanar fit | unstable | marginal | stable | **marginal** | 1.9925 / 1.9951 | 20 / 0 / 0 |
 | GJ 876 | archive snapshot (random phases) | unstable | marginal | marginal | **marginal** | 3.9795 / 3.7621 | 3 / 5 / 12 |
 | Kepler-11 | archive snapshot | marginal | marginal | marginal | **marginal** | 1.7855 / 1.7857 | 10 / 8 / 2 |
 
-No draw of these four runs is inconclusive. What the tests require (from the project brief) and why:
+No draw of these five runs is inconclusive. What the tests require (from the project brief) and why:
 
 - **TRAPPIST-1**, a resonant chain: stable or marginal, never unstable. ✔ Over 10,000 orbits of TRAPPIST-1 b
   (41 years) the nominal run is regular. It is not regular over longer runs: ⟨Y⟩ is 2.42 after 30,000 orbits and
   6.46 after 50,000 (WHFast; 5.26 with IAS15), with `exostab check "TRAPPIST-1" --offline --draws 0` and
-  `--orbits 30000` or `50000`.
+  `--orbits 30000` or `50000`. That label is for seed 0. The seed sets the start of the MEGNO calculation, and seeds 0 to
+  7 give ⟨Y⟩ = 2.17, 2.16, 2.38, 2.46, 2.49, 2.40, 2.24 and 2.38, regular for seeds 0 and 1 only.
+- **TRAPPIST-1, one paper's solution** (Agol et al. 2021, Table 2, in `examples/trappist1_agol2021.yaml`, with 180° added
+  to every ω, [because their code uses f = 270° − ω](data-assumptions.md#your-own-parameters)): the nominal run is regular
+  over 10,000 orbits with seeds 0, 1 and 2, and over 1,500 days with IAS15 each planet's mean transit period is within
+  0.002 d of Ducrot et al. (2020, Table 4) ✔ (largest difference 0.00085 d, planet h). The test also requires that the
+  table's ω, typed unchanged, misses that limit (planet h by 0.019 d). The overall verdict stays marginal because the
+  Hill test does not depend on the phases.
 - **GJ 876**, in a Laplace resonance: expected stable. The archive does not provide usable orbital phases for
   GJ 876, and with random phases the resonance is destroyed (12 of 20 draws have close encounters). The test
   therefore uses the published four-planet solution of Rivera et al. (2010, Table 3), with its mean anomalies,

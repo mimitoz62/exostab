@@ -8,6 +8,16 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- The catalog has three new columns, `hill_summary`, `amd_summary` and `overall_summary`, with the report card's
+  sentences. A system's page built from them has a section, Why this verdict; a page built from an older catalog keeps
+  its general text.
+- The web app says when a run covers fewer than 10,000 orbits, and that a short run's N-body verdict can look better than
+  a longer one's.
+- The calculator has an example, TRAPPIST-1 f and g, and says why it and a system's page can differ on one pair.
+- A system's page says that its command needs exostab installed, links to the Quickstart, and spells out and links the
+  names of the indicators. Its Binder link carries the catalog's seed, run length and draws, and starts the run.
+- `examples/solar_system.yaml`: the eight planets from NASA's fact sheets, and a FAQ entry that quotes what exostab says
+  about them.
 - A DOI that always resolves to the latest version: [10.5281/zenodo.23844658](https://doi.org/10.5281/zenodo.23844658), in `CITATION.cff`, the README and
   the page on citing exostab.
 - After each weekly catalog, the documentation workflow sends the site's URLs to IndexNow (`scripts/indexnow.py`), so
@@ -39,16 +49,34 @@ All notable changes to this project are documented here. The format follows
   exostab does not do, and how it relates to REBOUND, SPOCK, ExoNAMD, the published AMD-stability catalogues, long-term
   integrators such as Mercury and SWIFT, the NASA Exoplanet Archive, Exostab 2.0, celmech, the Exo-Striker and ARDENT.
 
+- `examples/trappist1_agol2021.yaml`, the transit-timing solution of Agol et al. (2021, Table 2), with every ω increased by
+  180° because their code uses f = 270° − ω. A validation test checks that its nominal run is regular over 10,000 orbits
+  with three seeds and that its transit periods match Ducrot et al. (2020), and that the table's ω typed unchanged does
+  not. The page of TRAPPIST-1 has a short note on what exostab's runs show and what published dynamical studies found.
+
 ### Changed
 
+- The AMD row of a system's page and the data dictionary now state the limits of β: the secular approximation, which
+  leaves out mean-motion resonances, and the assumption about the inclinations.
+- The overall summary no longer says that regular runs with failing analytic indicators are "typical of systems
+  protected by mean-motion resonances". It now gives each failing indicator's own summary. When no draw is regular it
+  says so, instead of "part of the parameter range". Verdicts do not change.
 - The documentation's pages have more descriptive titles, for browser tabs and search engines. The titles of the system
   pages no longer repeat the name of the site, and the CLI reference has its own description: `scripts/cli_page.py`
   now writes `docs/cli.md`.
 - The catalog's schema.org Dataset names its creator's ORCID iD in the form Google's documentation asks for, and adds
   the version, the variables and the technique.
+- The README, `CITATION.cff` and `codemeta.json` say what exostab does: it reports whether published parameters pass
+  three tests of stability, and how that holds up within the uncertainties. The first Zenodo record keeps the old text
+  until the next release.
+- The BibTeX of the software has the DOI of version 1.0.1, and the catalog's citation names the dated file of that
+  version. The validation page and the README say that the nominal label of TRAPPIST-1 is for seed 0, and give seeds 0 to 7.
 
 ### Fixed
 
+- The docs said that exostab takes every ω as the planet's, which does not fix the number. They now say that it uses ω as
+  published, with mid-transit at f = 90° − ω, and how to type a value from a source that uses f = 270° − ω. The code has
+  not changed (D9, amended).
 - The download URLs in the catalog's schema.org Dataset led to pages that do not exist. They now name
   `data/catalog.csv` and `data/catalog.parquet`, where the site serves the files.
 - The catalog's filter and the web app's search box now find Proxima Cen as `Proxima Centauri` and V1298 Tau as

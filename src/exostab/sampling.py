@@ -184,8 +184,8 @@ def _mean_anomaly(
     if t0 is None:  # pragma: no cover - choose_epoch always returns a time when one exists
         raise ValueError("a time-based phase needs a common epoch")
     T = pick(ph.value)
-    # Mid-transit / inferior conjunction happens at true anomaly f = pi/2 - omega, with omega the planet's
-    # argument of periastron measured from the sky plane (Winn 2010, Eq. 6). In the coplanar dynamical
+    # Mid-transit / inferior conjunction happens at true anomaly f = pi/2 - omega (Winn 2010, Eq. 6), with omega
+    # used as published, whichever orbit the source calls it (docs/data-assumptions.md). In the coplanar dynamical
     # frame this fixes a common line of sight for all planets. At periastron passage M = 0.
     M_ref = true_to_mean_anomaly(math.pi / 2 - omega, e) if ph.kind is PhaseKind.TRANSIT else 0.0
     return (M_ref + TWO_PI * (t0 - T) / P_days) % TWO_PI

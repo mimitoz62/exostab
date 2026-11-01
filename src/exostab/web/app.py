@@ -328,6 +328,12 @@ def _results(result: CheckResult, state: AppState) -> None:
             for note in ind.notes:
                 st.caption("• " + note)
     s = rep.settings
+    if s.orbits < 1e4:
+        st.warning(
+            f"This run covers {s.orbits:,.0f} orbits of the innermost planet, fewer than the 10,000 of exostab check "
+            "and the catalog. A short run has less time to show chaos, so its N-body verdict can look better than a "
+            "longer one."
+        )
     st.caption(
         f"N-body: {s.orbits:,.0f} orbits of the innermost planet ({s.t_end_yr:,.4g} yr), {s.draws} draws, seed "
         f"{s.seed}"

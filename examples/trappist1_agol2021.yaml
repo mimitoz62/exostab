@@ -1,0 +1,69 @@
+# TRAPPIST-1: the transit-timing solution of Agol et al. (2021, PSJ 2, 1), Table 2 (arXiv:2010.01074). Osculating
+# Jacobi elements at the start of their simulation, BJD_TDB 2457257.93115525; masses for a star of 0.09 Msun, which is
+# the value the table's masses assume. The table gives e cos omega and e sin omega, each with an error. Here e and
+# omega come from those two numbers, and their errors follow by first-order propagation, ignoring correlations, so the
+# draws are a simplification of the paper's posterior. The error of omega is capped at 180 degrees (planet c).
+#
+# Every omega_deg below is the table's angle plus 180 degrees. Their code, NbodyGradient, places a planet at
+# true anomaly f = 270 deg - omega at the transit time (kepler_init.jl, f1 = 1.5*pi - omega), and exostab uses
+# f = 90 deg - omega (docs/data-assumptions.md). Adding 180 degrees gives the planet the paper's true anomaly at
+# its transit time. Both then describe the same orbits, turned as a whole by 180 degrees.
+# Typed unchanged, the same numbers give a different starting configuration, whose mean transit periods miss those of
+# Ducrot et al. (2020) by up to 0.019 d; with 180 degrees added they are within 0.00085 d (tests/validation).
+# Over the 1,532 days of the paper's table of 447 transit times, this file (IAS15) gives each time within about 0.5 min of
+# the table's posterior mean (rms 0.2 min). Typed unchanged, the rms is 295 min.
+name: TRAPPIST-1 (Agol et al. 2021, Table 2)
+epoch_jd: 2457257.93115525
+star:
+  name: TRAPPIST-1
+  mass_msun: 0.09
+planets:
+  - name: TRAPPIST-1 b
+    period_days: {value: 1.510826, err: 0.000006}
+    mass_earth: {value: 1.3771, err: 0.0593}
+    eccentricity: {value: 0.003055, err: 0.002909}
+    omega_deg: {value: 314.735, err: 54.721}
+    transit_time_jd: {value: 2457257.55044, err: 0.00015}
+    reference: Agol et al. 2021, Table 2
+  - name: TRAPPIST-1 c
+    period_days: {value: 2.421937, err: 0.000018}
+    mass_earth: {value: 1.3105, err: 0.0453}
+    eccentricity: {value: 0.000550, err: 0.002320}
+    omega_deg: {value: 181.042, err: 178.133}
+    transit_time_jd: {value: 2457258.58728, err: 0.00027}
+    reference: Agol et al. 2021, Table 2
+  - name: TRAPPIST-1 d
+    period_days: {value: 4.049219, err: 0.000026}
+    mass_earth: {value: 0.3885, err: 0.0074}
+    eccentricity: {value: 0.005633, err: 0.001722}
+    omega_deg: {value: 331.706, err: 13.455}
+    transit_time_jd: {value: 2457257.06768, err: 0.00067}
+    reference: Agol et al. 2021, Table 2
+  - name: TRAPPIST-1 e
+    period_days: {value: 6.101013, err: 0.000035}
+    mass_earth: {value: 0.6932, err: 0.0128}
+    eccentricity: {value: 0.006325, err: 0.001201}
+    omega_deg: {value: 133.206, err: 11.221}
+    transit_time_jd: {value: 2457257.82771, err: 0.00041}
+    reference: Agol et al. 2021, Table 2
+  - name: TRAPPIST-1 f
+    period_days: {value: 9.207540, err: 0.000032}
+    mass_earth: {value: 1.0411, err: 0.0155}
+    eccentricity: {value: 0.008415, err: 0.001299}
+    omega_deg: {value: 3.474, err: 5.937}
+    transit_time_jd: {value: 2457257.07426, err: 0.00085}
+    reference: Agol et al. 2021, Table 2
+  - name: TRAPPIST-1 g
+    period_days: {value: 12.352446, err: 0.000054}
+    mass_earth: {value: 1.3238, err: 0.0171}
+    eccentricity: {value: 0.004010, err: 0.001085}
+    omega_deg: {value: 198.616, err: 10.768}
+    transit_time_jd: {value: 2457257.71462, err: 0.00103}
+    reference: Agol et al. 2021, Table 2
+  - name: TRAPPIST-1 h
+    period_days: {value: 18.772866, err: 0.000214}
+    mass_earth: {value: 0.3261, err: 0.0186}
+    eccentricity: {value: 0.003650, err: 0.000770}
+    omega_deg: {value: 0.314, err: 6.907}
+    transit_time_jd: {value: 2457249.60676, err: 0.00272}
+    reference: Agol et al. 2021, Table 2

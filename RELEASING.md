@@ -53,6 +53,9 @@ pre-releases included, and gives it a DOI. Its metadata (title, authors with ORC
 4. The concept DOI, which always resolves to the latest version, is 10.5281/zenodo.23844658. It is in `README.md`
    ("Citing exostab"), `docs/citing.md`, `docs/index.md`, `codemeta.json`, the structured data of `overrides/home.html`
    and, as `doi:`, in `CITATION.cff`.
+5. Once Zenodo has archived a release, put that version's own DOI and number in the BibTeX of `README.md` ("Citing
+   exostab") and `docs/citing.md`. `CITATION.cff` keeps the concept DOI, because a version's own DOI does not exist
+   before its release.
 
 Do not publish GitHub pre-releases for testing: Zenodo would archive them as versions of exostab.
 

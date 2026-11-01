@@ -382,6 +382,13 @@ def test_marginal_summary_names_the_actual_reason() -> None:
         "Part of the parameter range allowed by the published uncertainties is chaotic or unstable"
         in o.summary
     )
+    # No regular draw: not "part of" the range. The words change, the verdict does not.
+    o = overall_verdict(
+        {"hill": ind("hill", M), "amd": ind("amd", S), "nbody": nbody_ind(0, 0, 20, megno=9.8)}
+    )
+    assert o.verdict is M and "of 20 draws, 0 are regular, 20 chaotic" in o.summary
+    assert "No draw within the published uncertainties is regular." in o.summary
+    assert "Part of the parameter range" not in o.summary
     # Draws below an upper limit are not "within the uncertainties".
     o = overall_verdict(
         {"hill": ind("hill", M), "amd": ind("amd", S), "nbody": nbody_ind(10, 5, 5)},
@@ -392,7 +399,14 @@ def test_marginal_summary_names_the_actual_reason() -> None:
     # GJ 876: regular N-body motion in every run, analytic criteria failing.
     o = overall_verdict({"hill": ind("hill", U), "amd": ind("amd", M), "nbody": nbody_ind(20)})
     assert o.verdict is M and "regular motion for the nominal parameters and all 20 draws" in o.summary
-    assert "mean-motion resonances" in o.summary
+    assert "typical of" not in o.summary
+    # Each failing indicator speaks for itself; an indicator whose nominal verdict is stable must not read as a pass.
+    hill = ind("hill", U).model_copy(update={"summary": "Mars / Jupiter is too close."})
+    amd = ind("amd", M).model_copy(update={"nominal_verdict": S, "summary": "AMD-stable."})
+    o = overall_verdict({"hill": hill, "amd": amd, "nbody": nbody_ind(20)})
+    assert o.verdict is M and "Mars / Jupiter is too close." in o.summary
+    assert "amd is stable for the nominal parameters, but the draws disagree." in o.summary
+    assert "AMD-stable." not in o.summary
 
 
 def test_check_system_end_to_end_small() -> None:
