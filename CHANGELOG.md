@@ -84,6 +84,63 @@ All notable changes to this project are documented here. The format follows
 - Methods said that the Solar System is AMD-unstable because Mercury could collide with Venus. That reason is not in
   the arXiv source of Laskar & Petit (2017), which attributes it to the large AMD of the giant planets. The page now
   says so.
+- Web app: a what-if value moved on one system or planet is no longer applied to the next one picked, where it silently
+  changed the run. Every move of a control is kept: every second consecutive move used to be lost, and so was the table
+  edit after typing into a column that is empty for every planet.
+- YAML files: these are now refused with a message that names the field, where they were silently misread: a repeated
+  key (a missing dash dropped a planet), an error on one side only or an empty one, `err` next to `err_plus` or
+  `err_minus`, an error bar or a value of 0 on an upper limit, `mass_kind: estimated` with `upper_limit`, booleans or
+  text where a number belongs, integers that only YAML 1.1 reads as numbers (`010`, `0x10`, `1:30`), names and notes
+  that are not text or hold control characters, planet names that differ only in case or spaces, a radius that is not
+  positive, and values no real system has. `3e-6` is now a number. Files that are not UTF-8, that PyYAML cannot read, or
+  with `reference: 2017`, numeric keys next to unknown ones, huge integers or a negative mass no longer give a traceback.
+- A non-finite time, angle or drawn value no longer becomes a NaN phase, which was reported as a close encounter and
+  overall unstable. A table cell of `inf` counts as missing; a value that cannot be drawn is refused.
+- An empty or cut answer from the archive (no rows, QUERY_STATUS=OVERFLOW, or more than 1% of single-star hosts with
+  fewer rows than `sy_pnum`) no longer replaces a good cache. A single such host gets the flag `planet_rows_missing`.
+- `catalog build` exits with 1 when no system was computed, reports an archive outage in one line, says when the snapshot
+  replaced the archive table (`data_note` in `catalog_meta.json`), counts its error rows, and says when Parquet was
+  skipped. `--seed` is limited to what Parquet stores, and a Parquet failure still writes the meta file. Ctrl-C stops its
+  workers quietly and saves the finished rows in `catalog.partial.csv`.
+- Names that differ in digits or in the sign of a declination (`Kepler-10.01`, `BD+08 2823`) no longer reach another
+  star: they get a suggestion. A candidate's name suggests its host (`TOI-1233`), and the hint for a name that is not
+  found fits the case: `exostab list --offline`, or `--from-file` for a file name.
+- `--orbits`, `--max-seconds` and `--max-period-days` refuse NaN and infinity, `--draws` and `--steps` have a maximum,
+  an empty `--out` or `--spock-python` is refused, and `--offline` with `--refresh` is refused. A wrong SPOCK
+  interpreter is found before the integration, and the SPOCK message gives the raw URL of the script.
+- `sweep` varies the planet named in its first argument, refuses a letter that fits two planets, and names the planet it
+  varied. Its table tells close values apart and lists the assumptions, and a range that overflows, a mass above the star
+  or a period out of range is refused.
+- An output folder that cannot be written is found before the integration, with a one-line error, and a long or non-Latin
+  system name gets a folder of its own. A cache folder that cannot be used no longer loses the download, or crashes the
+  web app. Parallel first runs no longer collide on a temporary file. More kinds of damage to the cache are ignored and
+  rebuilt, and a tilde in `EXOSTAB_CACHE_DIR` means the home folder.
+- A stalled archive connection times out, and a line says when the table is downloaded. SIGTERM and SIGHUP no longer leave
+  workers running, Ctrl-C stops `check` and `sweep` at once, also after the speed measurement of `--budget`, and a worker
+  that dies gives one line.
+- Non-UTF-8 output, square brackets or emoji codes in paths, names and notes, `$` or a leading underscore in names on
+  figures, and an invalid `MPLBACKEND` no longer crash a run or change what is printed. `python -m exostab` works.
+- A mass ratio too small to evaluate, and impossible table cells, give one line naming the pair or the column instead of a
+  traceback; a catalog's reason is one clean sentence. The reason for a rejection no longer depends on the row order.
+- Web app: crafted links no longer give a traceback or an endless run. The table and links take periods up to 1e12 d and
+  masses up to 1e7 Earth masses. A name from a link is shown literally, and the page says when part of a link was lost,
+  when SPOCK is not available, when a budget cannot be met, and when a kept run length exceeds it. Internal error texts
+  are replaced by plain ones.
+- Web app: after an edit, the flags of the replaced value are dropped, and the summary says that the run uses changed
+  values instead of published uncertainties. Clearing ω of a planet phased from periastron gets a flag and the random-phase
+  note. The table shows upper limits as such, and the assumptions are listed before Run. After a change of data source,
+  the label and the search box follow; the address bar follows after an error too; the box shows the host of another name;
+  and after an archive failure the app tries again within minutes, not after a day. The page on the input hash says what
+  a different hash means.
+- Messages no longer name command-line options where they also reach the browser, or say "not published" about a file.
+  They name the value as written (`eccentricity 0.9500001`, `T b.mass_msun`, a 0.4 s budget), an orbit count below 100
+  is not rounded up to it, and one of a thing is singular. New flags say that an error on a radius is not propagated
+  (in the message of `mass_from_radius_chen_kipping`), `phase_uncertain_at_epoch` and `mass_kind_unknown`, and
+  `star_mass_inconsistent` says when only the sources of one value differ.
+- The report card says what `--inclination-prior isotropic` did, keeps the text of the assumptions next to long names,
+  and folds planet names when narrow. `exostab list` no longer cuts values, when piped or narrow, and its `no e` counts a
+  0 without an uncertainty. The help no longer cuts the default folder or the script's URL, and `Saved:` stays on one line.
+  A note says when `--no-plots` leaves figures of an earlier run.
 
 ## [1.0.1] - 2026-10-31
 

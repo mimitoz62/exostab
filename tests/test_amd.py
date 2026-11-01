@@ -8,7 +8,7 @@ from conftest import V, two_planet_system
 from exostab._numerics import bisect
 from exostab.analysis import CheckSettings, check_system
 from exostab.indicators import Verdict, amd
-from exostab.models import Provenance
+from exostab.models import Provenance, UnusableParametersError
 from exostab.sampling import Body, Realization
 
 alphas = st.floats(0.05, 0.98)
@@ -302,3 +302,16 @@ def test_check_system_passes_the_assumed_eccentricities() -> None:
     a = res.report.indicators["amd"]
     assert a.verdict is Verdict.STABLE and "no eccentricity is measured" in a.summary
     assert any("Test b, Test c" in n for n in a.notes)
+
+
+@pytest.mark.parametrize(
+    "ms",
+    [
+        [1e-200 * 3e-6, 5 * 3e-6],  # a ZeroDivisionError
+        [1e-12 * 3e-6, 10 * 9.5e-4],  # at the period of a heavy planet: "alpha must be in (0, 1)"
+    ],
+)
+def test_a_pair_the_critical_amd_cannot_handle_is_named(ms: list[float]) -> None:
+    periods = [0.1, 0.3] if ms[0] < 1e-100 else [0.1, 0.1]
+    with pytest.raises(UnusableParametersError, match="p0 / p1: the critical AMD cannot be evaluated"):
+        amd.analyse(real_of(ms, periods, [0.0, 0.0]))

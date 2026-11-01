@@ -13,11 +13,14 @@ from .completion import (
     complete_planets,
     complete_star,
     coplanar_flag,
+    eccentricity_is_assumed,
     mass_kind,
+    missing_rows_flag,
+    phase_spread_flags,
     star_mass_row,
 )
 from .files import SystemFileError, load_system_file
-from .names import AmbiguousNameError, SystemNotFoundError, resolve_host
+from .names import SNAPSHOT_LIST_HINT, AmbiguousNameError, SystemNotFoundError, resolve_host
 from .store import TableInfo, load_rows
 
 __all__ = [
@@ -54,13 +57,15 @@ def system_from_rows(rows: Sequence[Row], info: TableInfo) -> System:
         path=info.path,
         note=info.note,
     )
-    return System(
+    missing = missing_rows_flag(rows)
+    system = System(
         name=host,
         star=star,
         planets=tuple(planets),
         source=source,
-        flags=(*flags, *pflags, coplanar_flag()),
+        flags=(*flags, *pflags, coplanar_flag(), *([missing] if missing else [])),
     )
+    return system.model_copy(update={"flags": (*system.flags, *phase_spread_flags(system))})
 
 
 def find_host(name: str, hosts: Mapping[str, Sequence[Row]], info: TableInfo) -> str:
@@ -77,7 +82,9 @@ def find_host(name: str, hosts: Mapping[str, Sequence[Row]], info: TableInfo) ->
             raise
         why = "" if info.note is None or info.note.startswith("offline snapshot") else f" ({info.note})"
         where = f"the offline snapshot{why}, not the full archive table"
-        raise SystemNotFoundError(exc.query, exc.suggestions, where=where) from exc
+        raise SystemNotFoundError(
+            exc.query, exc.suggestions, where=where, list_hint=SNAPSHOT_LIST_HINT
+        ) from exc
 
 
 def load_system(name: str, *, refresh: bool = False, offline: bool = False) -> System:
@@ -126,7 +133,7 @@ def list_systems(
                 estimated_masses=sum(
                     r.get("pl_bmassprov") == "M-R relationship" or r.get("pl_bmasse") is None for r in rs
                 ),
-                missing_eccentricities=sum(r.get("pl_orbeccen") is None for r in rs),
+                missing_eccentricities=sum(eccentricity_is_assumed(r) for r in rs),
                 discovery_methods=", ".join(
                     sorted({str(r.get("discoverymethod")) for r in rs if r.get("discoverymethod")})
                 ),

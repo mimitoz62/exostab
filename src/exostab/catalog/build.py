@@ -25,10 +25,12 @@ from pathlib import Path
 from typing import Any
 
 from rich.console import Console
+from rich.markup import escape
 
 from .. import __version__
 from ..data import IncompleteSystemError, load_rows, system_from_rows
 from ..data.archive import Row, group_by_host
+from ..data.completion import invalid_message
 from ..data.store import TableInfo
 
 COLUMNS = [
@@ -102,7 +104,7 @@ def check_one(rows: list[Row], info: TableInfo, settings: CatalogSettings) -> di
     try:
         system = system_from_rows(rows, info)
     except (IncompleteSystemError, ValueError) as exc:
-        return _empty(host, len(rows), "skipped", str(exc), settings, info)
+        return _empty(host, len(rows), "skipped", invalid_message(exc), settings, info)
     result = check_system(
         system,
         CheckSettings(orbits=settings.orbits, draws=settings.draws, seed=settings.seed, jobs=1, n_samples=0),
@@ -137,6 +139,10 @@ def check_one(rows: list[Row], info: TableInfo, settings: CatalogSettings) -> di
     return row
 
 
+PARTIAL_CSV = (
+    "catalog.partial.csv"  # finished rows of an interrupted build: not the file a catalog is read from
+)
+
 # Seconds a worker may take to exit after SIGTERM before it is killed. A Python-level SIGTERM handler (for
 # example coverage's ``sigterm = true``) runs only when REBOUND returns from C (sim.integrate to the next
 # energy checkpoint, which can take long for a slow system), so terminate() alone does not enforce the cap.
@@ -156,6 +162,8 @@ def _worker(rows: list[Row], info: TableInfo, settings: CatalogSettings, out: An
     host = str(rows[0]["hostname"])
     try:
         out.put((host, check_one(rows, info, settings)))
+    except KeyboardInterrupt:  # Ctrl-C reaches every process of the group; the main process stops and reports
+        pass
     except Exception as exc:  # pragma: no cover - reported as an error row
         out.put((host, _empty(host, len(rows), "error", f"{type(exc).__name__}: {exc}", settings, info)))
 
@@ -170,6 +178,8 @@ def build_catalog(
     console: Console | None = None,
 ) -> tuple[list[Path], list[dict[str, Any]]]:
     rows, info = load_rows(refresh=refresh, offline=offline)
+    if console is not None and info.note:
+        console.print(f"[yellow]{escape(info.note)}[/yellow]")
     # Every host of the table (sy_pnum >= 2) gets a row: a host with a single planet row, whose other planets
     # orbit a companion star, is recorded as skipped with the reason, like any other system exostab cannot model.
     hosts = sorted(group_by_host(rows).items(), key=lambda x: x[0].lower())
@@ -181,43 +191,47 @@ def build_catalog(
     q = ctx.Queue()
     pending = list(hosts)
     active: dict[str, tuple[Any, float, int]] = {}
-    while pending or active:
-        while pending and len(active) < n_workers:
-            host, rs = pending.pop(0)
-            p = ctx.Process(target=_worker, args=(rs, info, settings, q), daemon=True)
-            p.start()
-            active[host] = (p, time.monotonic(), len(rs))
-        try:
-            while True:
-                host, row = q.get(timeout=0.2)
-                results[host] = row
-                if console is not None:
-                    console.print(
-                        f"[dim]{len(results)}/{len(hosts)}[/dim] {host}: {row['overall'] or row['status']}"
+    try:
+        while pending or active:
+            while pending and len(active) < n_workers:
+                host, rs = pending.pop(0)
+                p = ctx.Process(target=_worker, args=(rs, info, settings, q), daemon=True)
+                p.start()
+                active[host] = (p, time.monotonic(), len(rs))
+            try:
+                while True:
+                    host, row = q.get(timeout=0.2)
+                    results[host] = row
+                    if console is not None:
+                        console.print(
+                            f"[dim]{len(results)}/{len(hosts)}[/dim] {escape(host)}: {row['overall'] or row['status']}"
+                        )
+            except queue.Empty:
+                pass
+            for host, (p, start, n) in list(active.items()):
+                if host in results:
+                    p.join(timeout=5)
+                    del active[host]
+                elif time.monotonic() - start > settings.max_seconds:
+                    _stop(p)
+                    results[host] = _empty(
+                        host, n, "timeout", f"exceeded {settings.max_seconds:g} s", settings, info
                     )
-        except queue.Empty:
-            pass
-        for host, (p, start, n) in list(active.items()):
-            if host in results:
-                p.join(timeout=5)
-                del active[host]
-            elif time.monotonic() - start > settings.max_seconds:
-                _stop(p)
-                results[host] = _empty(
-                    host, n, "timeout", f"exceeded {settings.max_seconds:g} s", settings, info
-                )
-                del active[host]
-                if console is not None:
-                    console.print(f"[dim]{len(results)}/{len(hosts)}[/dim] {host}: timeout")
-            elif not p.is_alive() and p.exitcode not in (0, None):
-                results[host] = _empty(
-                    host, n, "error", f"worker exited with code {p.exitcode}", settings, info
-                )
-                del active[host]
+                    del active[host]
+                    if console is not None:
+                        console.print(f"[dim]{len(results)}/{len(hosts)}[/dim] {escape(host)}: timeout")
+                elif not p.is_alive() and p.exitcode not in (0, None):
+                    results[host] = _empty(
+                        host, n, "error", f"worker exited with code {p.exitcode}", settings, info
+                    )
+                    del active[host]
+    except BaseException:  # Ctrl-C or SIGTERM: stop the workers, and keep what is finished
+        _interrupted(active, results, len(hosts), out_dir, console)
+        raise
     out_rows = [results[h] for h, _ in hosts]
     out_dir.mkdir(parents=True, exist_ok=True)
     paths = [_write_csv(out_rows, out_dir / "catalog.csv")]
-    parquet = _write_parquet(out_rows, out_dir / "catalog.parquet")
+    parquet = _write_parquet(out_rows, out_dir / "catalog.parquet", console)
     if parquet is not None:
         paths.append(parquet)
     meta = {
@@ -226,6 +240,7 @@ def build_catalog(
         "settings": asdict(settings),
         "data_source": info.kind,
         "data_retrieved_utc": info.retrieved_utc,
+        "data_note": info.note,
         "n_systems": len(out_rows),
         "columns": COLUMNS,
     }
@@ -233,6 +248,27 @@ def build_catalog(
     meta_path.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
     paths.append(meta_path)
     return paths, out_rows
+
+
+def _interrupted(
+    active: dict[str, tuple[Any, float, int]],
+    results: dict[str, dict[str, Any]],
+    n_hosts: int,
+    out_dir: Path,
+    console: Console | None,
+) -> None:
+    """Stop the workers and save the finished rows under a name that cannot be published as the catalog."""
+    for p, _, _ in active.values():
+        p.terminate()
+    for p, _, _ in active.values():
+        _stop(p)
+    partial = None
+    if results:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        partial = _write_csv(list(results.values()), out_dir / PARTIAL_CSV)
+    if console is not None:
+        saved = f"; saved in {escape(str(partial))}" if partial else ""
+        console.print(f"[yellow]Stopped: {len(results)} of {n_hosts} systems finished{saved}.[/yellow]")
 
 
 def _write_csv(rows: list[dict[str, Any]], path: Path) -> Path:
@@ -243,12 +279,20 @@ def _write_csv(rows: list[dict[str, Any]], path: Path) -> Path:
     return path
 
 
-def _write_parquet(rows: list[dict[str, Any]], path: Path) -> Path | None:
+def _write_parquet(rows: list[dict[str, Any]], path: Path, console: Console | None = None) -> Path | None:
+    """catalog.parquet, or None with a note: the CSV holds the same rows, and the meta file is still to be written."""
+    earlier = " An older catalog.parquet in this folder was not updated." if path.exists() else ""
     try:
         import pyarrow as pa
         import pyarrow.parquet as pq
     except ImportError:
-        return None
-    table = pa.Table.from_pylist(rows)
-    pq.write_table(table, path)
-    return path
+        why = "pyarrow is not installed (the [catalog] extra)"
+    else:
+        try:
+            pq.write_table(pa.Table.from_pylist(rows), path)
+            return path
+        except (pa.ArrowException, OverflowError) as exc:
+            why = str(exc)
+    if console is not None:
+        console.print(f"[yellow]catalog.parquet was not written: {escape(why)}.{earlier}[/yellow]")
+    return None

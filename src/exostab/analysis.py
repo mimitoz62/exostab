@@ -16,6 +16,7 @@ from .integrate import RunResult
 from .models import PhaseKind, Provenance, System
 from .report import Overall, Report, build_report
 from .sampling import InclinationPrior, Realization, choose_epoch, realizations
+from .units import format_orbits
 
 
 @dataclass(frozen=True)
@@ -51,15 +52,21 @@ class CheckResult:
 
 
 NO_DRAWS = (
-    "No Monte Carlo draws were run (--draws 0): the result holds for the nominal parameters only and was not "
-    "tested against the published uncertainties."
+    "No Monte Carlo draws were run: the result holds for the nominal parameters only and was not tested against "
+    "the published uncertainties."
 )
+EDITED_FLAGS = ("edited_in_web_app", "what_if_in_web_app")
+EDITED = "This run uses values changed in the web app, not the published ones. "
 HORIZON = " The N-body test covers only the integrated time span, not the age of the system."
 
 
 def _join(items: Sequence[str]) -> str:
     """Join words as in prose: a; a and b; a, b and c."""
     return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def _draws(n: int) -> str:
+    return "1 draw" if n == 1 else f"{n} draws"
 
 
 def upper_limit_inputs(system: System) -> list[str]:
@@ -94,7 +101,7 @@ def _failed_draws(r: IndicatorResult) -> str | None:
     words = {Verdict.MARGINAL: "marginal", Verdict.UNSTABLE: "unstable", Verdict.INCONCLUSIVE: "inconclusive"}
     if r.name == "nbody":
         words |= {Verdict.MARGINAL: "chaotic", Verdict.UNSTABLE: "with a close encounter or escape"}
-    return f"{r.title}: of {d.n} draws, " + _join(
+    return f"{r.title}: of {_draws(d.n)}, " + _join(
         [f"{d.count(v)} {w}" for v, w in words.items() if d.count(v)]
     )
 
@@ -116,8 +123,8 @@ def _nbody_held(nb: IndicatorResult) -> list[str]:
         and n_outer < nbody_indicator.MIN_OUTER_ORBITS
     ):
         out.append(
-            f"the outermost planet completes only {n_outer:.0f} orbits, fewer than the "
-            f"{nbody_indicator.MIN_OUTER_ORBITS} needed to judge it (increase --orbits)"
+            f"the outermost planet completes only {format_orbits(n_outer)} orbits, fewer than the "
+            f"{nbody_indicator.MIN_OUTER_ORBITS} needed to judge it (a longer run is needed)"
         )
     return out
 
@@ -132,7 +139,9 @@ def _nbody_sentences(nb: IndicatorResult, allowed: str) -> list[str]:
     d = nb.draws
     held = _nbody_held(nb)
     if _all_regular(nb):
-        runs = "the nominal parameters" + (f" and all {d.n} draws" if d is not None else "")
+        runs = "the nominal parameters" + (
+            "" if d is None else " and the 1 draw" if d.n == 1 else f" and all {d.n} draws"
+        )
         if nb.verdict is Verdict.STABLE:
             return [f"The N-body integration shows regular motion for {runs}."]
         why = _join(held) if held else "see the N-body notes"
@@ -146,7 +155,7 @@ def _nbody_sentences(nb: IndicatorResult, allowed: str) -> list[str]:
     text = f"Direct integration: the nominal run is {nominal}"
     if d is not None:
         text += (
-            f"; of {d.n} draws, {d.stable} are regular, {d.marginal} chaotic and {d.unstable} had close "
+            f"; of {_draws(d.n)}, {d.stable} are regular, {d.marginal} chaotic and {d.unstable} had close "
             "encounters or escapes" + (f" ({d.inconclusive} inconclusive)" if d.inconclusive else "")
         )
     out = [text + "."]
@@ -163,7 +172,11 @@ def _nbody_sentences(nb: IndicatorResult, allowed: str) -> list[str]:
 
 
 def overall_verdict(
-    indicators: dict[str, IndicatorResult], *, upper_limits: Sequence[str] = (), n_stars: int = 1
+    indicators: dict[str, IndicatorResult],
+    *,
+    upper_limits: Sequence[str] = (),
+    n_stars: int = 1,
+    edited: bool = False,
 ) -> Overall:
     """Conservative combination of the per-indicator verdicts.
 
@@ -186,8 +199,18 @@ def overall_verdict(
     is modelled, so with more than one an N-body instability may come from the model and also gives "marginal":
     the planets may orbit different stars (Kepler-132 b and c, whose periods differ by 4%, cannot stably orbit
     one star), or a companion may change their orbits. The summary is built from the draw counts and never
-    claims more than they show.
+    claims more than they show. With ``edited`` (values changed in the web app) it says so, and does not call the
+    uncertainties published; the verdict is the same.
     """
+    overall = _combined_verdict(indicators, upper_limits, n_stars, edited)
+    if edited:
+        return overall.model_copy(update={"summary": EDITED + overall.summary})
+    return overall
+
+
+def _combined_verdict(
+    indicators: dict[str, IndicatorResult], upper_limits: Sequence[str], n_stars: int, edited: bool
+) -> Overall:
     nb = indicators["nbody"]
     others = [r for k, r in indicators.items() if k != "nbody"]
     not_stable = [
@@ -205,18 +228,20 @@ def overall_verdict(
     # Draws that are not stable although their indicator's verdict is (the 95% rule lets up to 5% through).
     hidden = [f for r in indicators.values() if r.verdict is Verdict.STABLE and (f := _failed_draws(r))]
     limits = _join(upper_limits) if upper_limits else ""
-    allowed = "published uncertainties" + (" and upper limits" if upper_limits else "")
-    caveats = [NO_DRAWS] if n == 0 else []
+    uncertainties = "uncertainties" if edited else "published uncertainties"
+    allowed = uncertainties + (" and upper limits" if upper_limits else "")
+    no_draws = NO_DRAWS.replace("published uncertainties", uncertainties)
+    caveats = [no_draws] if n == 0 else []
     extra = [f"Only upper limits are published for: {limits}."] if upper_limits else []
 
     if nb.verdict is Verdict.UNSTABLE:
         found = "Direct integration finds close encounters or escapes for the nominal parameters" + (
-            f" and for {encounters} of {n} draws" if n else ""
+            f" and for {encounters} of {_draws(n)}" if n else ""
         )
         if not upper_limits and n_stars == 1 and n:
             return Overall(
                 verdict=Verdict.UNSTABLE,
-                summary=found + " within the published uncertainties.",
+                summary=found + f" within the {uncertainties}.",
                 reasons=not_stable,
             )
         sentences = [found + "."]
@@ -244,7 +269,7 @@ def overall_verdict(
         if n == 0:
             return Overall(
                 verdict=Verdict.MARGINAL,
-                summary="Every indicator is stable for the nominal parameters. " + NO_DRAWS,
+                summary="Every indicator is stable for the nominal parameters. " + no_draws,
                 reasons=caveats,
             )
         if encounters:
@@ -259,12 +284,11 @@ def overall_verdict(
         if hidden:
             summary = (
                 f"Every indicator is stable for the nominal parameters and for at least {AGREEMENT:.0%} of the "
-                f"{n} draws, but not for all of them ({'; '.join(hidden)})."
+                f"{_draws(n)}, but not for all of them ({'; '.join(hidden)})."
             )
         else:
-            summary = (
-                "All indicators agree: no sign of instability for the nominal parameters or any of the "
-                f"{n} draws."
+            summary = "All indicators agree: no sign of instability for the nominal parameters or " + (
+                "the 1 draw." if n == 1 else f"any of the {n} draws."
             )
         return Overall(verdict=Verdict.STABLE, summary=summary + HORIZON, reasons=hidden)
 
@@ -308,8 +332,17 @@ def check_system(system: System, settings: CheckSettings, *, command: str | None
         jobs=settings.jobs,
     )
     runs, ias15 = nbody_indicator.integrate_all(reals, nb_settings, settings.seed)
-    random_phases = [p.name for p in system.planets if p.phase.kind is PhaseKind.RANDOM]
-    nbody = nbody_indicator.evaluate(runs, ias15, random_phases=random_phases)
+    # A phase relative to the periastron needs its direction: with omega unknown (cleared in the web app), the
+    # planet's longitude is random in every run as well.
+    relative = (PhaseKind.PERIASTRON, PhaseKind.MEAN_ANOMALY)
+    random_phases = [
+        p.name
+        for p in system.planets
+        if p.phase.kind is PhaseKind.RANDOM or (p.phase.kind in relative and not p.omega_deg.is_known)
+    ]
+    nbody = nbody_indicator.evaluate(
+        runs, ias15, random_phases=random_phases, from_file=system.source.kind == "file"
+    )
     indicators = {"hill": hill, "amd": amd, "nbody": nbody}
     if settings.spock_python and len(nominal.bodies) >= 3:
         indicators["spock"] = spock_indicator.evaluate(nominal, draws, settings.spock_python)
@@ -321,7 +354,10 @@ def check_system(system: System, settings: CheckSettings, *, command: str | None
         nominal_run=runs[0],
         indicators=indicators,
         overall=overall_verdict(
-            indicators, upper_limits=upper_limit_inputs(system), n_stars=system.star.n_stars
+            indicators,
+            upper_limits=upper_limit_inputs(system),
+            n_stars=system.star.n_stars,
+            edited=any(f.rule in EDITED_FLAGS for f in system.flags),
         ),
         runtime_s=time.perf_counter() - t0,
         command=command,

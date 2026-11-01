@@ -92,6 +92,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from .._numerics import bisect
+from ..models import UnusableParametersError
 from ..sampling import Realization
 from . import DrawStats, IndicatorResult, Verdict, combine
 
@@ -216,7 +217,13 @@ def analyse(real: Realization) -> dict[str, Any]:
         alpha = float(a[k] / a[k + 1])
         gamma = ms[k] / ms[k + 1]
         eps = (ms[k] + ms[k + 1]) / real.m_star
-        cc, branch = critical_amd(alpha, gamma, eps)
+        try:
+            cc, branch = critical_amd(alpha, gamma, eps)
+        except (ValueError, ArithmeticError) as exc:
+            raise UnusableParametersError(
+                f"{real.bodies[k].name} / {real.bodies[k + 1].name}: the critical AMD cannot be evaluated for these "
+                f"values (a/a' = {alpha:.6g}, m/m' = {gamma:.3g})"
+            ) from exc
         rel = coplanar / lam[k + 1]  # coplanar relative AMD C_p / Lambda'
         beta_p = rel / cc if cc > 0 else math.inf
         row: dict[str, Any] = {

@@ -39,6 +39,11 @@ def format_count(n: float) -> str:
     return f"{n:,.0f}" if n < 1e7 else f"{n:.3g}"
 
 
+def format_orbits(n: float) -> str:
+    """A number of completed orbits, rounded down to one decimal: 99.96 orbits are not yet "100"."""
+    return f"{math.floor(n * 10) / 10:g}"
+
+
 def days_to_years(days: float) -> float:
     return days * DAY_IN_YR
 

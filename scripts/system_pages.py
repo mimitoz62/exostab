@@ -44,6 +44,7 @@ RULES = {
         "A mass that the archive computed from m sin i and a measured inclination is used as the true mass."
     ),
     "mass_from_radius_chen_kipping": "A missing mass comes from the radius, with the relation of Chen & Kipping (2017).",
+    "mass_kind_unknown": "The archive's label for a mass is one exostab does not know; it is used as a true mass.",
     "mass_lower_limit": "A mass given as a lower limit is used at the limit.",
     "mass_upper_limit": "A mass given as an upper limit is used at the limit, with draws below it.",
     "minimum_mass": "A minimum mass (m sin i) is used as the mass.",
@@ -56,6 +57,8 @@ RULES = {
     "phase_from_periastron": "An orbital phase comes from a time of periastron.",
     "phase_from_transit": "An orbital phase comes from a mid-transit time.",
     "phase_randomized": "A missing orbital phase is drawn at random for every run.",
+    "phase_uncertain_at_epoch": "An orbital phase comes from a time so far from the common epoch that it is lost in the draws.",
+    "planet_rows_missing": "The table has fewer rows for this star than the archive's count of its planets.",
     "star_mass_inconsistent": "The planet rows give different stellar masses, and one is chosen by a written rule.",
     "star_mass_limit_ignored": "A limit on the stellar mass is not used; a measured value from another row is.",
 }
