@@ -1,6 +1,6 @@
 {
-  "created_utc": "2026-10-26T11:24:44+00:00",
-  "exostab_version": "1.0.0",
+  "created_utc": "2026-11-02T14:25:30+00:00",
+  "exostab_version": "1.0.2.dev0",
   "settings": {
     "orbits": 10000.0,
     "draws": 10,
@@ -9,7 +9,7 @@
     "jobs": null
   },
   "data_source": "archive",
-  "data_retrieved_utc": "2026-10-26T10:17:22+00:00",
+  "data_retrieved_utc": "2026-11-02T12:38:44+00:00",
   "n_systems": 1079,
   "columns": [
     "system",
@@ -23,6 +23,9 @@
     "hill_min_separation",
     "amd_beta_max",
     "megno_nominal",
+    "hill_summary",
+    "amd_summary",
+    "overall_summary",
     "nbody_regular",
     "nbody_chaotic",
     "nbody_unstable",
