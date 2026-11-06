@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The page on data and assumptions says how the numbers of a YAML file are read: osculating Jacobi elements at the start
+  of the run, planets in order of period, coplanar orbits with the node at 0, and how the starting epoch is chosen.
+
 ### Changed
 
 - A name that is not found: the message gives the date of the archive table, since a system published after it is the
