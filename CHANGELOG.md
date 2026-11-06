@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The BibTeX of the software has the DOI of version 1.1.0, and `main` is 1.1.1.dev0.
+
 ## [1.1.0] - 2026-11-06
 
 ### Added
