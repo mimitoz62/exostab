@@ -37,17 +37,17 @@ The overall verdict is one of four:
 
 ## A real card
 
-This card was printed on 31 October 2026 by exostab 1.0.2.dev0, the development version after release 1.0.1, with
-REBOUND 5.2.0, NumPy 2.5.3 and Python 3.12.11 on macOS (Apple M4 Pro). `--offline` uses the snapshot of 22 systems
-bundled with exostab, so you can repeat the run without a network. `COLUMNS=100` gives the card the width it has in the
-README. The [Quickstart](quickstart.md) shows how to install exostab or try it in a browser.
+This card was printed on 6 November 2026 by exostab 1.1.0, with REBOUND 5.2.0, NumPy 2.5.3 and Python 3.12.11 on
+macOS (Apple M4 Pro). `--offline` uses the snapshot of 22 systems bundled with exostab, so you can repeat the run
+without a network. `COLUMNS=100` gives the card the width it has in the README. The [Quickstart](quickstart.md) shows
+how to install exostab or try it in a browser.
 
 ```bash
 COLUMNS=100 exostab check "TRAPPIST-1" --offline
 ```
 
 ```text
-╭─────────────────────────── exostab 1.0.2.dev0 — stability report card ───────────────────────────╮
+╭───────────────────────────── exostab 1.1.0 — stability report card ──────────────────────────────╮
 │ TRAPPIST-1   M* = 0.0898 ± 0.0023 M☉   7 planets   data: snapshot (2026-09-28)                   │
 │                                                                                                  │
 │ Planet        P (d)               Mass (M⊕)      e                  ω (deg)       Phase          │
@@ -97,7 +97,7 @@ COLUMNS=100 exostab check "TRAPPIST-1" --offline
 │ Saved: exostab-results/trappist-1/report.json, exostab-results/trappist-1/orbits.png,            │
 │ exostab-results/trappist-1/megno.png                                                             │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-Finished in 7.8 s.
+Finished in 6.9 s.
 ```
 
 Release 1.0.1 prints the same card, apart from the version in the title and the run time. On another computer the
@@ -108,7 +108,7 @@ unstable and magenta for inconclusive. The rest of this page takes the card apar
 ## The header and the data source
 
 ```text
-╭─────────────────────────── exostab 1.0.2.dev0 — stability report card ───────────────────────────╮
+╭───────────────────────────── exostab 1.1.0 — stability report card ──────────────────────────────╮
 │ TRAPPIST-1   M* = 0.0898 ± 0.0023 M☉   7 planets   data: snapshot (2026-09-28)                   │
 ```
 
@@ -512,7 +512,7 @@ that the snapshot is in use, or that the archive could not be reached.
 │ Saved: exostab-results/trappist-1/report.json, exostab-results/trappist-1/orbits.png,            │
 │ exostab-results/trappist-1/megno.png                                                             │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-Finished in 7.8 s.
+Finished in 6.9 s.
 ```
 
 exostab writes three files to a folder named after the system, in `exostab-results/` below the folder you ran it in. A

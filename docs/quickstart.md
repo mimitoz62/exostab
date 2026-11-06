@@ -21,7 +21,7 @@ pair of planets on the page itself, with no integration. To run exostab itself i
 - [Binder](https://mybinder.org/v2/gh/mimitoz62/exostab/main?urlpath=exostab/) opens the web app and needs no account;
   the first start can take several minutes, and the session ends after 10 minutes without activity.
 
-Colab and Binder install release 1.0.1; a codespace installs the current code of the repository. A shareable link made
+Colab and Binder install release 1.1.0; a codespace installs the current code of the repository. A shareable link made
 in the web app on Binder or in a codespace points at that session: it works only while the session runs, and other
 people may not be able to open it.
 
@@ -30,7 +30,7 @@ about 350 MB into uv's cache. `--offline` uses the bundled snapshot of 22 well-k
 live archive.
 
 ```bash
-uvx --from git+https://github.com/mimitoz62/exostab@v1.0.1 exostab check "TRAPPIST-1" --offline
+uvx --from git+https://github.com/mimitoz62/exostab@v1.1.0 exostab check "TRAPPIST-1" --offline
 ```
 
 ## Install
@@ -39,10 +39,10 @@ uvx --from git+https://github.com/mimitoz62/exostab@v1.0.1 exostab check "TRAPPI
 python3 --version
 python3 -m venv .venv
 source .venv/bin/activate
-pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.0.1"
+pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.1.0"
 ```
 
-This installs release 1.0.1 from GitHub; `pip install git+https://github.com/mimitoz62/exostab` installs the
+This installs release 1.1.0 from GitHub; `pip install git+https://github.com/mimitoz62/exostab` installs the
 current development version instead. A release on PyPI is planned. Requires Python 3.10 or newer; exostab is
 tested on Linux and macOS. The first line shows your version, and `/usr/bin/python3` on macOS is 3.9. If yours is older
 than 3.10, install a newer Python first, for example from [python.org](https://www.python.org/downloads/). In a new
@@ -51,20 +51,20 @@ terminal, run the `source` line again.
 The `pip` line needs git. Without git, install the wheel of the release; `uvx --from` takes the same URL:
 
 ```bash
-pip install https://github.com/mimitoz62/exostab/releases/download/v1.0.1/exostab-1.0.1-py3-none-any.whl
+pip install https://github.com/mimitoz62/exostab/releases/download/v1.1.0/exostab-1.1.0-py3-none-any.whl
 ```
 
 Optional extras use the same form: `web` adds the web app, and `catalog` the Parquet output of `exostab catalog build`.
 
 ```bash
-pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.0.1"
-pip install "exostab[catalog] @ git+https://github.com/mimitoz62/exostab@v1.0.1"
+pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.1.0"
+pip install "exostab[catalog] @ git+https://github.com/mimitoz62/exostab@v1.1.0"
 ```
 
 Without git, put the wheel's URL after the `@`:
 
 ```bash
-pip install "exostab[web] @ https://github.com/mimitoz62/exostab/releases/download/v1.0.1/exostab-1.0.1-py3-none-any.whl"
+pip install "exostab[web] @ https://github.com/mimitoz62/exostab/releases/download/v1.1.0/exostab-1.1.0-py3-none-any.whl"
 ```
 
 Without the `[catalog]` extra, `exostab catalog build` writes `catalog.csv` but no `catalog.parquet`, and does not
@@ -107,7 +107,7 @@ To check your own parameters, download the example file, which shows every key, 
 exists only in a clone of the repository):
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/mimitoz62/exostab/v1.0.1/examples/two_planet.yaml
+curl -fsSLO https://raw.githubusercontent.com/mimitoz62/exostab/v1.1.0/examples/two_planet.yaml
 exostab check --from-file two_planet.yaml
 ```
 
