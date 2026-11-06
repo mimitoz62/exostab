@@ -13,6 +13,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import urllib.error
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -368,6 +369,17 @@ def test_catalog_findings(
     assert "every e assumed, every e 0.05" in out and "every e removed (so assumed 0)" in out
     for figure in (findings.PLANET_COUNT_FIGURE, findings.INPUTS_FIGURE):
         assert (tmp_path / figure).stat().st_size > 0
+
+
+def test_catalog_findings_reads_a_catalog_saved_by_windows_powershell(
+    small_catalog: Path, tmp_path: Path
+) -> None:
+    # `git show ... > oct26.csv`, as in docs/findings.md, writes UTF-16 with a byte-order mark there.
+    findings = load("catalog_findings")
+    utf8 = small_catalog / "catalog.csv"
+    utf16 = tmp_path / "catalog.csv"
+    utf16.write_bytes(utf8.read_text(encoding="utf-8").encode("utf-16"))
+    assert findings.read_catalog(utf16) == findings.read_catalog(utf8) != []
 
 
 def test_catalog_findings_inputs() -> None:
@@ -928,7 +940,11 @@ def run_spock_env(tmp_path: Path, target: Path) -> subprocess.CompletedProcess[s
     )
 
 
-@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+# The SPOCK setup script is for bash. On Windows, `bash` is often the launcher of WSL, with no distribution installed.
+NEEDS_BASH = pytest.mark.skipif(shutil.which("bash") is None or sys.platform == "win32", reason="needs bash")
+
+
+@NEEDS_BASH
 def test_spock_env_script_can_be_run_again(tmp_path: Path) -> None:
     target = tmp_path / "spock-env"
     for _ in range(2):  # a second run (after a failed source build, or to update) rebuilds the environment
@@ -939,7 +955,7 @@ def test_spock_env_script_can_be_run_again(tmp_path: Path) -> None:
     assert f"EXOSTAB_SPOCK_PYTHON={target}/bin/python" in r.stdout
 
 
-@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+@NEEDS_BASH
 def test_spock_env_script_leaves_other_folders_alone(tmp_path: Path) -> None:
     target = tmp_path / "notes"
     target.mkdir()

@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import os
 import signal
+import sys
 import threading
 from collections.abc import Sequence
 from concurrent.futures import ProcessPoolExecutor
@@ -107,6 +108,15 @@ def _python_handles_ctrl_c() -> None:
         signal.signal(signal.SIGINT, handler)
 
 
+# ProcessPoolExecutor refuses more workers than this on Windows (concurrent.futures.process._MAX_WINDOWS_WORKERS).
+MAX_WINDOWS_WORKERS = 61
+
+
+def worker_limit(n_workers: int) -> int:
+    """``n_workers``, but at most what a process pool accepts on this platform."""
+    return min(n_workers, MAX_WINDOWS_WORKERS) if sys.platform == "win32" else n_workers
+
+
 def run_many(jobs: Sequence[tuple[Realization, RunConfig]], n_workers: int | None) -> list[RunResult]:
     """Run integrations, in parallel worker processes when more than one worker is allowed.
 
@@ -115,7 +125,7 @@ def run_many(jobs: Sequence[tuple[Realization, RunConfig]], n_workers: int | Non
     """
     if n_workers is None:
         n_workers = max(1, (os.cpu_count() or 2) - 1)
-    n_workers = min(n_workers, len(jobs))
+    n_workers = worker_limit(min(n_workers, len(jobs)))
     if n_workers <= 1:
         return [_run(j) for j in jobs]
     _python_handles_ctrl_c()
@@ -124,6 +134,11 @@ def run_many(jobs: Sequence[tuple[Realization, RunConfig]], n_workers: int | Non
         results = list(pool.map(_run, jobs, chunksize=1))
     except BaseException:
         processes = list((pool._processes or {}).values())
+        # Python 3.10 waits at exit for the thread that feeds the workers' queue, which is stuck once they are gone and
+        # the pipe is full (8 KB on Windows, a few queued runs): after Ctrl-C the process never ended.
+        call_queue = getattr(pool, "_call_queue", None)
+        if call_queue is not None:
+            call_queue.cancel_join_thread()
         pool.shutdown(wait=False, cancel_futures=True)
         for process in processes:
             process.terminate()

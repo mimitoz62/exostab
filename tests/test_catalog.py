@@ -71,7 +71,9 @@ def test_a_worker_that_does_not_stop_on_sigterm_is_killed() -> None:
     assert ready.wait(60)
     t0 = time.monotonic()
     build._stop(p, grace_s=0.5)
-    assert not p.is_alive() and p.exitcode == -signal.SIGKILL
+    # On Windows, terminate() and kill() are both TerminateProcess, which multiprocessing reports as -SIGTERM.
+    killed = -signal.SIGTERM if sys.platform == "win32" else -signal.SIGKILL
+    assert not p.is_alive() and p.exitcode == killed
     assert time.monotonic() - t0 < 10
 
 

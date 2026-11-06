@@ -6,6 +6,7 @@ import json
 import os
 import random
 import socket
+import sys
 import threading
 import warnings
 from pathlib import Path
@@ -202,6 +203,11 @@ def test_fetch_rows_gives_up_on_a_stalled_connection(monkeypatch: pytest.MonkeyP
             NasaExoplanetArchive, "URL_TAP", f"http://127.0.0.1:{server.getsockname()[1]}/TAP"
         )
         monkeypatch.setattr(archive, "READ_TIMEOUT_S", 0.5)
+
+        def list_tables() -> list[str]:  # astroquery's own request to the real archive, without a timeout
+            raise AssertionError("the TAP tables were listed")
+
+        monkeypatch.setattr("astroquery.ipac.nexsci.nasa_exoplanet_archive.core.get_tap_tables", list_tables)
         errors: list[Exception] = []
 
         def fetch() -> None:
@@ -214,7 +220,7 @@ def test_fetch_rows_gives_up_on_a_stalled_connection(monkeypatch: pytest.MonkeyP
         thread.start()
         thread.join(timeout=30)
         assert not thread.is_alive(), "still waiting after 30 s"
-    assert errors and "could not query" in str(errors[0])
+    assert errors and "could not query" in str(errors[0]) and "127.0.0.1" in str(errors[0])
 
 
 # ------------------------------------------------------------------------------------------ completion rules
@@ -843,6 +849,8 @@ def test_a_cache_folder_that_cannot_be_written_keeps_the_rows(
     monkeypatch.setattr(store, "fetch_rows", lambda where: pair())
     blocker = tmp_path / "blocker"
     if kind == "read-only":
+        if sys.platform == "win32":
+            pytest.skip("Windows ignores these permission bits on folders")
         if os.geteuid() == 0:
             pytest.skip("root can write everywhere")
         blocker.mkdir()
@@ -865,6 +873,8 @@ def test_a_cache_folder_that_cannot_be_written_keeps_the_rows(
 def test_a_cache_folder_that_cannot_be_searched_counts_as_no_cache(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    if sys.platform == "win32":
+        pytest.skip("Windows ignores these permission bits on folders")
     if os.geteuid() == 0:
         pytest.skip("root can read everywhere")
     monkeypatch.delenv("EXOSTAB_OFFLINE")
@@ -983,6 +993,7 @@ def test_a_tilde_in_the_cache_folder_means_the_home_folder(
 ) -> None:
     # It created a folder named ~ in every working directory, each with its own download.
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))  # what ~ means on Windows
     monkeypatch.setenv("EXOSTAB_CACHE_DIR", "~/exo-cache")
     assert store.cache_dir() == tmp_path / "exo-cache"
 

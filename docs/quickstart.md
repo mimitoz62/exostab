@@ -42,11 +42,24 @@ source .venv/bin/activate
 pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.1.0"
 ```
 
-This installs release 1.1.0 from GitHub; `pip install git+https://github.com/mimitoz62/exostab` installs the
-current development version instead. A release on PyPI is planned. Requires Python 3.10 or newer; exostab is
-tested on Linux and macOS. The first line shows your version, and `/usr/bin/python3` on macOS is 3.9. If yours is older
-than 3.10, install a newer Python first, for example from [python.org](https://www.python.org/downloads/). In a new
+This installs release 1.1.0 from GitHub; `pip install git+https://github.com/mimitoz62/exostab` installs the current
+development version instead. A release on PyPI is planned. Requires Python 3.10 or newer; exostab is tested on Linux,
+macOS and Windows. The first line shows your version, and `/usr/bin/python3` on macOS is 3.9. If yours is older than
+3.10, install a newer Python first, for example from [python.org](https://www.python.org/downloads/). In a new
 terminal, run the `source` line again.
+
+On Windows, in Command Prompt:
+
+```bat
+py --version
+py -m venv .venv
+.venv\Scripts\activate.bat
+pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.1.0"
+```
+
+`py` is the launcher that the installer from python.org adds. In PowerShell the activation line is
+`.venv\Scripts\Activate.ps1`, which runs only where PowerShell allows scripts, so Command Prompt is the simpler
+choice. The [FAQ](faq.md) says what else differs on Windows.
 
 The `pip` line needs git. Without git, install the wheel of the release; `uvx --from` takes the same URL:
 

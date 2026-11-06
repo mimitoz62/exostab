@@ -6,9 +6,40 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Windows: continuous integration runs the tests and the command line on Windows with Python 3.10 and 3.14. The README
+  and the Quickstart have the install lines for Command Prompt, and the FAQ says what differs there: SPOCK is not
+  tested there, and output redirected in PowerShell changes some characters. Tests that rely on POSIX signals,
+  permission bits or bash are skipped on Windows.
+- The FAQ answers whether exostab can be used from Python: through `report.json` and its schema.
+
 ### Changed
 
 - The BibTeX of the software has the DOI of version 1.1.0, and `main` is 1.1.1.dev0.
+
+### Fixed
+
+- The output folder is tested with a file of exostab's own instead of `tempfile`, which Python 3.10 to 3.12 on Windows
+  retry for ever in a folder that refuses new files. A result file that another program keeps open, such as a CSV open
+  in Excel on Windows, is now found before the run instead of when the results are written.
+- SPOCK: the worker's output is UTF-8 at both ends, with undecodable bytes replaced, so a failing worker's message can no
+  longer end the run with a traceback.
+- The shell scripts keep LF line endings in a Windows checkout (`.gitattributes`), and `scripts/catalog_findings.py`
+  reads a catalog that Windows PowerShell 5.1 saved as UTF-16 with `>`.
+- Windows: `check` and `sweep` use at most 61 worker processes, the most that Python's process pool accepts there; more
+  (`--jobs 62` or above, or the default on a machine with more than 62 threads) ended in a traceback. The SPOCK setup
+  script lets uv find the environment's interpreter, which is `Scripts\python.exe` there, and prints the line to set
+  for PowerShell.
+- Python 3.10: after Ctrl-C during `check` or `sweep`, the process no longer waits for ever for the queue of its stopped
+  workers. On Windows a few queued runs fill the pipe, and the window had to be closed.
+- Windows: `exostab list | head` and other output into a reader that stops early end quietly, without a traceback.
+  Windows reports such a pipe as an invalid argument, not as a broken pipe (CPython gh-79935).
+- A stalled archive could still hang a download: before its query, astroquery lists the archive's tables through a
+  connection without a timeout. exostab now skips that list, which it does not need, so the download times out as
+  intended and makes one request fewer.
+- Ctrl-C reaches exostab again after an integration. REBOUND leaves its own handler for it in place, so the web app's
+  server could not be stopped from its terminal once it had run a check (on every platform).
 
 ## [1.1.0] - 2026-11-06
 

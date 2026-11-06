@@ -70,6 +70,21 @@ and Hill criteria reach further but make approximations. See [Methods](methods.m
 **Can I install it with `pip install exostab`?**
 Not yet: a release on PyPI is planned. Install from GitHub as shown in the [Quickstart](quickstart.md).
 
+**Does exostab run on Windows?**
+Yes. Continuous integration runs the tests and the command line on Windows with Python 3.10 and 3.14, as on Linux and
+macOS. The [Quickstart](quickstart.md#install) has the install lines for Command Prompt. Two things differ. The
+optional SPOCK indicator is not tested on Windows: its setup script runs in Git Bash and builds two packages from
+source, which needs the Microsoft C++ Build Tools; in WSL, exostab and SPOCK work as on Linux. And output that goes to
+a file or to another program is written in the Windows code page, so ☉ and ⊕ become `?`, and Windows PowerShell also
+turns – ± and • into other letters. To keep a report card, redirect it in Command Prompt
+(`exostab check "TRAPPIST-1" > card.txt`), or keep `report.json`, which holds every value.
+
+**Can I use exostab from Python?**
+Not through a documented API yet. Every check writes `report.json`, whose JSON schema ships with the package as
+`exostab/schemas/report.schema.json`. From a script, run `exostab check` with `--out` and read that file;
+[How to read a report card](reading-a-report.md#the-files-it-writes) says what it holds, and the
+[CLI reference](cli.md) lists the options.
+
 **How do I cite exostab?**
 Use the repository's `CITATION.cff` and cite the methods and the NASA Exoplanet Archive.
 [Citing exostab](citing.md) has a BibTeX entry, the DOI and the references for each indicator.

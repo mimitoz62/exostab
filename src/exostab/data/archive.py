@@ -125,19 +125,28 @@ def fetch_rows(where: str = MULTI_PLANET_WHERE, *, attempts: int = 3, pause: flo
     from pyvo.dal.exceptions import DALOverflowWarning  # type: ignore[import-untyped]
 
     _timeouts_on(NasaExoplanetArchive._session)
+    # astroquery first lists the archive's TAP tables, with a session of pyvo's own that has no timeout, so a stalled
+    # archive could still hang exostab there. The one table queried here is a TAP table, so the list is not needed.
+    lists_tables = "_tap_tables" not in vars(NasaExoplanetArchive)
+    if lists_tables:
+        NasaExoplanetArchive._tap_tables = [TABLE]
     last: Exception | None = None
-    for i in range(attempts):
-        try:
-            with warnings.catch_warnings():
-                warnings.simplefilter("error", DALOverflowWarning)
-                table = NasaExoplanetArchive.query_criteria(
-                    table=TABLE, select=",".join(COLUMN_NAMES), where=where, cache=False
-                )
-            return rows_from_table(table)
-        except Exception as exc:  # network errors surface as many different exception types
-            last = exc
-            if i + 1 < attempts:
-                time.sleep(pause * (i + 1))
+    try:
+        for i in range(attempts):
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("error", DALOverflowWarning)
+                    table = NasaExoplanetArchive.query_criteria(
+                        table=TABLE, select=",".join(COLUMN_NAMES), where=where, cache=False
+                    )
+                return rows_from_table(table)
+            except Exception as exc:  # network errors surface as many different exception types
+                last = exc
+                if i + 1 < attempts:
+                    time.sleep(pause * (i + 1))
+    finally:
+        if lists_tables:  # other users of astroquery in this process still get the full list
+            del NasaExoplanetArchive._tap_tables
     raise ArchiveError(f"could not query the NASA Exoplanet Archive: {type(last).__name__}: {last}") from last
 
 

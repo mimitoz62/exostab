@@ -2,6 +2,7 @@
 
 import math
 import signal
+import sys
 import threading
 import time
 from dataclasses import replace
@@ -14,7 +15,7 @@ from exostab.data import archive, system_from_rows
 from exostab.data.store import TableInfo
 from exostab.indicators import AGREEMENT, DrawStats, IndicatorResult, Verdict, combine
 from exostab.indicators import megno as nb
-from exostab.integrate import RunConfig, RunResult
+from exostab.integrate import RunConfig, RunResult, run
 from exostab.models import Phase, PhaseKind, Provenance, Value
 from exostab.sampling import realizations
 
@@ -413,6 +414,7 @@ def test_marginal_summary_names_the_actual_reason() -> None:
     assert "AMD-stable." not in o.summary
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows has no signal.pthread_kill")
 def test_ctrl_c_stops_queued_integrations_at_once() -> None:
     # With more runs than workers, the pool waited for its queue: `check` went on 22 s after Ctrl-C, and with --jobs 3
     # it took four presses and ended in a traceback.
@@ -425,6 +427,56 @@ def test_ctrl_c_stops_queued_integrations_at_once() -> None:
     with pytest.raises(KeyboardInterrupt):
         nb.run_many(jobs, 2)
     assert time.monotonic() - t0 < 25  # waiting for the queue of 7 runs takes over a minute
+
+
+@pytest.mark.parametrize("where", ["main thread", "another thread"])
+def test_ctrl_c_reaches_python_after_an_integration(where: str) -> None:
+    # REBOUND leaves its own C handler for SIGINT in place after it integrates, so Ctrl-C no longer reached Python: the
+    # web app's server, which integrates in a thread of its own, could not be stopped from its terminal.
+    nominal = realizations(two_planet_system(), 0, seed=0)[0]
+    if where == "main thread":
+        run(nominal, RunConfig(n_orbits=10))
+    else:
+        worker = threading.Thread(target=run, args=(nominal, RunConfig(n_orbits=10)))
+        worker.start()
+        worker.join()
+    with pytest.raises(KeyboardInterrupt):  # Python's handler raises it as soon as raise_signal returns
+        signal.raise_signal(signal.SIGINT)
+
+
+def test_an_interrupted_pool_does_not_wait_for_its_queue_at_exit(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Python 3.10 joins the thread that feeds the workers' queue at exit; with the workers gone and the pipe full (8 KB
+    # on Windows), Ctrl-C left a process that never ended. Reproduced with 20 kB items on macOS and Python 3.10.
+    cancelled = []
+
+    class Queue:
+        def cancel_join_thread(self) -> None:
+            cancelled.append(True)
+
+    class Pool:
+        def __init__(self, **kwargs: object) -> None:
+            self._processes: dict[int, object] = {}
+            self._call_queue = Queue()
+
+        def map(self, *args: object, **kwargs: object) -> list[object]:
+            raise KeyboardInterrupt
+
+        def shutdown(self, **kwargs: object) -> None:
+            pass
+
+    monkeypatch.setattr(nb, "ProcessPoolExecutor", Pool)
+    jobs = [(r, RunConfig(n_orbits=10)) for r in realizations(two_planet_system(), 2, seed=0)]
+    with pytest.raises(KeyboardInterrupt):
+        nb.run_many(jobs, 2)
+    assert cancelled == [True]
+
+
+def test_a_process_pool_gets_at_most_61_workers_on_windows(monkeypatch: pytest.MonkeyPatch) -> None:
+    # ProcessPoolExecutor raised "max_workers must be <= 61" there for --jobs 62 or more, or by default on a big machine.
+    monkeypatch.setattr(nb.sys, "platform", "win32")
+    assert nb.worker_limit(64) == 61 and nb.worker_limit(8) == 8
+    monkeypatch.setattr(nb.sys, "platform", "linux")
+    assert nb.worker_limit(64) == 64
 
 
 def test_messages_do_not_assume_the_command_line() -> None:

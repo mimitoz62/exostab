@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import io
 import itertools
@@ -11,11 +12,10 @@ import re
 import shlex
 import signal
 import sys
-import tempfile
 import time
 from collections.abc import Iterable, Iterator
 from concurrent.futures.process import BrokenProcessPool
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from enum import Enum
 from pathlib import Path
 from types import FrameType
@@ -49,6 +49,18 @@ def _stop_on_signal(signum: int, frame: FrameType | None) -> NoReturn:
     raise SystemExit(128 + signum)
 
 
+def _reader_went_away(exc: OSError) -> bool:
+    """Windows reports a pipe whose reader has gone (``exostab list | head``) as EINVAL, not as a broken pipe
+    (CPython gh-79935), so neither Rich nor Typer stopped quietly. A path error has a file name; a write has none."""
+    on_windows = sys.platform == "win32"  # a variable, so that mypy checks the rest on every platform
+    if not on_windows or exc.errno != errno.EINVAL or exc.filename is not None:
+        return False
+    try:
+        return not sys.stdout.isatty()
+    except ValueError:  # stdout already closed
+        return True
+
+
 class _Exostab(typer.Typer):
     """The exostab command, with what must be in place before Typer parses the arguments."""
 
@@ -61,7 +73,15 @@ class _Exostab(typer.Typer):
         for name in ("SIGTERM", "SIGHUP"):
             if hasattr(signal, name):
                 signal.signal(getattr(signal, name), _stop_on_signal)
-        return super().__call__(*args, **kwargs)
+        try:
+            return super().__call__(*args, **kwargs)
+        except OSError as exc:
+            if not _reader_went_away(exc):
+                raise
+            # As Python does for a broken pipe elsewhere: no traceback, and nothing more written to the pipe at exit.
+            with suppress(OSError, ValueError):
+                os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+            raise SystemExit(1) from None
 
 
 app = _Exostab(
@@ -152,8 +172,11 @@ def _output_folder(out: Path, files: Iterable[str]) -> Path:
     """``out``, created and tested before any integration: finding out afterwards would lose the whole run."""
     try:
         out.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryFile(dir=out):
-            pass
+        # A file of its own, not tempfile: on Windows, Python 3.10 to 3.12 retry tempfile's PermissionError for ever.
+        probe = out / f".exostab-write-test-{os.getpid()}-{time.monotonic_ns()}"
+        os.close(os.open(probe, os.O_WRONLY | os.O_CREAT | os.O_EXCL))
+        with suppress(OSError):
+            probe.unlink()
     except OSError as exc:
         _print_error(
             f"Cannot write to the output folder {out}: {exc.strerror or exc}. Choose another with --out."
@@ -161,9 +184,21 @@ def _output_folder(out: Path, files: Iterable[str]) -> Path:
         raise typer.Exit(2) from exc
     for name in files:
         target = out / name
-        if target.is_dir() or (target.exists() and not os.access(target, os.W_OK)):
+        if target.is_dir():
             _print_error(f"Cannot write {target}. Choose another output folder with --out.")
             raise typer.Exit(2)
+        try:
+            # Opening for writing, without truncating, also finds a file that another program keeps locked, such as
+            # a CSV open in Excel on Windows, which os.access does not see.
+            os.close(os.open(target, os.O_WRONLY))
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            _print_error(
+                f"Cannot write {target}: {exc.strerror or exc}. Close it if another program has it open, or choose "
+                "another output folder with --out."
+            )
+            raise typer.Exit(2) from exc
     return out
 
 

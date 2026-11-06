@@ -114,6 +114,8 @@ def test_evaluate_with_fake_worker(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         ("import sys; sys.exit(3)", "exit 3"),
         ("print('not json')", "unexpected answer"),
         ("import json,sys; json.load(sys.stdin); print(json.dumps({'p_stable': []}))", "different number"),
+        # bytes that neither UTF-8 nor cp1252 decodes: a traceback here, or on Windows the message lost
+        ("import sys; sys.stderr.buffer.write(b'bad \\x81\\xff bytes'); sys.exit(1)", "exit 1.*bad"),
     ],
 )
 def test_worker_failures(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, body: str, match: str) -> None:
@@ -207,11 +209,12 @@ def test_a_wrong_interpreter_is_found_before_any_integration(
     )
     assert r.exit_code == 2 and "could not run the SPOCK environment" in " ".join(r.output.split())
     assert not out.exists()
-    failing = tmp_path / "fails"
-    failing.write_text("#!/bin/sh\nexit 3\n")
-    failing.chmod(0o755)
-    with pytest.raises(sp.SpockUnavailableError, match="exited with code 3"):
-        sp.probe(str(failing))
+    if sys.platform != "win32":  # a shell script cannot stand in for an interpreter there
+        failing = tmp_path / "fails"
+        failing.write_text("#!/bin/sh\nexit 3\n")
+        failing.chmod(0o755)
+        with pytest.raises(sp.SpockUnavailableError, match="exited with code 3"):
+            sp.probe(str(failing))
     sp.probe(sys.executable)
 
 

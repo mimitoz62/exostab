@@ -29,6 +29,7 @@ import math
 import os
 import platform
 import statistics
+import sys
 import time
 import urllib.parse
 import urllib.request
@@ -138,8 +139,10 @@ def stable_count(rows: Iterable[CatalogRow], key: str = "overall") -> int:
 
 
 def read_catalog(path: Path) -> list[CatalogRow]:
-    with path.open(encoding="utf-8", newline="") as fh:
-        return list(csv.DictReader(fh))
+    raw = path.read_bytes()
+    # Windows PowerShell 5.1 writes UTF-16 with `>`, which the reproduction steps of docs/findings.md use.
+    text = raw.decode("utf-16") if raw[:2] in (b"\xff\xfe", b"\xfe\xff") else raw.decode("utf-8-sig")
+    return list(csv.DictReader(io.StringIO(text, newline="")))
 
 
 def label(row: CatalogRow) -> str:
@@ -742,7 +745,8 @@ def print_eccentricity_what_if(
         if jobs == 1:
             runs = [verdicts_with_eccentricity(task) for task in tasks]
         else:
-            with ProcessPoolExecutor(max_workers=jobs) as pool:
+            # ProcessPoolExecutor refuses more than 61 workers on Windows
+            with ProcessPoolExecutor(max_workers=min(jobs, 61) if sys.platform == "win32" else jobs) as pool:
                 runs = list(pool.map(verdicts_with_eccentricity, tasks))
         pairs = list(zip(group, runs, strict=True))
         changes = Counter(f"{r['overall']} to {run['overall']}" for r, run in pairs)
