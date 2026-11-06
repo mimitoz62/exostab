@@ -147,25 +147,47 @@ def _flag(planet: str | None, parameter: str, rule: str, message: str) -> Comple
 
 
 AXIS_TOLERANCE = 0.10  # relative; Kepler's a scales as M*^(1/3), so a 30% different stellar mass gives 9%
+AXIS_SIGMA = 3.0  # with uncertainties on the axis, the period and the stellar mass, refuse above 3 sigma
 
 
-def _check_axis(name: str, a: Value, period_days: float, m_total_msun: float) -> None:
+def _relative_error(v: Value) -> float:
+    """Mean of the two error bars over the value; 0 when the value has no uncertainty."""
+    if not v.has_errors:
+        return 0.0
+    return 0.5 * ((v.err_plus or 0.0) + (v.err_minus or 0.0)) / abs(v.require())
+
+
+def _check_axis(name: str, a: Value, period: Value, star_mass: Value, planet_mass: Value) -> None:
     """Refuse a semi-major axis that contradicts the period (the period is what the integrations use).
 
-    Allowed: 10% (stellar masses from different sources) or three times the axis's relative error, whichever
-    is larger.
+    The Kepler axis a_K = (G M P^2 / 4 pi^2)^(1/3), with M the stellar plus planet mass, has the first-order relative
+    error sigma_K = sqrt((sigma_M / 3M)^2 + (2 sigma_P / 3P)^2). It is combined in quadrature with the axis's own
+    relative error, sigma = sqrt((sigma_a / a)^2 + sigma_K^2). When the axis, the period and the stellar mass all have
+    uncertainties, the two may differ by up to 3 sigma. Otherwise the fixed 10% tolerance (stellar masses from
+    different sources) still applies as a floor: max(10%, 3 sigma). ``planet_mass`` is in Earth masses.
     """
-    a_kepler = semimajor_axis_from_period(days_to_years(period_days), m_total_msun)
-    rel_err = 0.5 * ((a.err_plus or 0.0) + (a.err_minus or 0.0)) / a.require()
-    if abs(a.require() / a_kepler - 1) > max(AXIS_TOLERANCE, 3 * rel_err):
+    m_star = star_mass.require()
+    m_total = m_star + planet_mass.require() * MEARTH_IN_MSUN  # Msun
+    a_kepler = semimajor_axis_from_period(days_to_years(period.require()), m_total)
+    sigma_m = math.hypot(
+        _relative_error(star_mass) * m_star,
+        _relative_error(planet_mass) * planet_mass.require() * MEARTH_IN_MSUN,
+    )
+    rel_kepler = math.hypot(sigma_m / (3 * m_total), 2 * _relative_error(period) / 3)
+    sigma = math.hypot(_relative_error(a), rel_kepler)
+    all_uncertain = all(_relative_error(v) > 0 for v in (a, period, star_mass))
+    allowed = AXIS_SIGMA * sigma if all_uncertain else max(AXIS_TOLERANCE, AXIS_SIGMA * sigma)
+    off = abs(a.require() / a_kepler - 1)
+    if off > allowed:
         raise SystemFileError(
-            f"{name}: semimajor_axis_au = {a.value:g} AU disagrees with period_days = {period_days:g} d, "
-            f"which gives {a_kepler:.4g} AU for the stellar and planet mass; give only one of them or check "
-            "the stellar mass"
+            f"{name}: semimajor_axis_au = {a.value:g} AU disagrees with period_days = {period.value:g} d, "
+            f"which gives {a_kepler:.4g} AU for the stellar and planet mass ({off:.1%} apart, {allowed:.1%} "
+            "allowed); give only one of them or check the stellar mass"
         )
 
 
-def _planet(raw: dict[str, Any], m_star: float, flags: list[CompletionFlag], idx: int) -> Planet:
+def _planet(raw: dict[str, Any], star_mass: Value, flags: list[CompletionFlag], idx: int) -> Planet:
+    m_star = star_mass.require()
     name = str(raw.get("name") or f"planet {idx + 1}")
     unknown = set(raw) - PLANET_KEYS
     if unknown:
@@ -261,7 +283,7 @@ def _planet(raw: dict[str, Any], m_star: float, flags: list[CompletionFlag], idx
     if "period_days" in raw:
         period = _value(raw["period_days"], reference=ref, where=f"{name}.period_days")
         if a is not None and period.require() > 0:
-            _check_axis(name, a, period.require(), m_total)
+            _check_axis(name, a, period, star_mass, mass)
     elif a is not None:
         P = years_to_days(period_from_semimajor_axis(a.require(), m_total))
         rel = 0.5 * ((a.err_plus or 0) + (a.err_minus or 0)) / a.require()
@@ -385,7 +407,7 @@ def load_system_file(path: str | Path) -> System:
     for i, pr in enumerate(planets_raw):
         if not isinstance(pr, dict):
             raise SystemFileError(f"{p}: planet {i + 1} must be a mapping")
-        planets.append(_planet(pr, star_mass.require(), flags, i))
+        planets.append(_planet(pr, star_mass, flags, i))
     planets.sort(key=lambda q: q.period_days.require())
     flags.append(coplanar_flag())
     epoch = raw.get("epoch_jd")

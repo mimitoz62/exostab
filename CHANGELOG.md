@@ -56,6 +56,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- A YAML planet that gives both `semimajor_axis_au` and `period_days` is checked against the uncertainties of the
+  axis, the period, the stellar mass and the planet mass (σ_a/a ≈ √((σ_M/3M)² + (2σ_P/3P)²) for the Kepler axis,
+  combined with the axis's own error). When the axis, the period and the stellar mass all have uncertainties, the two
+  may differ by up to 3σ, so a precise file with a real 8% contradiction is refused, and a file whose stellar mass is
+  uncertain enough to cover a larger difference is accepted. Otherwise the 10% tolerance stays as a floor. The error
+  message gives the difference and the limit. Verdicts do not change: the integrations use the period (#24).
 - The AMD row of a system's page and the data dictionary now state the limits of β: the secular approximation, which
   leaves out mean-motion resonances, and the assumption about the inclinations.
 - The overall summary no longer says that regular runs with failing analytic indicators are "typical of systems

@@ -562,7 +562,10 @@ Measured on the archive cache of 2026-09-28 (2,663 rows, 1,070 hosts) unless sta
 - **Mass kind:** "Msini" of a transiting planet is a true mass (`msini_of_transiting_planet`). A lower limit on
   the mass of a non-transiting planet is a minimum mass. 19 planets in 14 hosts change; default runs are
   unchanged.
-- **YAML:** if `semimajor_axis_au` is given with `period_days`, the two must agree within max(10%, 3σ_a/a).
+- **YAML:** if `semimajor_axis_au` is given with `period_days`, the two must agree within 3σ, with
+  σ² = (σ_a/a)² + (σ_M/3M)² + (2σ_P/3P)² (first-order propagation through Kepler's third law; M is the stellar plus
+  planet mass). When the axis, the period or the stellar mass has no uncertainty (or a zero one), the limit is
+  max(10%, 3σ) (since 2026-11-02, issue #24; before, max(10%, 3σ_a/a) for every file).
   *Uncertain tolerance:* 10% allows stellar masses from different sources, since a ∝ M_*^{1/3}. Unknown star keys
   are refused, `mass_kind` must match the mass given, and non-finite numbers (`.nan`, `.inf`) are refused (since
   2026-10-04: a NaN angle or epoch used to stop every integration at once, which was reported as a close

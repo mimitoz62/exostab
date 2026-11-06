@@ -137,7 +137,7 @@ other value is refused.
 | `epoch_jd` | JD | epoch of mean anomalies and mean longitudes; required when a file combines them with transit or periastron times |
 | `star.name`, `star.mass_msun` | M☉ | the only star keys |
 | `planets[].name` | — | at least two planets |
-| `period_days` | d | or `semimajor_axis_au` (AU), from which the period follows by Kepler's third law (`period_from_semimajor_axis`); if both are given they must agree within 10% (or three times the axis's relative error) |
+| `period_days` | d | or `semimajor_axis_au` (AU), from which the period follows by Kepler's third law (`period_from_semimajor_axis`); if both are given they must agree within 3σ, where σ combines the axis's relative error with that of the Kepler axis, √((σ_M/3M)² + (2σ_P/3P)²) for the stellar plus planet mass M and the period P; if the axis, the period or the stellar mass has no uncertainty, within max(10%, 3σ) |
 | `mass_earth` / `mass_jupiter` / `mass_msun` | M⊕ / M♃ / M☉ | one of them; or only `radius_earth` (R⊕), and the mass comes from Chen & Kipping (2017) (`mass_from_radius_chen_kipping`) |
 | `mass_kind` | — | `true` (default), `minimum` (m sin i, `minimum_mass`) or `estimated` (`mass_estimated_in_file`); a radius-only planet takes no other kind than `estimated` |
 | `eccentricity` | — | missing → 0 (`eccentricity_assumed_zero`); above 0.95 refused |

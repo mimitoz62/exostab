@@ -17,7 +17,8 @@ planets:
   - name: Example b
     period_days: {value: 50.0, err: 0.01}
     # semimajor_axis_au: 0.266   # instead of period_days (period from Kepler's third law), or with it
-    #                            # (it must then agree with the period within 10%)
+    #                            # (it must then agree with the period within 3 sigma, or 10% if the axis,
+    #                            # the period or the stellar mass has no uncertainty)
     mass_earth: {value: 30.0, err: 5.0}
     # or mass_jupiter: 0.094, or mass_msun: 9.0e-5; with no mass, radius_earth: {value: 2.0, err: 0.1}
     # gives a mass from the Chen & Kipping (2017) relation (next to a mass it is kept for information)

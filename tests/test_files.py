@@ -235,6 +235,56 @@ def test_semimajor_axis_is_kept_and_checked_against_the_period(tmp_path: Path) -
     assert s.planet("b").semimajor_axis_au is not None
 
 
+def _axis_system(star: str, period: str, axis: str) -> str:
+    # P = 365.25 d around 1 Msun (plus 5 Earth masses) is a = 1.0000 AU
+    return f"""
+name: T
+star: {{mass_msun: {star}}}
+planets:
+  - {{name: T b, period_days: {period}, semimajor_axis_au: {axis}, mass_earth: 5}}
+  - {{name: T c, period_days: 800, mass_earth: 8}}
+"""
+
+
+def test_axis_check_refuses_a_precise_contradiction_below_10_percent(tmp_path: Path) -> None:
+    # Issue #24: with tight uncertainties on the axis, the period and the stellar mass, an 8% mismatch is far
+    # beyond 3 sigma, but the fixed 10% tolerance used to let it through.
+    text = _axis_system("{value: 1.0, err: 0.01}", "{value: 365.25, err: 0.01}", "{value: 1.08, err: 0.005}")
+    with pytest.raises(SystemFileError, match=r"semimajor_axis_au = 1.08 AU disagrees .*allowed"):
+        load_system_file(write(tmp_path, text))
+
+
+def test_axis_check_accepts_a_mismatch_covered_by_the_stellar_mass_uncertainty(tmp_path: Path) -> None:
+    # Issue #24: a 25% mismatch is within 3 sigma when the stellar mass is uncertain by 30%
+    # (sigma_a/a from M alone is 0.3 / 3 = 10%), but the old rule refused anything above max(10%, 3 sigma_a/a).
+    text = _axis_system("{value: 1.0, err: 0.3}", "{value: 365.25, err: 0.01}", "{value: 1.25, err: 0.01}")
+    s = load_system_file(write(tmp_path, text))
+    b = s.planet("T b")
+    assert b.semimajor_axis_au is not None and b.semimajor_axis_au.value == 1.25
+    # the same mismatch is still refused with a precise stellar mass
+    with pytest.raises(SystemFileError, match="disagrees"):
+        load_system_file(write(tmp_path, text.replace("err: 0.3", "err: 0.01")))
+
+
+@pytest.mark.parametrize(
+    ("star", "period", "axis"),
+    [
+        ("1.0", "{value: 365.25, err: 0.01}", "{value: 1.08, err: 0.005}"),
+        ("{value: 1.0, err: 0.01}", "365.25", "{value: 1.08, err: 0.005}"),
+        ("{value: 1.0, err: 0.01}", "{value: 365.25, err: 0.01}", "1.08"),
+        ("{value: 1.0, err: 0}", "{value: 365.25, err: 0.01}", "{value: 1.08, err: 0.005}"),
+    ],
+)
+def test_axis_check_keeps_the_10_percent_floor_without_every_uncertainty(
+    tmp_path: Path, star: str, period: str, axis: str
+) -> None:
+    # A value given without an uncertainty (or with a zero one) keeps the fixed tolerance, so 8% passes ...
+    load_system_file(write(tmp_path, _axis_system(star, period, axis)))
+    # ... and 12% does not.
+    with pytest.raises(SystemFileError, match="disagrees"):
+        load_system_file(write(tmp_path, _axis_system(star, period, axis.replace("1.08", "1.12"))))
+
+
 @pytest.mark.parametrize("key", ["circumbinary: true", "n_stars: 2", "mass_msun_err: 0.1"])
 def test_unknown_star_keys_are_refused(tmp_path: Path, key: str) -> None:
     # They were silently ignored: a binary modelled as a single star without a flag, or an error bar lost.
