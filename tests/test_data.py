@@ -203,6 +203,11 @@ def test_fetch_rows_gives_up_on_a_stalled_connection(monkeypatch: pytest.MonkeyP
             NasaExoplanetArchive, "URL_TAP", f"http://127.0.0.1:{server.getsockname()[1]}/TAP"
         )
         monkeypatch.setattr(archive, "READ_TIMEOUT_S", 0.5)
+
+        def list_tables() -> list[str]:  # astroquery's own request to the real archive, without a timeout
+            raise AssertionError("the TAP tables were listed")
+
+        monkeypatch.setattr("astroquery.ipac.nexsci.nasa_exoplanet_archive.core.get_tap_tables", list_tables)
         errors: list[Exception] = []
 
         def fetch() -> None:
@@ -215,7 +220,7 @@ def test_fetch_rows_gives_up_on_a_stalled_connection(monkeypatch: pytest.MonkeyP
         thread.start()
         thread.join(timeout=30)
         assert not thread.is_alive(), "still waiting after 30 s"
-    assert errors and "could not query" in str(errors[0])
+    assert errors and "could not query" in str(errors[0]) and "127.0.0.1" in str(errors[0])
 
 
 # ------------------------------------------------------------------------------------------ completion rules

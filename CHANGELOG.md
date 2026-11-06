@@ -35,6 +35,9 @@ All notable changes to this project are documented here. The format follows
   workers. On Windows a few queued runs fill the pipe, and the window had to be closed.
 - Windows: `exostab list | head` and other output into a reader that stops early end quietly, without a traceback.
   Windows reports such a pipe as an invalid argument, not as a broken pipe (CPython gh-79935).
+- A stalled archive could still hang a download: before its query, astroquery lists the archive's tables through a
+  connection without a timeout. exostab now skips that list, which it does not need, so the download times out as
+  intended and makes one request fewer.
 - Ctrl-C reaches exostab again after an integration. REBOUND leaves its own handler for it in place, so the web app's
   server could not be stopped from its terminal once it had run a check (on every platform).
 
