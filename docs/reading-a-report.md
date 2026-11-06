@@ -516,8 +516,9 @@ Finished in 6.9 s.
 ```
 
 exostab writes three files to a folder named after the system, in `exostab-results/` below the folder you ran it in. A
-new run of the same system overwrites them. `--out` chooses another folder, and `--no-plots` leaves out the figures. The
-last line of the output is the run time.
+new run of the same system overwrites them. `--out` chooses another folder, and `--no-plots` leaves out the figures.
+The last line of the output is the run time. Versions after 1.1.1 give the whole time, with the part spent on the
+analysis, and then the address of this page.
 
 - **`report.json`** is the full record of the check, with a versioned schema. It holds what the card rounds or leaves
   out: the publication behind each value (`system.planets`), the flags (`system.flags`), the spacing of every pair

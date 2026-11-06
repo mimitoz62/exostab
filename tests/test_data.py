@@ -1196,6 +1196,16 @@ def test_no_suggestion_points_to_the_list_command(query: str) -> None:
     )
 
 
+def test_a_name_missing_from_the_archive_table_gives_the_date_of_the_table() -> None:
+    # A system published after the download is the usual reason, and --refresh is the remedy.
+    from exostab.data import find_host
+
+    with pytest.raises(
+        SystemNotFoundError, match=r"in the archive table of 2026-09-28\. Did you mean: GJ 876\?"
+    ):
+        find_host("Gliese 876", SUGGESTED_HOSTS, INFO)
+
+
 def test_error_text_says_either_what_to_try_or_where_to_look() -> None:
     with pytest.raises(SystemNotFoundError) as err:
         names.resolve_host("Gliese 876", SUGGESTED_HOSTS)

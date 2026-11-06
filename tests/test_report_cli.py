@@ -1023,6 +1023,30 @@ def test_a_pipe_whose_reader_has_gone_ends_quietly_on_windows(
         assert silenced == []
 
 
+@pytest.mark.parametrize(
+    ("name", "hint"),
+    [
+        ("Sun", "solar_system.yaml"),
+        ("Solar System", "solar_system.yaml"),
+        ("Nonexistent-999", "data-assumptions/#your-own-parameters"),
+    ],
+)
+def test_a_name_that_is_not_found_gets_a_way_forward(name: str, hint: str) -> None:
+    # The message gave no way forward, and a system published after the table is exactly this case.
+    r = runner.invoke(app, ["check", name, "--offline"])
+    text = " ".join(plain(r.output).split())
+    assert r.exit_code == 1 and hint in text
+    assert "--refresh" not in text  # offline: the snapshot is all there is
+
+
+def test_the_last_lines_give_the_whole_time_and_the_guide(tmp_path: Path) -> None:
+    # The time left out the download and the start-up, a third of a first run.
+    r = runner.invoke(app, ["check", "Kepler-36", *FAST, "--no-plots", "--out", str(tmp_path)])
+    text = " ".join(plain(r.output).split())
+    assert r.exit_code == 0 and "s of it on the analysis" in text
+    assert "How to read this card: https://mimitoz62.github.io/exostab/reading-a-report/" in text
+
+
 def test_python_m_exostab() -> None:
     r = _exostab("--version")
     assert r.returncode == 0 and __version__ in r.stdout

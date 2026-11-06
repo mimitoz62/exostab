@@ -141,6 +141,15 @@ contradictory input are refused with a message that names the field. So are:
 - names and notes that are not text. YAML reads an unquoted `No`, `Yes`, `On` or `Off` as a boolean, so put such a name
   in quotes. Control characters are refused too, and planet names must differ by more than case or surrounding spaces.
 
+**How the numbers are read.** The values are osculating orbital elements at the start of the run, in Jacobi
+coordinates: the planets are added in order of period, each relative to the centre of mass of the star and the planets
+inside its orbit. A period from a linear ephemeris is used as the osculating period. Elements relative to the star
+(astrocentric) describe the same orbits with other numbers, and for planets in or near a mean-motion resonance the
+difference can change the N-body answer, so convert such elements first. The orbits are coplanar with the node at 0,
+so `omega_deg` acts as the longitude of periastron. The run starts at `epoch_jd`; without it, at the published transit
+or periastron time that minimises the summed variance of the propagated phases. `nominal` in `report.json` records the
+epoch and the starting elements.
+
 A value is a number or a mapping `{value, err}` / `{value, err_plus, err_minus}`, optionally with `reference`.
 Planet masses and eccentricities can also be `{value, upper_limit: true}` (a YAML boolean); an upper limit on any
 other value is refused.

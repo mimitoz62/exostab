@@ -33,6 +33,9 @@ from .models import System, UnusableParametersError
 
 # The raw file, which can be downloaded; it is not part of the package.
 SPOCK_ENV_SCRIPT = "https://raw.githubusercontent.com/mimitoz62/exostab/main/scripts/make_spock_env.sh"
+SOLAR_SYSTEM_FILE = "https://raw.githubusercontent.com/mimitoz62/exostab/main/examples/solar_system.yaml"
+OWN_PARAMETERS = "https://mimitoz62.github.io/exostab/data-assumptions/#your-own-parameters"
+READING_GUIDE = "https://mimitoz62.github.io/exostab/reading-a-report/"
 QUICKSTART = "https://mimitoz62.github.io/exostab/quickstart/"  # install commands (exostab is not on PyPI)
 # Far beyond any run that can finish; a larger number ends in a memory error or an overflow.
 MAX_STEPS_OR_DRAWS = 1_000_000
@@ -241,6 +244,7 @@ def _load(name: str | None, from_file: Path | None, refresh: bool, offline: bool
         load_system_file,
     )
     from .data.archive import ArchiveError
+    from .data.names import AmbiguousNameError
 
     if (name is None) == (from_file is None):
         err_console.print("[red]Give either a system name or --from-file (not both).[/red]")
@@ -252,7 +256,26 @@ def _load(name: str | None, from_file: Path | None, refresh: bool, offline: bool
         return load_system(name, refresh=refresh, offline=offline)
     except (SystemNotFoundError, IncompleteSystemError, SystemFileError, ArchiveError) as exc:
         _print_error(exc)
+        if isinstance(exc, SystemNotFoundError) and not isinstance(exc, AmbiguousNameError):
+            err_console.print(Text(_way_forward(exc.query, offline), style="dim"))
         raise typer.Exit(1) from exc
+
+
+def _way_forward(name: str, offline: bool) -> str:
+    """What to do about a name the table does not have: often a system too new for it, or one of our own."""
+    from .data.names import normalize
+
+    if normalize(name) in {"sun", "sol", "solarsystem"}:
+        return (
+            "The Solar System is not in the archive, which lists exoplanets. To check it, run exostab check "
+            f"--from-file solar_system.yaml with this file: {SOLAR_SYSTEM_FILE}"
+        )
+    # each URL ends its line: a full stop after it would become part of the link in some terminals
+    newer = "" if offline else "--refresh downloads the archive's current table. "
+    return (
+        f"{newer}A system that is not in the table can be checked from a file of its parameters with --from-file: "
+        f"{OWN_PARAMETERS}"
+    )
 
 
 def _command() -> str:
@@ -372,6 +395,7 @@ def check(
     offline: OfflineOpt = False,
 ) -> None:
     """Stability report card for one system (archive name or --from-file)."""
+    started = time.perf_counter()
     from .analysis import CheckSettings, check_system, settings_for_budget
     from .budget import parse_budget
     from .report import render, write_json
@@ -461,7 +485,11 @@ def check(
         console.print(
             f"[yellow]{' and '.join(old_figures)} here are from an earlier run: --no-plots left them.[/yellow]"
         )
-    console.print(f"[dim]Finished in {result.report.runtime_s:.1f} s.[/dim]")
+    total = time.perf_counter() - started  # a first run also downloads the table and builds a font cache
+    console.print(
+        f"[dim]Finished in {total:.1f} s, {result.report.runtime_s:.1f} s of it on the analysis.[/dim]"
+    )
+    console.print(f"[dim]How to read this card: {READING_GUIDE}[/dim]")
 
 
 def _named_planet(name: str | None, system: System) -> str:
