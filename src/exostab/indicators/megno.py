@@ -134,6 +134,11 @@ def run_many(jobs: Sequence[tuple[Realization, RunConfig]], n_workers: int | Non
         results = list(pool.map(_run, jobs, chunksize=1))
     except BaseException:
         processes = list((pool._processes or {}).values())
+        # Python 3.10 waits at exit for the thread that feeds the workers' queue, which is stuck once they are gone and
+        # the pipe is full (8 KB on Windows, a few queued runs): after Ctrl-C the process never ended.
+        call_queue = getattr(pool, "_call_queue", None)
+        if call_queue is not None:
+            call_queue.cancel_join_thread()
         pool.shutdown(wait=False, cancel_futures=True)
         for process in processes:
             process.terminate()

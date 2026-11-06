@@ -444,6 +444,33 @@ def test_ctrl_c_reaches_python_after_an_integration(where: str) -> None:
         signal.raise_signal(signal.SIGINT)
 
 
+def test_an_interrupted_pool_does_not_wait_for_its_queue_at_exit(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Python 3.10 joins the thread that feeds the workers' queue at exit; with the workers gone and the pipe full (8 KB
+    # on Windows), Ctrl-C left a process that never ended. Reproduced with 20 kB items on macOS and Python 3.10.
+    cancelled = []
+
+    class Queue:
+        def cancel_join_thread(self) -> None:
+            cancelled.append(True)
+
+    class Pool:
+        def __init__(self, **kwargs: object) -> None:
+            self._processes: dict[int, object] = {}
+            self._call_queue = Queue()
+
+        def map(self, *args: object, **kwargs: object) -> list[object]:
+            raise KeyboardInterrupt
+
+        def shutdown(self, **kwargs: object) -> None:
+            pass
+
+    monkeypatch.setattr(nb, "ProcessPoolExecutor", Pool)
+    jobs = [(r, RunConfig(n_orbits=10)) for r in realizations(two_planet_system(), 2, seed=0)]
+    with pytest.raises(KeyboardInterrupt):
+        nb.run_many(jobs, 2)
+    assert cancelled == [True]
+
+
 def test_a_process_pool_gets_at_most_61_workers_on_windows(monkeypatch: pytest.MonkeyPatch) -> None:
     # ProcessPoolExecutor raised "max_workers must be <= 61" there for --jobs 62 or more, or by default on a big machine.
     monkeypatch.setattr(nb.sys, "platform", "win32")
