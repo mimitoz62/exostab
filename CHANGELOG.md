@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-06
+
 ### Added
 
 - The README shows the install line and the first command before the recording, and the recording plays once and
