@@ -847,7 +847,8 @@ def test_paths_are_text_not_markup(command: list[str], folder: str, tmp_path: Pa
         pytest.skip("a folder name cannot hold a colon on Windows")
     r = runner.invoke(app, [*command, "--out", str(tmp_path / folder)])
     assert r.exit_code == 0, r.output
-    assert f"{folder}{os.sep}" in "".join(plain(r.output).split())
+    # On Windows, the slash in "res[/dim]x" is a separator.
+    assert f"{Path(folder)}{os.sep}" in "".join(plain(r.output).split())
 
 
 @pytest.mark.parametrize(
