@@ -53,10 +53,10 @@ and the DECISIONS.md entry behind it. Smaller items were merged into them or add
 - [#20](https://github.com/mimitoz62/exostab/issues/20) Rescale planet masses to the stellar mass used, or propagate the stellar-mass spread
 - [#21](https://github.com/mimitoz62/exostab/issues/21) Very eccentric orbits: justify the e ≤ 0.95 cap and use a physical distance for star approaches
 - [#22](https://github.com/mimitoz62/exostab/issues/22) Name the actual reasons in the indicator and overall summaries
-- [#23](https://github.com/mimitoz62/exostab/issues/23) Radii calculated by the archive are labelled 'measured' in report.json
+- [#23](https://github.com/mimitoz62/exostab/issues/23) Radii calculated by the archive are labelled 'measured' in report.json Closed by #34.
 - [#24](https://github.com/mimitoz62/exostab/issues/24) YAML files: base the semimajor_axis_au / period_days consistency check on the uncertainties
-- [#25](https://github.com/mimitoz62/exostab/issues/25) `exostab sweep --param e` accepts eccentricities above the 0.95 cap that `exostab check` refuses
-- [#26](https://github.com/mimitoz62/exostab/issues/26) `gladman_critical_separation` raises 'root not bracketed' for a very massive inner body
+- [#25](https://github.com/mimitoz62/exostab/issues/25) `exostab sweep --param e` accepts eccentricities above the 0.95 cap that `exostab check` refuses Closed by #31.
+- [#26](https://github.com/mimitoz62/exostab/issues/26) `gladman_critical_separation` raises 'root not bracketed' for a very massive inner body Closed by #32.
 - [#27](https://github.com/mimitoz62/exostab/issues/27) Web app: stop a run at a wall-clock limit, not only at an estimated cost
 - [#28](https://github.com/mimitoz62/exostab/issues/28) Web app: tie shared links to the archive data they were made with
 - [#29](https://github.com/mimitoz62/exostab/issues/29) SPOCK environment: ship the setup script with the package and pin the whole environment

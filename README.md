@@ -39,6 +39,14 @@
   <a href="https://mybinder.org/v2/gh/mimitoz62/exostab/main?urlpath=exostab/">open the web app on Binder</a>
 </p>
 
+Or install it (Python 3.10 or newer, and git) and check a system:
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.0.1"
+exostab check "TRAPPIST-1"
+```
+
 <p align="center">
   <img alt="Terminal recording of exostab check &quot;TRAPPIST-1&quot; --offline: a report card with the parameters of the seven planets, Hill spacing marginal, AMD stable, N-body + MEGNO marginal, overall verdict marginal, and the data-completion rules that were applied" src="https://raw.githubusercontent.com/mimitoz62/exostab/main/docs/assets/demo.gif" width="720">
   <br>

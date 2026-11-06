@@ -3,6 +3,13 @@
 Thank you for helping. Bug reports, questions about specific systems and proposals for new indicators are all
 welcome; please use the issue templates.
 
+## Where to start
+
+Pick an issue labelled [good first issue](https://github.com/mimitoz62/exostab/labels/good%20first%20issue) or
+[help wanted](https://github.com/mimitoz62/exostab/labels/help%20wanted), say in a comment that you are taking it,
+branch from `main` and fill in the pull request template. Issues labelled `science` or `decision` need a choice by the
+maintainer first: ask in the issue before you write code. There is one maintainer, so a reply can take some days.
+
 ## Development setup
 
 You need Python 3.10 or newer. `pre-commit install` is optional: it runs ruff and mypy before each commit.
