@@ -9,8 +9,8 @@ All notable changes to this project are documented here. The format follows
 ### Added
 
 - Windows: continuous integration runs the tests and the command line on Windows with Python 3.10 and 3.14. The README
-  and the Quickstart have the install lines for Command Prompt, and the FAQ says what differs there: the SPOCK setup script
-  needs WSL, and output redirected to a file needs `PYTHONUTF8=1` for ☉ and ⊕. Tests that rely on POSIX signals,
+  and the Quickstart have the install lines for Command Prompt, and the FAQ says what differs there: SPOCK is not
+  tested there, and output redirected in PowerShell changes some characters. Tests that rely on POSIX signals,
   permission bits or bash are skipped on Windows.
 - The FAQ answers whether exostab can be used from Python: through `report.json` and its schema.
 
@@ -29,8 +29,8 @@ All notable changes to this project are documented here. The format follows
   reads a catalog that Windows PowerShell 5.1 saved as UTF-16 with `>`.
 - Windows: `check` and `sweep` use at most 61 worker processes, the most that Python's process pool accepts there; more
   (`--jobs 62` or above, or the default on a machine with more than 62 threads) ended in a traceback. The SPOCK setup
-  script finds the environment's interpreter in Git Bash (`Scripts/python.exe`), and the FAQ says that SPOCK is not
-  tested on Windows.
+  script lets uv find the environment's interpreter, which is `Scripts\python.exe` there, and prints the line to set
+  for PowerShell.
 - Python 3.10: after Ctrl-C during `check` or `sweep`, the process no longer waits for ever for the queue of its stopped
   workers. On Windows a few queued runs fill the pipe, and the window had to be closed.
 - Windows: `exostab list | head` and other output into a reader that stops early end quietly, without a traceback.

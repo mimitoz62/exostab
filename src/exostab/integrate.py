@@ -46,6 +46,7 @@ from __future__ import annotations
 import ctypes
 import math
 import signal
+import threading
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -179,6 +180,9 @@ def _c_sigint_api() -> tuple[Any, Any] | None:
 
 
 _C_SIGINT_API = _c_sigint_api()
+_sigint_lock = threading.Lock()
+_sigint_runs = 0  # runs integrating in this process, in any thread
+_sigint_saved: Any = None
 
 
 @contextmanager
@@ -186,17 +190,26 @@ def _sigint_handler_kept() -> Iterator[None]:
     """Put back the C handler for SIGINT that REBOUND replaces when it integrates and leaves in place.
 
     Ctrl-C still stops a run while it integrates, but afterwards it no longer reached Python: the web app's server, for
-    one, could not be stopped from its terminal. PyOS_setsig works from any thread, unlike signal.signal.
+    one, could not be stopped from its terminal. PyOS_setsig works from any thread, unlike signal.signal. The handler
+    is saved by the first of overlapping runs (two sessions of the web app) and put back by the last one, so that no
+    run saves REBOUND's handler as the one to restore.
     """
+    global _sigint_runs, _sigint_saved
     if _C_SIGINT_API is None:  # pragma: no cover
         yield
         return
     getsig, setsig = _C_SIGINT_API
-    saved = getsig(signal.SIGINT)
+    with _sigint_lock:
+        if _sigint_runs == 0:
+            _sigint_saved = getsig(signal.SIGINT)
+        _sigint_runs += 1
     try:
         yield
     finally:
-        setsig(signal.SIGINT, saved)
+        with _sigint_lock:
+            _sigint_runs -= 1
+            if _sigint_runs == 0:
+                setsig(signal.SIGINT, _sigint_saved)
 
 
 def run(real: Realization, config: RunConfig) -> RunResult:

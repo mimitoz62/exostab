@@ -72,10 +72,12 @@ Not yet: a release on PyPI is planned. Install from GitHub as shown in the [Quic
 
 **Does exostab run on Windows?**
 Yes. Continuous integration runs the tests and the command line on Windows with Python 3.10 and 3.14, as on Linux and
-macOS. The [Quickstart](quickstart.md#install) has the install lines for Command Prompt. Two things differ. The optional
-SPOCK indicator is not tested on Windows: its setup script is for bash (Git Bash runs it) and builds two packages from
-source, which needs a C compiler; in WSL, exostab and SPOCK work as on Linux. And output redirected to a file is written
-in the Windows code page, which has no ☉ or ⊕, unless the variable `PYTHONUTF8` is set to `1`.
+macOS. The [Quickstart](quickstart.md#install) has the install lines for Command Prompt. Two things differ. The
+optional SPOCK indicator is not tested on Windows: its setup script runs in Git Bash and builds two packages from
+source, which needs the Microsoft C++ Build Tools; in WSL, exostab and SPOCK work as on Linux. And output that goes to
+a file or to another program is written in the Windows code page, so ☉ and ⊕ become `?`, and Windows PowerShell also
+turns – ± and • into other letters. To keep a report card, redirect it in Command Prompt
+(`exostab check "TRAPPIST-1" > card.txt`), or keep `report.json`, which holds every value.
 
 **Can I use exostab from Python?**
 Not through a documented API yet. Every check writes `report.json`, whose JSON schema ships with the package as
