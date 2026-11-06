@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Windows: continuous integration runs the tests and the command line on Windows with Python 3.10 and 3.14. The README
+  and the Quickstart have the install lines for Command Prompt, and the FAQ says what differs there: the SPOCK setup script
+  needs WSL, and output redirected to a file needs `PYTHONUTF8=1` for ☉ and ⊕. Tests that rely on POSIX signals,
+  permission bits or bash are skipped on Windows.
+- The FAQ answers whether exostab can be used from Python: through `report.json` and its schema.
+
 ### Changed
 
 - The BibTeX of the software has the DOI of version 1.1.0, and `main` is 1.1.1.dev0.
