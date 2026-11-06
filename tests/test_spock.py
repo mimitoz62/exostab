@@ -207,11 +207,12 @@ def test_a_wrong_interpreter_is_found_before_any_integration(
     )
     assert r.exit_code == 2 and "could not run the SPOCK environment" in " ".join(r.output.split())
     assert not out.exists()
-    failing = tmp_path / "fails"
-    failing.write_text("#!/bin/sh\nexit 3\n")
-    failing.chmod(0o755)
-    with pytest.raises(sp.SpockUnavailableError, match="exited with code 3"):
-        sp.probe(str(failing))
+    if sys.platform != "win32":  # a shell script cannot stand in for an interpreter there
+        failing = tmp_path / "fails"
+        failing.write_text("#!/bin/sh\nexit 3\n")
+        failing.chmod(0o755)
+        with pytest.raises(sp.SpockUnavailableError, match="exited with code 3"):
+            sp.probe(str(failing))
     sp.probe(sys.executable)
 
 

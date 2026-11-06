@@ -97,7 +97,7 @@ def test_render_card(small_result) -> None:  # type: ignore[no-untyped-def]
     console = Console(record=True, width=100)
     render(small_result.report, console, outputs=[Path("x/report.json")])
     text = console.export_text()
-    for s in ("Hill spacing", "AMD", "N-body + MEGNO", "Overall:", "Saved: x/report.json"):
+    for s in ("Hill spacing", "AMD", "N-body + MEGNO", "Overall:", f"Saved: {Path('x/report.json')}"):
         assert s in text
 
 
@@ -126,7 +126,7 @@ def test_reading_guide_quotes_a_real_card() -> None:
     from exostab.data import load_system
 
     def plain(text: str) -> str:
-        return " ".join(re.sub("[│╭╮╰╯─]", " ", text).split())
+        return " ".join(re.sub("[│╭╮╰╯┌┐└┘─]", " ", text).split())  # Rich squares the corners on Windows
 
     page = READING_GUIDE.read_text(encoding="utf-8")
     changelog = (READING_GUIDE.parents[1] / "CHANGELOG.md").read_text(encoding="utf-8")
@@ -679,6 +679,8 @@ def test_an_output_folder_that_cannot_be_written_is_refused_first(
 
 
 def test_a_read_only_output_folder_is_refused_first(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    if sys.platform == "win32":
+        pytest.skip("Windows ignores these permission bits on folders")
     if os.geteuid() == 0:
         pytest.skip("root can write everywhere")
     _no_integration(monkeypatch)
@@ -841,9 +843,11 @@ def test_catalog_seed_is_limited_to_what_parquet_stores(tmp_path: Path) -> None:
 def test_paths_are_text_not_markup(command: list[str], folder: str, tmp_path: Path) -> None:
     # results[test] printed "Saved: results/sweep.csv" while the files were in results[test]/, x:fire:y an emoji, and
     # [/dim] a MarkupError after the work was done.
+    if sys.platform == "win32" and ":" in folder:
+        pytest.skip("a folder name cannot hold a colon on Windows")
     r = runner.invoke(app, [*command, "--out", str(tmp_path / folder)])
     assert r.exit_code == 0, r.output
-    assert f"{folder}/" in "".join(plain(r.output).split())
+    assert f"{folder}{os.sep}" in "".join(plain(r.output).split())
 
 
 @pytest.mark.parametrize(
@@ -1210,13 +1214,13 @@ def test_saved_paths_stay_on_one_line(tmp_path: Path) -> None:
         app, ["sweep", "Kepler-36", "--steps", "2", "--orbits", "100", "--jobs", "1", "--out", str(folder)]
     )
     assert r.exit_code == 0, r.output
-    assert f"{folder}/sweep.csv" in plain(r.output)
+    assert str(folder / "sweep.csv") in plain(r.output)
 
 
 def _card(res: object, width: int = 100) -> str:
     console = Console(record=True, width=width)
     render(res.report, console)  # type: ignore[attr-defined]
-    return " ".join(re.sub("[│╭╮╰╯─]", " ", console.export_text()).split())
+    return " ".join(re.sub("[│╭╮╰╯┌┐└┘─]", " ", console.export_text()).split())
 
 
 def test_the_card_says_what_the_inclination_prior_did() -> None:

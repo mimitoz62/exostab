@@ -70,6 +70,18 @@ and Hill criteria reach further but make approximations. See [Methods](methods.m
 **Can I install it with `pip install exostab`?**
 Not yet: a release on PyPI is planned. Install from GitHub as shown in the [Quickstart](quickstart.md).
 
+**Does exostab run on Windows?**
+Yes. Continuous integration runs the tests and the command line on Windows with Python 3.10 and 3.14, as on Linux and
+macOS. The [Quickstart](quickstart.md#install) has the install lines for PowerShell. Two things differ: the script that
+sets up SPOCK is for bash, so run it in WSL, and output redirected to a file is written in the Windows code page, which
+has no ☉ or ⊕, unless the variable `PYTHONUTF8` is set to `1`.
+
+**Can I use exostab from Python?**
+Not through a documented API yet. Every check writes `report.json`, whose JSON schema ships with the package as
+`exostab/schemas/report.schema.json`. From a script, run `exostab check` with `--out` and read that file;
+[How to read a report card](reading-a-report.md#the-files-it-writes) says what it holds, and the
+[CLI reference](cli.md) lists the options.
+
 **How do I cite exostab?**
 Use the repository's `CITATION.cff` and cite the methods and the NASA Exoplanet Archive.
 [Citing exostab](citing.md) has a BibTeX entry, the DOI and the references for each indicator.

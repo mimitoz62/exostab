@@ -2,6 +2,7 @@
 
 import math
 import signal
+import sys
 import threading
 import time
 from dataclasses import replace
@@ -413,6 +414,7 @@ def test_marginal_summary_names_the_actual_reason() -> None:
     assert "AMD-stable." not in o.summary
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows has no signal.pthread_kill")
 def test_ctrl_c_stops_queued_integrations_at_once() -> None:
     # With more runs than workers, the pool waited for its queue: `check` went on 22 s after Ctrl-C, and with --jobs 3
     # it took four presses and ended in a traceback.

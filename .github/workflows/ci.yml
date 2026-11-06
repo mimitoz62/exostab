@@ -47,6 +47,35 @@ jobs:
           exostab check "TOI-270" --offline --orbits 2000 --draws 3 --out smoke/
           test -f smoke/report.json && test -f smoke/orbits.png && test -f smoke/megno.png
 
+  windows:
+    # The tests and the CLI on Windows; ruff, mypy and coverage run in the job above.
+    name: windows-latest / Python ${{ matrix.python }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.14"]
+    env:
+      EXOSTAB_OFFLINE: "1"
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+      - name: Tests
+        run: pytest
+      - name: CLI smoke test
+        shell: bash
+        run: |
+          exostab --version
+          exostab list --min-planets 4 --max-period-days 200 --offline
+          exostab check "TOI-270" --offline --orbits 2000 --draws 3 --out smoke/
+          test -f smoke/report.json && test -f smoke/orbits.png && test -f smoke/megno.png
+
   lowest:
     # Every direct dependency at the lower bound declared in pyproject.toml (pip keeps an older installed
     # version that satisfies the bound, so the bounds must work, not only the newest releases).

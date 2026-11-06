@@ -13,6 +13,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import urllib.error
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -928,7 +929,11 @@ def run_spock_env(tmp_path: Path, target: Path) -> subprocess.CompletedProcess[s
     )
 
 
-@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+# The SPOCK setup script is for bash. On Windows, `bash` is often the launcher of WSL, with no distribution installed.
+NEEDS_BASH = pytest.mark.skipif(shutil.which("bash") is None or sys.platform == "win32", reason="needs bash")
+
+
+@NEEDS_BASH
 def test_spock_env_script_can_be_run_again(tmp_path: Path) -> None:
     target = tmp_path / "spock-env"
     for _ in range(2):  # a second run (after a failed source build, or to update) rebuilds the environment
@@ -939,7 +944,7 @@ def test_spock_env_script_can_be_run_again(tmp_path: Path) -> None:
     assert f"EXOSTAB_SPOCK_PYTHON={target}/bin/python" in r.stdout
 
 
-@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+@NEEDS_BASH
 def test_spock_env_script_leaves_other_folders_alone(tmp_path: Path) -> None:
     target = tmp_path / "notes"
     target.mkdir()
