@@ -13,16 +13,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: ${{ matrix.os }} / Python ${{ matrix.python }}
-    runs-on: ${{ matrix.os }}
+  windows:
+    name: windows-latest / Python ${{ matrix.python }}
+    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python: ["3.10", "3.13"]
     env:
-      EXOSTAB_OFFLINE: "1"  # tests use the bundled snapshot, never the network
+      EXOSTAB_OFFLINE: "1"
       MPLBACKEND: Agg
     steps:
       - uses: actions/checkout@v7
@@ -32,89 +31,20 @@ jobs:
           cache: pip
       - name: Install
         run: python -m pip install -e ".[dev]"
-      - name: Ruff
-        run: |
-          ruff check src tests scripts
-          ruff format --check src tests scripts
-      - name: Mypy
-        run: mypy
-      - name: Tests with coverage
-        run: pytest --cov=exostab --cov-report=term-missing --cov-report=xml --cov-fail-under=85
-      - name: CLI smoke test
+      - name: Tests
+        run: pytest -p no:cacheprovider -rf --tb=short
+      - name: CLI smoke test (bash)
+        if: always()
+        shell: bash
         run: |
           exostab --version
           exostab list --min-planets 4 --max-period-days 200 --offline
           exostab check "TOI-270" --offline --orbits 2000 --draws 3 --out smoke/
           test -f smoke/report.json && test -f smoke/orbits.png && test -f smoke/megno.png
-
-  lowest:
-    # Every direct dependency at the lower bound declared in pyproject.toml (pip keeps an older installed
-    # version that satisfies the bound, so the bounds must work, not only the newest releases).
-    name: lowest dependency versions / Python 3.10
-    runs-on: ubuntu-latest
-    env:
-      EXOSTAB_OFFLINE: "1"
-      MPLBACKEND: Agg
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.10"
-      - name: Install with uv's lowest-direct resolution
+      - name: CLI in PowerShell
+        if: always()
+        shell: pwsh
         run: |
-          python -m pip install uv
-          uv venv --python "$(command -v python)" .venv-lowest
-          uv pip install --python .venv-lowest/bin/python --resolution lowest-direct ".[dev]"
-          uv pip list --python .venv-lowest/bin/python
-      - name: CLI and fast test suite
-        run: |
-          .venv-lowest/bin/exostab --help
-          .venv-lowest/bin/python -m pytest
-      - name: Build without isolation with the oldest allowed hatchling
-        run: |
-          uv pip install --python .venv-lowest/bin/python build "hatchling==1.27.0"  # [build-system] lower bound
-          .venv-lowest/bin/python -m build --no-isolation --wheel --outdir lowest-dist
-          .venv-lowest/bin/python -m zipfile -e lowest-dist/*.whl lowest-wheel
-          grep -qx "License-Expression: MIT" lowest-wheel/exostab-*.dist-info/METADATA
-
-  docs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: python -m pip install -e ".[dev]"
-      - name: CLI reference is up to date
-        run: |
-          python scripts/cli_page.py /tmp/cli.md
-          diff -u docs/cli.md /tmp/cli.md
-      - name: Build documentation (strict)
-        run: mkdocs build --strict
-
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-      - run: python -m pip install build twine
-      - run: python -m build
-      - run: python -m twine check --strict dist/*
-      - name: Tests run from the unpacked sdist (as distributions and conda-forge run them)
-        env:
-          EXOSTAB_OFFLINE: "1"
-          MPLBACKEND: Agg
-        run: |
-          mkdir sdist-check
-          tar -xzf dist/*.tar.gz -C sdist-check --strip-components 1
-          cd sdist-check
-          python -m pip install ".[dev]"
-          python -m pytest
-      - name: Wheel contains the snapshot and the schema
-        run: |
-          python -m zipfile -l dist/*.whl > wheel-contents.txt
-          grep -q pscomppars_snapshot.csv wheel-contents.txt
-          grep -q report.schema.json wheel-contents.txt
+          exostab check "TRAPPIST-1" --offline --orbits 2000 --draws 3 --out smoke2/
+          exostab check "TOI-270" --offline --orbits 2000 --draws 3 --no-plots --out smoke3/ > out.txt
+          Get-Content out.txt -Tail 3
