@@ -148,7 +148,7 @@ answer.
     python3 --version
     python3 -m venv .venv
     source .venv/bin/activate
-    pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.0.1"
+    pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.1.0"
     exostab check "TRAPPIST-1"
     exostab list --min-planets 4 --max-period-days 200
     ```
@@ -164,7 +164,7 @@ answer.
     In the virtual environment from the [Quickstart](quickstart.md#install):
 
     ```bash
-    pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.0.1"
+    pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.1.0"
     python -m exostab.web
     ```
 
@@ -177,7 +177,7 @@ answer.
 === "Your own parameters"
 
     ```bash
-    curl -fsSLO https://raw.githubusercontent.com/mimitoz62/exostab/v1.0.1/examples/two_planet.yaml
+    curl -fsSLO https://raw.githubusercontent.com/mimitoz62/exostab/v1.1.0/examples/two_planet.yaml
     exostab check --from-file two_planet.yaml
     exostab sweep "HD 127195" --planet b --param e --range 0 0.6 --steps 25
     ```
