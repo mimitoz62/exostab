@@ -93,7 +93,7 @@ def _label(name: str) -> str:
 def _save(fig: Any, path: Any, **kwargs: Any) -> None:
     """Save without one warning per character the font lacks: a non-Latin name still gets its figure."""
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message="Glyph .* missing from font", category=UserWarning)
+        warnings.filterwarnings("ignore", message="Glyph .* missing from", category=UserWarning)  # "current font" on Linux
         fig.savefig(path, **kwargs)
 
 

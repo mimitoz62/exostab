@@ -172,8 +172,6 @@ def write_system(tmp_path: Path, system: str = "T", b: str = "T b", c: str = "T 
     ("system", "b"),
     [("a$b", "x$y"), ("$a_b$", "$x^$"), ("a$", "$$"), ("T", "_b"), ("_T", "__"), ("Τ€x", "日本語 b")],
 )
-# Old matplotlib with a new pyparsing warns on mathtext, and a font without CJK glyphs warns on them: neither is ours.
-@pytest.mark.filterwarnings("ignore::DeprecationWarning", "ignore:Glyph .* missing from:UserWarning")
 def test_figures_take_any_name(tmp_path: Path, system: str, b: str) -> None:
     # "$" is mathtext to matplotlib: ParseSyntaxException after the whole integration, and no card. A label with a
     # leading underscore left the legend out, and letters the font lacks gave one warning each.
@@ -186,6 +184,8 @@ def test_figures_take_any_name(tmp_path: Path, system: str, b: str) -> None:
     res = check_system(s, CheckSettings(orbits=100, draws=0, jobs=1, n_samples=5, ias15_check=False))
     with warnings.catch_warnings():
         warnings.simplefilter("error")
+        # old matplotlib with a new pyparsing warns about its own use of pyparsing: not exostab's to fix
+        warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*deprecated - use")
         assert all(p.stat().st_size > 10_000 for p in check_figures(res, tmp_path))
         rows = [
             {
