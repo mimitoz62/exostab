@@ -18,6 +18,20 @@ All notable changes to this project are documented here. The format follows
 
 - The BibTeX of the software has the DOI of version 1.1.0, and `main` is 1.1.1.dev0.
 
+### Fixed
+
+- The output folder is tested with a file of exostab's own instead of `tempfile`, which Python 3.10 to 3.12 on Windows
+  retry for ever in a folder that refuses new files. A result file that another program keeps open, such as a CSV open
+  in Excel on Windows, is now found before the run instead of when the results are written.
+- SPOCK: the worker's output is read as UTF-8 at both ends, so a failing worker's message in another encoding no longer
+  ends the run with a traceback (or, on Windows, loses the message).
+- The shell scripts keep LF line endings in a Windows checkout (`.gitattributes`), and `scripts/catalog_findings.py`
+  reads a catalog that Windows PowerShell 5.1 saved as UTF-16 with `>`.
+- Windows: `check` and `sweep` use at most 61 worker processes, the most that Python's process pool accepts there; more
+  (`--jobs 62` or above, or the default on a machine with more than 62 threads) ended in a traceback. The SPOCK setup
+  script finds the environment's interpreter in Git Bash (`Scripts/python.exe`), and the FAQ says that SPOCK is not
+  tested on Windows.
+
 ## [1.1.0] - 2026-11-06
 
 ### Added

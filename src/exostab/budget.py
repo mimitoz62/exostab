@@ -19,6 +19,7 @@ import os
 import time
 from dataclasses import dataclass
 
+from .indicators.megno import worker_limit
 from .integrate import RunConfig, run
 from .sampling import Realization
 
@@ -91,7 +92,7 @@ def estimate_seconds(
 
 def plan(nominal: Realization, budget_s: float, *, jobs: int | None = None, ias15_check: bool = True) -> Plan:
     """The most thorough preset whose estimated wall time fits ``budget_s``."""
-    workers = jobs or max(1, (os.cpu_count() or 2) - 1)
+    workers = worker_limit(jobs or max(1, (os.cpu_count() or 2) - 1))
     t0 = time.perf_counter()
     s_wh = _seconds_per_orbit(nominal, "whfast", min_orbits=100, min_wall=0.05)
     s_ias = _seconds_per_orbit(nominal, "ias15", min_orbits=10, min_wall=0.05) if ias15_check else 0.0

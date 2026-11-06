@@ -29,6 +29,7 @@ import math
 import os
 import platform
 import statistics
+import sys
 import time
 import urllib.parse
 import urllib.request
@@ -744,7 +745,8 @@ def print_eccentricity_what_if(
         if jobs == 1:
             runs = [verdicts_with_eccentricity(task) for task in tasks]
         else:
-            with ProcessPoolExecutor(max_workers=jobs) as pool:
+            # ProcessPoolExecutor refuses more than 61 workers on Windows
+            with ProcessPoolExecutor(max_workers=min(jobs, 61) if sys.platform == "win32" else jobs) as pool:
                 runs = list(pool.map(verdicts_with_eccentricity, tasks))
         pairs = list(zip(group, runs, strict=True))
         changes = Counter(f"{r['overall']} to {run['overall']}" for r, run in pairs)

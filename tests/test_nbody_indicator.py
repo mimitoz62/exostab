@@ -429,6 +429,14 @@ def test_ctrl_c_stops_queued_integrations_at_once() -> None:
     assert time.monotonic() - t0 < 25  # waiting for the queue of 7 runs takes over a minute
 
 
+def test_a_process_pool_gets_at_most_61_workers_on_windows(monkeypatch: pytest.MonkeyPatch) -> None:
+    # ProcessPoolExecutor raised "max_workers must be <= 61" there for --jobs 62 or more, or by default on a big machine.
+    monkeypatch.setattr(nb.sys, "platform", "win32")
+    assert nb.worker_limit(64) == 61 and nb.worker_limit(8) == 8
+    monkeypatch.setattr(nb.sys, "platform", "linux")
+    assert nb.worker_limit(64) == 64
+
+
 def test_messages_do_not_assume_the_command_line() -> None:
     # In the browser: "increase --orbits", "supply measured phases with --from-file", "(--draws 0)".
     nbi = nb.evaluate([result(n_orbits_outermost=36.0)], None, random_phases=["X b"])
