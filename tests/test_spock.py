@@ -114,6 +114,8 @@ def test_evaluate_with_fake_worker(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         ("import sys; sys.exit(3)", "exit 3"),
         ("print('not json')", "unexpected answer"),
         ("import json,sys; json.load(sys.stdin); print(json.dumps({'p_stable': []}))", "different number"),
+        # bytes that neither UTF-8 nor cp1252 decodes: a traceback here, or on Windows the message lost
+        ("import sys; sys.stderr.buffer.write(b'bad \\x81\\xff bytes'); sys.exit(1)", "exit 1.*bad"),
     ],
 )
 def test_worker_failures(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, body: str, match: str) -> None:

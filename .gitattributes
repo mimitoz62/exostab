@@ -1,0 +1,4 @@
+# Shell scripts keep LF line endings in every checkout, also with Git for Windows' core.autocrlf: bash stops at a
+# carriage return.
+*.sh text eol=lf
+.binder/postBuild text eol=lf

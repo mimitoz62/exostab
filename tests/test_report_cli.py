@@ -678,6 +678,59 @@ def test_an_output_folder_that_cannot_be_written_is_refused_first(
         assert "Cannot write" in r.output and "--out" in r.output
 
 
+def test_the_write_test_leaves_nothing_and_does_not_use_tempfile(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # On Windows, Python 3.10 to 3.12 retry tempfile's PermissionError for ever in a folder that refuses new files.
+    import tempfile
+
+    from exostab import cli
+
+    def refuse(*args: object, **kwargs: object) -> None:
+        raise AssertionError("the write test should not use tempfile")
+
+    for name in ("TemporaryFile", "NamedTemporaryFile", "mkstemp"):
+        monkeypatch.setattr(tempfile, name, refuse)
+    out = tmp_path / "o"
+    assert cli._output_folder(out, cli.OUTPUT_FILES["check"]) == out
+    assert list(out.iterdir()) == []
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="a file lock that denies writing is a Windows feature")
+def test_a_file_that_another_program_keeps_open_is_refused_first(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Excel keeps an open CSV locked; os.access did not see it, so the run was lost when the file was written.
+    import ctypes
+    from ctypes import wintypes
+
+    _no_integration(monkeypatch)
+    out = tmp_path / "o"
+    out.mkdir()
+    (out / "report.json").write_text("{}")
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]
+    kernel32.CreateFileW.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.HANDLE,
+    ]
+    kernel32.CreateFileW.restype = wintypes.HANDLE
+    generic_read, file_share_read, open_existing = 0x80000000, 0x1, 3
+    handle = kernel32.CreateFileW(
+        str(out / "report.json"), generic_read, file_share_read, None, open_existing, 0, None
+    )
+    assert handle not in (None, wintypes.HANDLE(-1).value)
+    try:
+        r = runner.invoke(app, ["check", "Kepler-36", "--no-plots", "--out", str(out)])
+    finally:
+        kernel32.CloseHandle(handle)
+    assert r.exit_code == 2 and "Close it if another program has it open" in " ".join(r.output.split())
+
+
 def test_a_read_only_output_folder_is_refused_first(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     if sys.platform == "win32":
         pytest.skip("Windows ignores these permission bits on folders")

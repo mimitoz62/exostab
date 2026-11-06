@@ -11,11 +11,10 @@ import re
 import shlex
 import signal
 import sys
-import tempfile
 import time
 from collections.abc import Iterable, Iterator
 from concurrent.futures.process import BrokenProcessPool
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from enum import Enum
 from pathlib import Path
 from types import FrameType
@@ -152,8 +151,11 @@ def _output_folder(out: Path, files: Iterable[str]) -> Path:
     """``out``, created and tested before any integration: finding out afterwards would lose the whole run."""
     try:
         out.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryFile(dir=out):
-            pass
+        # A file of its own, not tempfile: on Windows, Python 3.10 to 3.12 retry tempfile's PermissionError for ever.
+        probe = out / f".exostab-write-test-{os.getpid()}-{time.monotonic_ns()}"
+        os.close(os.open(probe, os.O_WRONLY | os.O_CREAT | os.O_EXCL))
+        with suppress(OSError):
+            probe.unlink()
     except OSError as exc:
         _print_error(
             f"Cannot write to the output folder {out}: {exc.strerror or exc}. Choose another with --out."
@@ -161,9 +163,22 @@ def _output_folder(out: Path, files: Iterable[str]) -> Path:
         raise typer.Exit(2) from exc
     for name in files:
         target = out / name
-        if target.is_dir() or (target.exists() and not os.access(target, os.W_OK)):
+        if target.is_dir():
             _print_error(f"Cannot write {target}. Choose another output folder with --out.")
             raise typer.Exit(2)
+        try:
+            # Opening for writing, without truncating, also finds a file that another program keeps locked, such as
+            # a CSV open in Excel on Windows, which os.access does not see.
+            with target.open("r+b"):
+                pass
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            _print_error(
+                f"Cannot write {target}: {exc.strerror or exc}. Close it if another program has it open, or choose "
+                "another output folder with --out."
+            )
+            raise typer.Exit(2) from exc
     return out
 
 

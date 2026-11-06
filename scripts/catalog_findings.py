@@ -138,8 +138,10 @@ def stable_count(rows: Iterable[CatalogRow], key: str = "overall") -> int:
 
 
 def read_catalog(path: Path) -> list[CatalogRow]:
-    with path.open(encoding="utf-8", newline="") as fh:
-        return list(csv.DictReader(fh))
+    raw = path.read_bytes()
+    # Windows PowerShell 5.1 writes UTF-16 with `>`, which the reproduction steps of docs/findings.md use.
+    text = raw.decode("utf-16") if raw[:2] in (b"\xff\xfe", b"\xfe\xff") else raw.decode("utf-8-sig")
+    return list(csv.DictReader(io.StringIO(text, newline="")))
 
 
 def label(row: CatalogRow) -> str:
