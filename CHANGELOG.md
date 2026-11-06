@@ -31,6 +31,8 @@ All notable changes to this project are documented here. The format follows
   (`--jobs 62` or above, or the default on a machine with more than 62 threads) ended in a traceback. The SPOCK setup
   script finds the environment's interpreter in Git Bash (`Scripts/python.exe`), and the FAQ says that SPOCK is not
   tested on Windows.
+- Ctrl-C reaches exostab again after an integration. REBOUND leaves its own handler for it in place, so the web app's
+  server could not be stopped from its terminal once it had run a check (on every platform).
 
 ## [1.1.0] - 2026-11-06
 

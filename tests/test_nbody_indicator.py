@@ -15,7 +15,7 @@ from exostab.data import archive, system_from_rows
 from exostab.data.store import TableInfo
 from exostab.indicators import AGREEMENT, DrawStats, IndicatorResult, Verdict, combine
 from exostab.indicators import megno as nb
-from exostab.integrate import RunConfig, RunResult
+from exostab.integrate import RunConfig, RunResult, run
 from exostab.models import Phase, PhaseKind, Provenance, Value
 from exostab.sampling import realizations
 
@@ -427,6 +427,21 @@ def test_ctrl_c_stops_queued_integrations_at_once() -> None:
     with pytest.raises(KeyboardInterrupt):
         nb.run_many(jobs, 2)
     assert time.monotonic() - t0 < 25  # waiting for the queue of 7 runs takes over a minute
+
+
+@pytest.mark.parametrize("where", ["main thread", "another thread"])
+def test_ctrl_c_reaches_python_after_an_integration(where: str) -> None:
+    # REBOUND leaves its own C handler for SIGINT in place after it integrates, so Ctrl-C no longer reached Python: the
+    # web app's server, which integrates in a thread of its own, could not be stopped from its terminal.
+    nominal = realizations(two_planet_system(), 0, seed=0)[0]
+    if where == "main thread":
+        run(nominal, RunConfig(n_orbits=10))
+    else:
+        worker = threading.Thread(target=run, args=(nominal, RunConfig(n_orbits=10)))
+        worker.start()
+        worker.join()
+    with pytest.raises(KeyboardInterrupt):  # Python's handler raises it as soon as raise_signal returns
+        signal.raise_signal(signal.SIGINT)
 
 
 def test_a_process_pool_gets_at_most_61_workers_on_windows(monkeypatch: pytest.MonkeyPatch) -> None:
