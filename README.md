@@ -618,15 +618,15 @@ Archive.
 
 **The software.** Use [CITATION.cff](https://github.com/mimitoz62/exostab/blob/main/CITATION.cff) (GitHub's
 "Cite this repository" button), and give the version you used; every `report.json` records it. The DOI
-[10.5281/zenodo.23844658](https://doi.org/10.5281/zenodo.23844658) always resolves to the latest version, and each version also has its own. In BibTeX, with the DOI of version 1.1.0:
+[10.5281/zenodo.23844658](https://doi.org/10.5281/zenodo.23844658) always resolves to the latest version, and each version also has its own. In BibTeX, with the DOI of version 1.1.1:
 
 ```bibtex
 @software{oz_exostab,
   author  = {{\"O}z, Mehmet},
   title   = {exostab: honest, traceable orbital-stability indicators for known exoplanet systems},
   year    = {2026},
-  version = {1.1.0},
-  doi     = {10.5281/zenodo.24020765},
+  version = {1.1.1},
+  doi     = {10.5281/zenodo.24021878},
   url     = {https://github.com/mimitoz62/exostab}
 }
 ```

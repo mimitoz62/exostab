@@ -40,9 +40,12 @@ the release still reaches GitHub and Zenodo. Once PyPI accepts the upload, open 
 *Re-run failed jobs* (GitHub allows this for 30 days after the run): it uploads the files of that release. Otherwise the
 next release uploads. Either way, the install lines can then say `pip install exostab`.
 
-PyPI refused 1.0.1 on 2026-10-31 with `invalid-publisher`: the token carried the repository `mimitoz62/exostab`, the
-workflow `release.yml` and the environment `pypi`, so PyPI had no pending publisher with exactly the values of step 2.
-Check them at https://pypi.org/manage/account/publishing/.
+PyPI refused 1.0.1 on 2026-10-31 and 1.1.1 on 2026-11-06 with `invalid-publisher`: the token carried the repository
+`mimitoz62/exostab`, the workflow `release.yml` and the environment `pypi`, so PyPI had no pending publisher with exactly
+the values of step 2. Check them at https://pypi.org/manage/account/publishing/. `PUBLISH_PYPI` stays `true`, so once
+they match, *Re-run failed jobs* on the Release run of 1.1.1
+(https://github.com/mimitoz62/exostab/actions/runs/42289845513, until 6 December 2026) uploads 1.1.1, and after that
+date the next release uploads.
 
 ## Zenodo (software DOI)
 
