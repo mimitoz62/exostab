@@ -49,7 +49,7 @@ catalog's Zenodo dataset (RELEASING.md).
 - [x] Optional SPOCK indicator for 3+ planet systems, in a separate environment because SPOCK needs REBOUND < 5
   (D23, #4). Whether to keep this design is Mehmet's decision (D23).
 
-## v1.0 (done, except the Zenodo DOI)
+## v1.0 (done)
 
 - [x] Weekly GitHub Actions catalog job (all archive systems with ≥ 2 planets, per-system time cap) →
   `catalog.csv`, `catalog.parquet` and `catalog_meta.json` on the branch `catalog-data` (not release assets,
@@ -57,4 +57,4 @@ catalog's Zenodo dataset (RELEASING.md).
 - [x] MkDocs Material site on GitHub Pages (Quickstart, CLI reference, Web app, Methods, Data assumptions,
   Validation, Catalog, FAQ, Citing, Changelog).
 - [x] `CITATION.cff` and a draft `paper/paper.md` (JOSS; not submittable before about April 2027, D22).
-- [ ] Zenodo DOI with the first archived release.
+- [x] Zenodo DOI with the first archived release (10.5281/zenodo.23844658, release 1.0.1).
