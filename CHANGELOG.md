@@ -23,8 +23,8 @@ All notable changes to this project are documented here. The format follows
 - The output folder is tested with a file of exostab's own instead of `tempfile`, which Python 3.10 to 3.12 on Windows
   retry for ever in a folder that refuses new files. A result file that another program keeps open, such as a CSV open
   in Excel on Windows, is now found before the run instead of when the results are written.
-- SPOCK: the worker's output is read as UTF-8 at both ends, so a failing worker's message in another encoding no longer
-  ends the run with a traceback (or, on Windows, loses the message).
+- SPOCK: the worker's output is UTF-8 at both ends, with undecodable bytes replaced, so a failing worker's message can no
+  longer end the run with a traceback.
 - The shell scripts keep LF line endings in a Windows checkout (`.gitattributes`), and `scripts/catalog_findings.py`
   reads a catalog that Windows PowerShell 5.1 saved as UTF-16 with `>`.
 - Windows: `check` and `sweep` use at most 61 worker processes, the most that Python's process pool accepts there; more

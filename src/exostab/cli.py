@@ -169,8 +169,7 @@ def _output_folder(out: Path, files: Iterable[str]) -> Path:
         try:
             # Opening for writing, without truncating, also finds a file that another program keeps locked, such as
             # a CSV open in Excel on Windows, which os.access does not see.
-            with target.open("r+b"):
-                pass
+            os.close(os.open(target, os.O_WRONLY))
         except FileNotFoundError:
             pass
         except OSError as exc:

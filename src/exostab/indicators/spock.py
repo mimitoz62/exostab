@@ -80,8 +80,8 @@ def predict(
     """SPOCK stability estimates for each realization, and the versions used by the worker."""
     payload = json.dumps({"systems": [_request(r) for r in reals], "n_jobs": 1})
     try:
-        # UTF-8 at both ends: otherwise both use the locale's code page (cp1252 on Windows), and a byte of a
-        # failing worker's message that the code page cannot decode lost the whole message.
+        # UTF-8 at both ends, with undecodable bytes replaced: otherwise both use the locale's encoding, and bytes it
+        # cannot decode (from a C library, or a worker with PYTHONIOENCODING set) ended the run with a traceback.
         proc = subprocess.run(
             [python, str(WORKER)],
             input=payload,
