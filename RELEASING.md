@@ -156,14 +156,14 @@ workflow so the catalog page is updated. The full log is in the run's `catalog` 
      release date, then copy the file.
 
    Also change the version in these places:
-   - `@v1.1.0` in the install lines of `README.md`, `overrides/home.html`, `docs/index.md`, `docs/quickstart.md` and
+   - `@v1.1.1` in the install lines of `README.md`, `overrides/home.html`, `docs/index.md`, `docs/quickstart.md` and
      `docs/web.md`, and in the first code cell and the last text cell of `examples/exostab_quickstart.ipynb`;
-   - `@v1.1.0` in the first code cell of `examples/exostab_exercise.ipynb`;
-   - `v1.1.0` and `1.1.0` in the wheel URLs of `README.md`, `docs/quickstart.md` and `.binder/requirements.txt`;
-   - `v1.1.0` in the `raw.githubusercontent.com` URLs: the example file in `README.md`, `docs/index.md` and
+   - `@v1.1.1` in the first code cell of `examples/exostab_exercise.ipynb`;
+   - `v1.1.1` and `1.1.1` in the wheel URLs of `README.md`, `docs/quickstart.md` and `.binder/requirements.txt`;
+   - `v1.1.1` in the `raw.githubusercontent.com` URLs: the example file in `README.md`, `docs/index.md` and
      `docs/quickstart.md`, and the SPOCK script in `README.md`;
-   - "release 1.1.0" in the text of `README.md` and `docs/quickstart.md`, and "Version 1.1.0" in `overrides/home.html`;
-   - `"version": "1.1.0"` in the structured data of `overrides/home.html`.
+   - "release 1.1.1" in the text of `README.md` and `docs/quickstart.md`, and "Version 1.1.1" in `overrides/home.html`;
+   - `"version": "1.1.1"` in the structured data of `overrides/home.html`.
 
    Re-read the text of the notebooks and the answer notes in `docs/exercise.md`: they quote results and the snapshot
    date of the release the notebooks install, and the notes were run with 1.0.1.

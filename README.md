@@ -43,7 +43,7 @@ Or install it (Python 3.10 or newer, and git) and check a system:
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.1.0"
+pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.1.1"
 exostab check "TRAPPIST-1"
 ```
 
@@ -96,7 +96,7 @@ cache). `--offline` uses the snapshot of 22 well-known systems that ships with e
 archive:
 
 ```bash
-uvx --from git+https://github.com/mimitoz62/exostab@v1.1.0 exostab check "TRAPPIST-1" --offline
+uvx --from git+https://github.com/mimitoz62/exostab@v1.1.1 exostab check "TRAPPIST-1" --offline
 ```
 
 **Or install it** and check a multi-planet system from the archive, by host or planet name. You need Python 3.10 or
@@ -107,7 +107,7 @@ without git.
 python3 --version
 python3 -m venv .venv
 source .venv/bin/activate
-pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.1.0"
+pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.1.1"
 exostab check "TRAPPIST-1"
 ```
 
@@ -288,10 +288,10 @@ limit. The Note, which had no energy criterion, found 134 regular, 57 chaotic an
 python3 --version
 python3 -m venv .venv
 source .venv/bin/activate
-pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.1.0"
+pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.1.1"
 ```
 
-This installs release 1.1.0 from GitHub. exostab needs Python 3.10 or newer; 3.10–3.14 are tested on Linux and macOS
+This installs release 1.1.1 from GitHub. exostab needs Python 3.10 or newer; 3.10–3.14 are tested on Linux and macOS
 in continuous integration, and 3.10 and 3.14 on Windows. The first line shows your version, and `/usr/bin/python3` on
 macOS is 3.9. If yours is older than 3.10, install a newer Python first, for example from
 [python.org](https://www.python.org/downloads/). In a new terminal, run the `source` line again. A package on PyPI is
@@ -303,7 +303,7 @@ On Windows, in Command Prompt:
 py --version
 py -m venv .venv
 .venv\Scripts\activate.bat
-pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.1.0"
+pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.1.1"
 ```
 
 `py` is the launcher that the installer from python.org adds. In PowerShell the activation line is
@@ -313,18 +313,18 @@ choice. The [FAQ](https://mimitoz62.github.io/exostab/faq/) says what else diffe
 The `pip` line needs git. Without git, install the wheel of the release; `uvx --from` takes the same URL:
 
 ```bash
-pip install https://github.com/mimitoz62/exostab/releases/download/v1.1.0/exostab-1.1.0-py3-none-any.whl
+pip install https://github.com/mimitoz62/exostab/releases/download/v1.1.1/exostab-1.1.1-py3-none-any.whl
 ```
 
 | Optional extra | What it adds | Install |
 |---|---|---|
-| `web` | The Streamlit web app (Streamlit, Plotly) | `pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.1.0"` |
-| `catalog` | Parquet output for `exostab catalog build` (pyarrow) | `pip install "exostab[catalog] @ git+https://github.com/mimitoz62/exostab@v1.1.0"` |
+| `web` | The Streamlit web app (Streamlit, Plotly) | `pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.1.1"` |
+| `catalog` | Parquet output for `exostab catalog build` (pyarrow) | `pip install "exostab[catalog] @ git+https://github.com/mimitoz62/exostab@v1.1.1"` |
 
 Without git, put the wheel's URL after the `@`:
 
 ```bash
-pip install "exostab[web] @ https://github.com/mimitoz62/exostab/releases/download/v1.1.0/exostab-1.1.0-py3-none-any.whl"
+pip install "exostab[web] @ https://github.com/mimitoz62/exostab/releases/download/v1.1.1/exostab-1.1.1-py3-none-any.whl"
 ```
 
 <details>
@@ -338,7 +338,7 @@ compiler, download the setup script (or run it from a clone of the repository), 
 point exostab at the new environment:
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/mimitoz62/exostab/v1.1.0/scripts/make_spock_env.sh
+curl -fsSLO https://raw.githubusercontent.com/mimitoz62/exostab/v1.1.1/scripts/make_spock_env.sh
 bash make_spock_env.sh
 export EXOSTAB_SPOCK_PYTHON=~/.exostab-spock/bin/python
 exostab check "TRAPPIST-1" --spock
@@ -398,7 +398,7 @@ publications) and one inconclusive (HD 10180).
 The `examples/` folder exists only in a clone of the repository. To get the example file without one:
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/mimitoz62/exostab/v1.1.0/examples/two_planet.yaml
+curl -fsSLO https://raw.githubusercontent.com/mimitoz62/exostab/v1.1.1/examples/two_planet.yaml
 exostab check --from-file two_planet.yaml
 ```
 
@@ -457,7 +457,7 @@ copy a **shareable link** that encodes the system, your edits, the seed and the 
 It runs on your own computer, in the virtual environment from [Install](#install):
 
 ```bash
-pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.1.0"
+pip install "exostab[web] @ git+https://github.com/mimitoz62/exostab@v1.1.1"
 python -m exostab.web
 ```
 

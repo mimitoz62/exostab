@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-11-06
+
 ### Added
 
 - Windows: continuous integration runs the tests and the command line on Windows with Python 3.10 and 3.14. The README
