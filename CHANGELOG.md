@@ -8,6 +8,11 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- A name that is not found: the message gives the date of the archive table, since a system published after it is the
+  usual reason, and the command line says what to do: `--refresh` downloads the current table, and `--from-file` checks
+  a system from a file of its parameters. For the Sun or the Solar System it points to `examples/solar_system.yaml`.
+- The last lines of `exostab check` give the whole time, with the part spent on the analysis (a first run also
+  downloads the table and builds a font cache), and the address of the guide to reading the card.
 - The BibTeX of the software has the DOI of version 1.1.1, and `main` is 1.1.2.dev0.
 
 ## [1.1.1] - 2026-11-06
