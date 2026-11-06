@@ -35,10 +35,14 @@ PyPI; a version already released on GitHub is not uploaded afterwards.
 
 To pause PyPI uploads, delete the variable or set it to anything other than `true`.
 
-The upload of 1.0.1 on 2026-10-31 failed with `invalid-publisher`, which means PyPI has no pending publisher with
-exactly the values of step 2. So `PUBLISH_PYPI` is unset, and 1.0.1 went to GitHub and Zenodo only. To finish: check
-step 2 at https://pypi.org/manage/account/publishing/, set the variable, and release the next version, whose install
-lines can then say `pip install exostab`.
+The GitHub release does not wait for PyPI. If PyPI refuses an upload, only the job `pypi` of the Release run fails, and
+the release still reaches GitHub and Zenodo. Once PyPI accepts the upload, open that run in the Actions tab and press
+*Re-run failed jobs* (GitHub allows this for 30 days after the run): it uploads the files of that release. Otherwise the
+next release uploads. Either way, the install lines can then say `pip install exostab`.
+
+PyPI refused 1.0.1 on 2026-10-31 with `invalid-publisher`: the token carried the repository `mimitoz62/exostab`, the
+workflow `release.yml` and the environment `pypi`, so PyPI had no pending publisher with exactly the values of step 2.
+Check them at https://pypi.org/manage/account/publishing/.
 
 ## Zenodo (software DOI)
 
@@ -181,12 +185,12 @@ workflow so the catalog page is updated. The full log is in the run's `catalog` 
      `date-released`, and that `CHANGELOG.md` has a section for the version;
    - builds the wheel and sdist and tests the wheel on Ubuntu and macOS: ruff, mypy, the fast suite and the CLI
      with Python 3.10 and 3.14, and the validation suite (`pytest -m slow`) with Python 3.12;
-   - uploads to PyPI if `PUBLISH_PYPI` is `true`;
+   - uploads to PyPI if `PUBLISH_PYPI` is `true`; the GitHub release does not wait for this upload (PyPI above);
    - creates the GitHub release with the CHANGELOG section as notes. Zenodo archives it only if its GitHub
      integration was switched on before the release (see Zenodo above).
 6. If the workflow fails before anything is published, fix the problem on `main`, delete the tag
    (`git push --delete origin vX.Y.Z` and `git tag -d vX.Y.Z`) and tag again. Once a version is on PyPI its
-   number cannot be used again: release `X.Y.Z+1` instead.
+   number cannot be used again: release `X.Y.Z+1` instead. A failed `pypi` job alone needs no new tag (PyPI above).
 7. Announce the release only after the tag is pushed and the GitHub release exists. The `pip` and `uvx` lines in
    the README and on the documentation's landing page, the SPOCK setup script's URL, the install cell of the notebook
    and the release badge all point to the tag, and fail or read "no releases" until then. Binder cannot build until

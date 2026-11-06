@@ -126,10 +126,9 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
 
   github-release:
-    needs: [build, test, validation, pypi]
-    if: >-
-      ${{ !cancelled() && needs.build.result == 'success' && needs.test.result == 'success'
-      && needs.validation.result == 'success' && needs.pypi.result != 'failure' }}
+    # Does not wait for PyPI. If PyPI refuses the upload, only the pypi job fails; once PyPI accepts it,
+    # "Re-run failed jobs" on this run uploads the same files (RELEASING.md).
+    needs: [build, test, validation]
     runs-on: ubuntu-latest
     permissions:
       contents: write  # creating the release also triggers the Zenodo archive once the integration is enabled
