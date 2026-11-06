@@ -12,6 +12,7 @@ import csv
 import io
 import math
 import time
+import warnings
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,9 @@ TABLE = "pscomppars"
 ARCHIVE_URL = "https://exoplanetarchive.ipac.caltech.edu"  # base for the relative links in *_reflink cells
 TAP_SERVICE = "https://exoplanetarchive.ipac.caltech.edu/TAP"
 MULTI_PLANET_WHERE = "sy_pnum >= 2"
+# Seconds for each attempt to connect, and without receiving any data once connected. astroquery and pyvo set no
+# timeout, so a server that accepted the query and then stalled kept exostab waiting without end.
+CONNECT_TIMEOUT_S, READ_TIMEOUT_S = 30.0, 120.0
 
 Row = dict[str, Any]
 
@@ -83,7 +87,7 @@ def _clean(value: Any, kind: str) -> Any:
         x = float(value)
     except (TypeError, ValueError):
         return None
-    if math.isnan(x):
+    if not math.isfinite(x):  # an infinite phase or time would become a NaN angle, and stop every run at once
         return None
     return int(x) if kind == "int" else x
 
@@ -97,16 +101,38 @@ def rows_from_table(table: Any) -> list[Row]:
     return [{c: _clean(r[c], _TYPES[c]) for c in COLUMN_NAMES} for r in table]
 
 
-def fetch_rows(where: str = MULTI_PLANET_WHERE, *, attempts: int = 3, pause: float = 2.0) -> list[Row]:
-    """Query ``pscomppars`` for all planets matching ``where`` (retrying transient network errors)."""
-    from astroquery.ipac.nexsci.nasa_exoplanet_archive import NasaExoplanetArchive
+def _timeouts_on(session: Any) -> None:
+    """Give every request of a ``requests`` session a timeout, for those that set none (pyvo's)."""
+    from requests.adapters import HTTPAdapter
 
+    class TimeoutAdapter(HTTPAdapter):
+        def send(self, request: Any, **kwargs: Any) -> Any:  # type: ignore[override]
+            if kwargs.get("timeout") is None:
+                kwargs["timeout"] = (CONNECT_TIMEOUT_S, READ_TIMEOUT_S)
+            return super().send(request, **kwargs)
+
+    for prefix in ("https://", "http://"):
+        session.mount(prefix, TimeoutAdapter())
+
+
+def fetch_rows(where: str = MULTI_PLANET_WHERE, *, attempts: int = 3, pause: float = 2.0) -> list[Row]:
+    """Query ``pscomppars`` for all planets matching ``where`` (retrying transient network errors).
+
+    A result the service reports as cut (QUERY_STATUS=OVERFLOW, which pyvo only warns about) is an error: it would
+    otherwise replace a good cache and silently drop planets.
+    """
+    from astroquery.ipac.nexsci.nasa_exoplanet_archive import NasaExoplanetArchive
+    from pyvo.dal.exceptions import DALOverflowWarning  # type: ignore[import-untyped]
+
+    _timeouts_on(NasaExoplanetArchive._session)
     last: Exception | None = None
     for i in range(attempts):
         try:
-            table = NasaExoplanetArchive.query_criteria(
-                table=TABLE, select=",".join(COLUMN_NAMES), where=where, cache=False
-            )
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", DALOverflowWarning)
+                table = NasaExoplanetArchive.query_criteria(
+                    table=TABLE, select=",".join(COLUMN_NAMES), where=where, cache=False
+                )
             return rows_from_table(table)
         except Exception as exc:  # network errors surface as many different exception types
             last = exc
@@ -131,7 +157,14 @@ def read_csv(source: Path | str) -> list[Row]:
     missing = [c for c in COLUMN_NAMES if c not in fields]
     if missing:
         raise ArchiveError(f"table file lacks columns {missing}")
-    return [{c: _clean(r[c] if r[c] != "" else None, _TYPES[c]) for c in COLUMN_NAMES} for r in reader]
+    rows = []
+    for r in reader:
+        if any(
+            r[c] is None for c in COLUMN_NAMES
+        ):  # csv gives None, not "", for a field the line does not reach
+            raise ArchiveError(f"table file has a cut row, at line {reader.line_num}")
+        rows.append({c: _clean(r[c] if r[c] != "" else None, _TYPES[c]) for c in COLUMN_NAMES})
+    return rows
 
 
 def group_by_host(rows: Sequence[Row]) -> dict[str, list[Row]]:

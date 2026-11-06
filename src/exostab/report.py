@@ -31,7 +31,7 @@ from . import __version__
 from .indicators import IndicatorResult, Verdict
 from .indicators.megno import ENERGY_ERROR_MAX, MEGNO_CHAOTIC
 from .integrate import RunResult
-from .models import Provenance, System, Value
+from .models import MassKind, Provenance, System, Value
 from .sampling import E_MAX, SIN_I_MIN, Realization
 from .units import MEARTH_IN_MSUN, format_count, format_years, years_to_days
 
@@ -316,13 +316,13 @@ def _fmt(v: Value | None, fmt: str = "{:.4g}", scale: float = 1.0) -> str:
 def _planet_table(report: Report) -> Table:
     t = Table(title=None, box=None, pad_edge=False, header_style="bold")
     for col in ("Planet", "P (d)", "Mass (M⊕)", "e", "ω (deg)", "Phase"):
-        t.add_column(col)
+        t.add_column(col, overflow="fold")
     for p in report.system.planets:
         mass = _fmt(p.mass_earth, "{:.3g}")
         if p.mass_kind.value == "minimum":
             mass += " (m sin i)"
         t.add_row(
-            p.name,
+            Text(p.name),  # a name is text, not markup
             _fmt(p.period_days, "{:.6g}"),
             mass,
             _fmt(p.eccentricity, "{:.3g}"),
@@ -353,12 +353,12 @@ def _indicator_block(report: Report) -> Group:
     return Group(*parts)
 
 
-def group_flags(report: Report) -> list[tuple[str, str]]:
+def system_flags(system: System) -> list[tuple[str, str]]:
     """Completion flags with identical messages merged: ("b, c, d", message)."""
-    host = report.system.star.name
-    order = {p.name: k for k, p in enumerate(report.system.planets)}
+    host = system.star.name
+    order = {p.name: k for k, p in enumerate(system.planets)}
     groups: dict[str, list[str]] = {}
-    for f in report.system.flags:
+    for f in system.flags:
         groups.setdefault(f.message, []).append(f.planet or "system")
     out = []
     for message, names in groups.items():
@@ -366,6 +366,34 @@ def group_flags(report: Report) -> list[tuple[str, str]]:
         short = [n[len(host) + 1 :] if n.startswith(host + " ") else n for n in unique]
         out.append((", ".join(short), message))
     return out
+
+
+def group_flags(report: Report) -> list[tuple[str, str]]:
+    """The completion flags of a report, see :func:`system_flags`."""
+    return system_flags(report.system)
+
+
+def flags_table(system: System) -> Table:
+    """The completion flags, one row per message. Names can be long, so both columns wrap, or the messages could
+    be left with no room at all."""
+    flags = Table(box=None, pad_edge=False, show_header=False)
+    flags.add_column(style="dim", overflow="fold")
+    flags.add_column(style="dim", overflow="fold")
+    for who, message in system_flags(system):
+        flags.add_row(Text(who), Text(message))
+    return flags
+
+
+def _prior_note(report: Report) -> str:
+    """What the inclination prior did: report.json is not the only place that should say."""
+    s = report.settings
+    if s.inclination_prior == "none":
+        return ""
+    if s.draws == 0:
+        return f" The {s.inclination_prior} inclination prior has no effect: it applies only to draws."
+    if not any(p.mass_kind is MassKind.MINIMUM for p in report.system.planets):
+        return f" The {s.inclination_prior} inclination prior has no effect: no mass here is a minimum mass."
+    return f" Inclinations drawn with the {s.inclination_prior} prior (sin i ≥ {s.sin_i_min:g})."
 
 
 def render(report: Report, console: Console, *, outputs: list[Path] | None = None) -> None:
@@ -379,11 +407,6 @@ def render(report: Report, console: Console, *, outputs: list[Path] | None = Non
     header.append(
         f"data: {src.source}" + (f" ({src.retrieved_utc[:10]})" if src.retrieved_utc else ""), style="dim"
     )
-    flags = Table(box=None, pad_edge=False, show_header=False)
-    flags.add_column(style="dim", no_wrap=True)
-    flags.add_column(style="dim")
-    for who, message in group_flags(report):
-        flags.add_row(who, message)
     overall = Text("Overall: ", style="bold")
     overall.append_text(_verdict_text(report.overall.verdict))
     overall.append("  " + report.overall.summary)
@@ -391,9 +414,10 @@ def render(report: Report, console: Console, *, outputs: list[Path] | None = Non
         f"N-body: {format_count(s.orbits)} orbits of the innermost planet = {format_years(s.t_end_yr)}, WHFast dt = "
         f"{(s.dt_yr or 0) * 365.25:.3g} d"
         + (", checked with IAS15" if s.check_integrator else "")
-        + f"; {s.draws} Monte Carlo draws; seed {s.seed}; MEGNO chaotic at <Y> ≥ {s.megno_threshold:g}; "
-        f"energy-error limit {s.energy_error_max:.0e}."
+        + f"; {s.draws} Monte Carlo {'draw' if s.draws == 1 else 'draws'}; seed {s.seed}; MEGNO chaotic at <Y> ≥ "
+        f"{s.megno_threshold:g}; energy-error limit {s.energy_error_max:.0e}."
         + (f" Run length and draws chosen for a {s.budget_s:g} s budget." if s.budget_s else "")
+        + _prior_note(report)
     )
     parts: list[Any] = [
         header,
@@ -407,7 +431,11 @@ def render(report: Report, console: Console, *, outputs: list[Path] | None = Non
         Text(horizon, style="dim"),
     ]
     if report.system.flags:
-        parts += [Text(""), Text("Data completion (applied automatically):", style="bold dim"), flags]
+        parts += [
+            Text(""),
+            Text("Data completion (applied automatically):", style="bold dim"),
+            flags_table(report.system),
+        ]
     if src.note:
         parts += [Text(f"Note: {src.note}", style="yellow")]
     if outputs:

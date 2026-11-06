@@ -20,8 +20,7 @@ import numpy as np
 from .indicators import amd, hill
 from .indicators.megno import classify_run, megno_seed, run_many
 from .integrate import RunConfig
-from .models import System
-from .plots import sweep_figure
+from .models import MASS_MAX_EARTH, PERIOD_MAX_DAYS, PERIOD_MIN_DAYS, System, UnusableParametersError
 from .report import software_record
 from .sampling import E_MAX, Realization, realizations
 from .units import days_to_years, mearth_to_msun
@@ -51,6 +50,20 @@ def check_value(param: str, value: float) -> None:
         )
     if param in ("mass", "period") and value <= 0:
         raise ValueError(f"{param} must be positive, got {value}")
+    if param == "mass" and value > MASS_MAX_EARTH:
+        raise ValueError(f"mass must be at most {MASS_MAX_EARTH:g} Earth masses, got {value}")
+    if param == "period" and not PERIOD_MIN_DAYS <= value <= PERIOD_MAX_DAYS:
+        raise ValueError(f"period must be in [{PERIOD_MIN_DAYS:g}, {PERIOD_MAX_DAYS:g}] days, got {value}")
+
+
+def check_range(param: str, value_range: tuple[float, float]) -> None:
+    """Raise ValueError unless every value between the two ends is valid (each valid set is an interval)."""
+    for end in value_range:
+        check_value(param, end)
+    if not math.isfinite(value_range[1] - value_range[0]):
+        raise ValueError(
+            f"the two ends of the range are too far apart: {value_range[0]} and {value_range[1]}"
+        )
 
 
 def _modified(nominal: Realization, index: int, param: str, value: float) -> Realization:
@@ -78,20 +91,24 @@ def run_sweep(
     jobs: int | None = None,
 ) -> list[dict[str, Any]]:
     """Indicators for ``steps`` values of ``param`` between the two ends of ``value_range``."""
-    for end in value_range:  # every swept value lies between the two ends, and each valid set is an interval
-        check_value(param, end)
+    check_range(param, value_range)
     target = system.planet(planet).name
     nominal = realizations(system, 0, seed)[0]
+    if param == "mass" and mearth_to_msun(max(value_range)) >= nominal.m_star:
+        raise UnusableParametersError(
+            f"{target}: a mass of {max(value_range):g} Earth masses is not below the stellar mass"
+        )
     index = [b.name for b in nominal.bodies].index(target)
     values = np.linspace(value_range[0], value_range[1], steps)
     reals = [_modified(nominal, index, param, float(v)) for v in values]
+    # The analytic indicators come first: if they cannot evaluate a value, no integration has been wasted.
+    tables = [hill.pair_table(r) for r in reals]
+    analyses = [amd.analyse(r) for r in reals]
     config = _run_config(orbits)
     runs = run_many([(r, replace(config, megno_seed=megno_seed(seed, 0))) for r in reals], jobs)
     rows = []
-    for v, r, res in zip(values, reals, runs, strict=True):
-        pairs = hill.pair_table(r)
+    for v, r, res, pairs, a in zip(values, reals, runs, tables, analyses, strict=True):
         closest = min(pairs, key=lambda p: p["separation_hill"])
-        a = amd.analyse(r)
         rows.append(
             {
                 "value": float(v),
@@ -125,6 +142,10 @@ def write_sweep(
     command: str | None = None,
 ) -> list[Path]:
     """sweep.csv (one row per value), sweep.json (everything needed to repeat the sweep) and sweep.png."""
+    from .plots import (
+        sweep_figure,  # here, so that a broken MPLBACKEND or matplotlib matters only for figures
+    )
+
     csv_path = out_dir / "sweep.csv"
     with csv_path.open("w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=list(rows[0]))

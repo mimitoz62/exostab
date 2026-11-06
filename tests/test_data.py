@@ -3,6 +3,11 @@
 from __future__ import annotations
 
 import json
+import os
+import random
+import socket
+import threading
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -148,6 +153,14 @@ def test_clean_values() -> None:
     assert archive._clean(2.0, "int") == 2
 
 
+@pytest.mark.parametrize("cell", ["inf", "-inf", "1e999", float("inf")])
+@pytest.mark.parametrize("kind", ["float", "int"])
+def test_a_non_finite_cell_is_missing(cell: Any, kind: str) -> None:
+    # An infinite time or angle became a NaN phase, which stopped every run at once and gave overall UNSTABLE, and
+    # inf in an integer column gave an OverflowError.
+    assert archive._clean(cell, kind) is None
+
+
 def test_fetch_rows_retries_then_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     from astroquery.ipac.nexsci.nasa_exoplanet_archive import NasaExoplanetArchive
 
@@ -162,6 +175,46 @@ def test_fetch_rows_retries_then_raises(monkeypatch: pytest.MonkeyPatch) -> None
         archive.fetch_rows(attempts=2, pause=0.0)
     assert len(calls) == 2
     assert calls[0]["table"] == "pscomppars"
+
+
+def test_fetch_rows_refuses_a_result_the_service_reports_as_cut(monkeypatch: pytest.MonkeyPatch) -> None:
+    # QUERY_STATUS=OVERFLOW is only a warning in pyvo: the 16 rows that came replaced the good cache.
+    from astroquery.ipac.nexsci.nasa_exoplanet_archive import NasaExoplanetArchive
+    from pyvo.dal.exceptions import DALOverflowWarning
+
+    def cut(**kw: Any) -> Table:
+        warnings.warn("Result set limited", category=DALOverflowWarning, stacklevel=2)
+        return Table()
+
+    monkeypatch.setattr(NasaExoplanetArchive, "query_criteria", cut)
+    with pytest.raises(archive.ArchiveError, match="Result set limited"):
+        archive.fetch_rows(attempts=1)
+
+
+def test_fetch_rows_gives_up_on_a_stalled_connection(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A server that accepts the query and never answers: `exostab list` waited for ever, in silence.
+    from astroquery.ipac.nexsci.nasa_exoplanet_archive import NasaExoplanetArchive
+
+    with socket.socket() as server:
+        server.bind(("127.0.0.1", 0))
+        server.listen()
+        monkeypatch.setattr(
+            NasaExoplanetArchive, "URL_TAP", f"http://127.0.0.1:{server.getsockname()[1]}/TAP"
+        )
+        monkeypatch.setattr(archive, "READ_TIMEOUT_S", 0.5)
+        errors: list[Exception] = []
+
+        def fetch() -> None:
+            try:
+                archive.fetch_rows(attempts=1)
+            except archive.ArchiveError as exc:
+                errors.append(exc)
+
+        thread = threading.Thread(target=fetch, daemon=True)
+        thread.start()
+        thread.join(timeout=30)
+        assert not thread.is_alive(), "still waiting after 30 s"
+    assert errors and "could not query" in str(errors[0])
 
 
 # ------------------------------------------------------------------------------------------ completion rules
@@ -454,6 +507,130 @@ def test_stellar_mass_of_the_publication_of_the_measured_masses() -> None:
     assert system_from_rows(au_mic, INFO).star.mass_msun.value == 0.635
 
 
+def test_the_flag_says_when_only_the_sources_of_one_stellar_mass_differ() -> None:
+    # HAT-P-2: "The planet rows give different stellar masses" followed by the same value twice.
+    same = [row("Host b"), row("Host c", pl_orbper=25.0, st_mass_reflink=REF_B)]
+    flag = next(f for f in system_from_rows(same, INFO).flags if f.rule == "star_mass_inconsistent")
+    assert "one stellar mass with different errors or sources" in flag.message
+    assert "different stellar masses" not in flag.message
+    other = [row("Host b"), row("Host c", pl_orbper=25.0, st_mass=0.5, st_mass_reflink=REF_B)]
+    flag = next(f for f in system_from_rows(other, INFO).flags if f.rule == "star_mass_inconsistent")
+    assert "different stellar masses" in flag.message
+
+
+@pytest.mark.parametrize(
+    ("kw", "match"),
+    [
+        ({"pl_bmasse": 0.0}, r"Host c: the archive's mass \(pl_bmasse\) is 0"),
+        ({"pl_bmasse": -3.0}, r"Host c: the archive's mass \(pl_bmasse\) is -3"),
+        ({"pl_orbper": 0.0}, r"Host c: the archive's orbital period \(pl_orbper\) is 0"),
+        ({"pl_orbper": -5.0}, r"Host c: the archive's orbital period \(pl_orbper\) is -5"),
+        ({"pl_orbper": None, "pl_orbsmax": 0.0}, r"\(pl_orbsmax\) is 0"),
+        ({"pl_orbper": None, "pl_orbsmax": -1.0}, r"\(pl_orbsmax\) is -1"),
+        ({"pl_bmasse": None, "pl_rade": -1.0}, r"\(pl_rade\) is -1"),
+    ],
+)
+def test_impossible_cells_are_rejected_with_planet_and_column(kw: dict[str, Any], match: str) -> None:
+    # A pydantic traceback, a ZeroDivisionError or "math domain error", and a pydantic dump as a catalog's reason.
+    with pytest.raises(IncompleteSystemError, match=match):
+        system_from_rows(pair(**kw), INFO)
+
+
+def test_an_impossible_stellar_mass_is_rejected() -> None:
+    rows = [row("Host b", st_mass=0.0), row("Host c", pl_orbper=25.0, st_mass=0.0)]
+    with pytest.raises(IncompleteSystemError, match=r"Host: the archive's stellar mass \(st_mass\) is 0"):
+        system_from_rows(rows, INFO)
+
+
+@pytest.mark.parametrize(
+    ("value", "said"), [("M-R Relationship", "gives 'M-R Relationship'"), (None, "says nothing")]
+)
+def test_an_unknown_mass_kind_is_flagged_and_stays_true(value: str | None, said: str) -> None:
+    # 1,179 of 2,663 rows depend on the exact spelling of pl_bmassprov, which the archive does not document (D18).
+    s = system_from_rows(pair(pl_bmassprov=value), INFO)
+    assert (
+        s.planets[1].mass_kind is MassKind.TRUE and s.planets[1].mass_earth.provenance is Provenance.MEASURED
+    )
+    flag = next(f for f in s.flags if f.rule == "mass_kind_unknown")
+    assert flag.planet == "Host c" and said in flag.message
+    assert "mass_kind_unknown" not in rules(pair())
+
+
+def test_the_reason_for_a_rejection_does_not_depend_on_the_row_order() -> None:
+    # The archive returns rows in no fixed order, and catalog.csv and the system pages show this text.
+    rows = [
+        row("Host a", pl_bmasse=None),
+        row("Host b", pl_orbper=None),
+        row("Host c", pl_orbper=25.0),
+    ]
+    reasons = set()
+    for seed in range(12):
+        shuffled = random.Random(seed).sample(rows, len(rows))
+        with pytest.raises(IncompleteSystemError) as err:
+            system_from_rows(shuffled, INFO)
+        reasons.add(str(err.value))
+    assert len(reasons) == 1
+
+
+def test_the_flags_of_an_accepted_system_keep_the_row_order() -> None:
+    s = system_from_rows(list(reversed(pair(pl_orbeccen=None))), INFO)
+    assert [p.name for p in s.planets] == ["Host b", "Host c"]
+    assert next(f.planet for f in s.flags if f.rule == "eccentricity_assumed_zero") == "Host c"
+
+
+def test_messages_do_not_assume_the_command_line() -> None:
+    # The same text reaches the web app, and a report downloaded from it.
+    s = system_from_rows(pair(pl_bmassprov="Msini"), INFO)
+    assert "an inclination prior" in next(f.message for f in s.flags if f.rule == "minimum_mass")
+    s = system_from_rows(pair(pl_bmassprov="Msini", tran_flag=1), INFO)
+    s2 = system_from_rows(pair(pl_bmasselim=-1), INFO)
+    for f in (*s.flags, *s2.flags):
+        assert "--" not in f.message
+    no_star = [row("Host b", st_mass=None), row("Host c", pl_orbper=25.0, st_mass=None)]
+    limit = [row("Host b", st_masslim=1), row("Host c", pl_orbper=25.0, st_masslim=1)]
+    imaged = pair(pl_orbper=None, pl_orbsmax=5.0, discoverymethod="Imaging")
+    for rows in (no_star, limit, imaged):
+        with pytest.raises(IncompleteSystemError) as err:
+            system_from_rows(rows, INFO)
+        assert "--" not in str(err.value) and "YAML system file" in str(err.value)
+
+
+def test_a_reference_time_far_from_the_epoch_is_flagged() -> None:
+    # HD 11964 c and HD 4203 c, from a time of periastron: the phase is uncertain by many turns at the common epoch,
+    # while the card says "periastron". A flag, with the numbers unchanged.
+    def far(reference: float) -> list[dict[str, Any]]:
+        return [
+            row("Host b", tran_flag=1, pl_tranmid=2455000.0, pl_tranmiderr1=1e-3, pl_tranmiderr2=-1e-3),
+            row(
+                "Host c",
+                pl_orbper=25.0,
+                pl_orbpererr1=0.01,
+                pl_orbpererr2=-0.01,
+                tran_flag=1,
+                pl_tranmid=reference,
+                pl_tranmiderr1=1e-3,
+                pl_tranmiderr2=-1e-3,
+            ),
+        ]
+
+    s = system_from_rows(far(5000.0), INFO)
+    flagged = [f for f in s.flags if f.rule == "phase_uncertain_at_epoch"]
+    assert len(flagged) == 1 and "full turns" in flagged[0].message
+    assert "phase_uncertain_at_epoch" not in {f.rule for f in system_from_rows(far(2455010.0), INFO).flags}
+
+
+@pytest.mark.parametrize(
+    "rule",
+    ["mass_kind_unknown", "phase_uncertain_at_epoch", "planet_rows_missing", "phase_random_without_omega"],
+)
+def test_new_flags_are_documented(rule: str) -> None:
+    # docs/data-assumptions.md says that its table lists every flag exostab can set.
+    page = Path(__file__).resolve().parents[1] / "docs" / "data-assumptions.md"
+    if not page.is_file():
+        pytest.skip("this page is not in the sdist")
+    assert f"`{rule}`" in page.read_text(encoding="utf-8")
+
+
 def test_controversial_flag() -> None:
     assert "controversial_planet" in rules(pair(pl_controv_flag=1))
 
@@ -610,6 +787,213 @@ def test_lookup_in_the_snapshot_says_only_the_snapshot_was_searched(monkeypatch:
     assert "not the full archive table" in message and "in the archive table" not in message
     with pytest.raises(SystemNotFoundError, match="offline snapshot"):
         load_system("Kepler-1542", offline=True)
+
+
+def test_empty_answer_keeps_the_cache_or_falls_back(monkeypatch: pytest.MonkeyPatch) -> None:
+    # An empty answer replaced a good cache: n_rows went from 2663 to 0, and `catalog build --refresh` exited 0
+    # with no systems.
+    monkeypatch.delenv("EXOSTAB_OFFLINE")
+    monkeypatch.setattr(store, "fetch_rows", lambda where: [])
+    _rows, info = load_rows()  # no cache: the snapshot, with the reason
+    assert info.kind == "snapshot" and "no rows" in (info.note or "")
+    assert not store.cache_dir().exists() or not list(store.cache_dir().iterdir())
+    monkeypatch.setattr(store, "fetch_rows", lambda where: pair())
+    load_rows()
+    good = (store.cache_dir() / store.CACHE_TABLE).read_bytes()
+    monkeypatch.setattr(store, "fetch_rows", lambda where: [])
+    with pytest.raises(archive.ArchiveError, match="no rows"):
+        load_rows(refresh=True)
+    assert (store.cache_dir() / store.CACHE_TABLE).read_bytes() == good
+
+
+def _hosts(n: int, short: int = 0) -> list[dict[str, Any]]:
+    """Rows of ``n`` single-star hosts with two planets each, of which ``short`` have lost one row."""
+    rows = []
+    for k in range(n):
+        rows.append(row(f"H{k} b", host=f"H{k}"))
+        if k >= short:
+            rows.append(row(f"H{k} c", host=f"H{k}", pl_orbper=25.0))
+    return rows
+
+
+def test_a_cut_answer_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A result cut after 16 rows: Kepler-11 kept 3 of its 6 planets, with no flag, in every later report.
+    monkeypatch.delenv("EXOSTAB_OFFLINE")
+    monkeypatch.setattr(store, "fetch_rows", lambda where: _hosts(100, short=2))
+    with pytest.raises(archive.ArchiveError, match="looks cut: 2 of 100"):
+        load_rows(refresh=True)
+    # up to 1% is taken as the archive's own gaps: the table is kept, and those hosts are flagged
+    monkeypatch.setattr(store, "fetch_rows", lambda where: _hosts(100, short=1))
+    _rows, info = load_rows(refresh=True)
+    assert info.kind == "archive" and store.load_cache() is not None
+    host_rows = [row("H b", host="H", sy_pnum=3), row("H c", host="H", sy_pnum=3, pl_orbper=25.0)]
+    flag = next(f for f in system_from_rows(host_rows, INFO).flags if f.rule == "planet_rows_missing")
+    assert "counts 3 planets" in flag.message and "2 rows" in flag.message
+    # companion stars can hold the other planets, as sy_pnum counts around every star of the system
+    host_rows = [{**r, "sy_snum": 2} for r in host_rows]
+    assert "planet_rows_missing" not in {f.rule for f in system_from_rows(host_rows, INFO).flags}
+
+
+@pytest.mark.parametrize("kind", ["a file in the way", "below a file", "read-only"])
+def test_a_cache_folder_that_cannot_be_written_keeps_the_rows(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, kind: str
+) -> None:
+    # A read-only home on a cluster: the tracebacks came after a successful download, and the rows were thrown away.
+    monkeypatch.delenv("EXOSTAB_OFFLINE")
+    monkeypatch.setattr(store, "fetch_rows", lambda where: pair())
+    blocker = tmp_path / "blocker"
+    if kind == "read-only":
+        if os.geteuid() == 0:
+            pytest.skip("root can write everywhere")
+        blocker.mkdir()
+        blocker.chmod(0o500)
+        monkeypatch.setenv("EXOSTAB_CACHE_DIR", str(blocker / "cache"))
+    else:
+        blocker.write_text("x")
+        monkeypatch.setenv(
+            "EXOSTAB_CACHE_DIR", str(blocker if kind == "a file in the way" else blocker / "cache")
+        )
+    try:
+        rows, info = load_rows()
+    finally:
+        if kind == "read-only":
+            blocker.chmod(0o700)
+    assert rows == pair() and info.kind == "archive" and info.path is None
+    assert "could not be saved in the cache folder" in (info.note or "")
+
+
+def test_a_cache_folder_that_cannot_be_searched_counts_as_no_cache(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    if os.geteuid() == 0:
+        pytest.skip("root can read everywhere")
+    monkeypatch.delenv("EXOSTAB_OFFLINE")
+    monkeypatch.setattr(store, "fetch_rows", lambda where: pair())
+    closed = tmp_path / "closed"
+    closed.mkdir()
+    closed.chmod(0o000)
+    monkeypatch.setenv("EXOSTAB_CACHE_DIR", str(closed / "cache"))
+    try:
+        assert store.load_cache() is None
+        assert load_rows()[0] == pair()
+    finally:
+        closed.chmod(0o700)
+
+
+def test_processes_filling_the_cache_at_once_do_not_disturb_each_other(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # An array job with a shared cache: 6 of 8 processes failed with FileNotFoundError on the one temporary name.
+    monkeypatch.delenv("EXOSTAB_OFFLINE")
+    monkeypatch.setattr(store, "fetch_rows", lambda where: pair())
+    write = store.write_csv
+    together = threading.Barrier(2)
+
+    def write_then_wait(rows: Any, path: Path) -> None:
+        write(rows, path)
+        together.wait(timeout=30)  # both have written their temporary file before either renames it
+
+    monkeypatch.setattr(store, "write_csv", write_then_wait)
+    errors: list[BaseException] = []
+
+    def refresh() -> None:
+        try:
+            store.refresh_cache()
+        except BaseException as exc:
+            errors.append(exc)
+
+    threads = [threading.Thread(target=refresh) for _ in range(2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=60)
+    assert errors == []
+    cached = store.load_cache()
+    assert cached is not None and cached[0] == pair()
+    assert sorted(p.name for p in store.cache_dir().iterdir()) == sorted(
+        [store.CACHE_META, store.CACHE_TABLE]
+    )
+
+
+def _good_cache(monkeypatch: pytest.MonkeyPatch) -> Path:
+    monkeypatch.delenv("EXOSTAB_OFFLINE")
+    monkeypatch.setattr(store, "fetch_rows", lambda where: pair())
+    load_rows()
+    return store.cache_dir()
+
+
+def _without_checksum(d: Path) -> None:
+    meta = json.loads((d / store.CACHE_META).read_text())
+    del meta["sha256"]
+    (d / store.CACHE_META).write_text(json.dumps(meta))
+
+
+def test_a_stray_quote_is_damage(monkeypatch: pytest.MonkeyPatch) -> None:
+    # _csv.Error: field larger than the field limit, as a traceback
+    d = _good_cache(monkeypatch)
+    table = d / store.CACHE_TABLE
+    table.write_text(table.read_text().replace("Host c", '"Host c', 1) + "x" * 200_000)
+    _without_checksum(d)
+    assert store.load_cache() is None
+
+
+@pytest.mark.parametrize("cell", ["inf", "1e999"])
+def test_an_infinite_integer_in_the_cache_gives_no_traceback(
+    monkeypatch: pytest.MonkeyPatch, cell: str
+) -> None:
+    d = _good_cache(monkeypatch)
+    table = d / store.CACHE_TABLE
+    text = table.read_text()
+    assert ",2,1," in text
+    table.write_text(text.replace(",2,1,", f",{cell},1,", 1))
+    _without_checksum(d)
+    cached = store.load_cache()
+    assert cached is not None and cached[0][0]["sy_pnum"] is None
+
+
+def test_a_non_text_date_in_the_cache_is_damage(monkeypatch: pytest.MonkeyPatch) -> None:
+    # `exostab list` failed on it with a TypeError
+    d = _good_cache(monkeypatch)
+    meta = json.loads((d / store.CACHE_META).read_text())
+    meta["retrieved_utc"] = 20260928
+    (d / store.CACHE_META).write_text(json.dumps(meta))
+    assert store.load_cache() is None
+
+
+def test_a_directory_in_place_of_the_table_is_damage(monkeypatch: pytest.MonkeyPatch) -> None:
+    d = _good_cache(monkeypatch)
+    (d / store.CACHE_TABLE).unlink()
+    (d / store.CACHE_TABLE).mkdir()
+    assert store.load_cache() is None
+    rows, info = load_rows()  # and it cannot be replaced: the rows still come, with a message
+    assert rows == pair() and "could not be saved" in (info.note or "")
+
+
+def test_a_row_cut_in_the_middle_is_damage(monkeypatch: pytest.MonkeyPatch) -> None:
+    # An old sidecar has no checksum, and the row count still matches: K2-368 b lost its pl_bmassprov and its "estimated".
+    d = _good_cache(monkeypatch)
+    table = d / store.CACHE_TABLE
+    table.write_bytes(table.read_bytes().rstrip()[:-40])
+    _without_checksum(d)
+    assert store.load_cache() is None
+
+
+def test_a_tilde_in_the_cache_folder_means_the_home_folder(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # It created a folder named ~ in every working directory, each with its own download.
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("EXOSTAB_CACHE_DIR", "~/exo-cache")
+    assert store.cache_dir() == tmp_path / "exo-cache"
+
+
+def test_a_line_says_when_the_table_is_downloaded(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("EXOSTAB_OFFLINE")
+    monkeypatch.setattr(store, "fetch_rows", lambda where: pair())
+    load_rows()
+    assert "Downloading the archive table" in capsys.readouterr().err
 
 
 def test_offline_flag_and_env() -> None:
@@ -813,6 +1197,81 @@ def test_error_text_says_either_what_to_try_or_where_to_look() -> None:
         load_system("Gliese 876", offline=True)
     with pytest.raises(SystemNotFoundError, match=r"offline snapshot.*Run exostab list"):
         load_system("Nonexistent-999", offline=True)
+
+
+@pytest.mark.parametrize(
+    ("query", "suggested"),
+    [
+        ("Kepler-10.01", "Kepler-1001"),  # another star, named only in the header of a full report
+        ("K2-3.2", "K2-32"),
+        ("KOI-35.03", "KOI-3503"),
+        ("BD+08 2823", "BD-08 2823"),
+        ("BD-08 2823", "BD+08 2823"),
+    ],
+)
+def test_digits_and_signs_stay_apart(query: str, suggested: str) -> None:
+    hosts = archive.group_by_host(
+        [row(f"{h} {letter}", host=h) for h in (suggested,) for letter in "bc"]
+        + [row(f"Kepler-10 {letter}", host="Kepler-10") for letter in "bc"]
+    )
+    with pytest.raises(SystemNotFoundError) as err:
+        names.resolve_host(
+            query, hosts
+        )  # D24: a wrong guess would check another system, so it is only suggested
+    assert suggested in err.value.suggestions
+
+
+def test_separators_between_letters_and_digits_are_still_ignored() -> None:
+    assert names.normalize("Kepler 10") == names.normalize("KEPLER-10") == "kepler10"
+    assert names.normalize("TOI-1233.01") == names.normalize("TOI 1233 01") != names.normalize("TOI-123301")
+    hosts = archive.group_by_host(
+        [row("BD-08 2823 b", host="BD-08 2823"), row("BD-08 2823 c", host="BD-08 2823")]
+    )
+    assert names.resolve_host("bd-08  2823", hosts) == "BD-08 2823"
+    assert names.resolve_host("BD-08 2823 b", hosts) == "BD-08 2823"
+
+
+def test_a_candidate_name_suggests_its_host() -> None:
+    # TOI-1233: "Did you mean: TOI-1533, TOI-1238, ...", although the planet TOI-1233.01 belongs to HD 108236.
+    hosts = archive.group_by_host(
+        [
+            row("HD 108236 b", host="HD 108236"),
+            row("TOI-1233.01", host="HD 108236", pl_letter="c"),
+            row("TOI-1533 b", host="TOI-1533"),
+            row("TOI-1533 c", host="TOI-1533"),
+        ]
+    )
+    with pytest.raises(SystemNotFoundError) as err:
+        names.resolve_host("TOI-1233", hosts)  # a suggestion, never a resolution
+    assert err.value.suggestions == ["HD 108236"]
+    assert names.resolve_host("TOI-1233.01", hosts) == "HD 108236"
+
+
+def test_the_hint_points_to_the_list_that_was_searched() -> None:
+    # `exostab list` shows the archive's 1,060 hosts, whose names still fail with --offline.
+    with pytest.raises(SystemNotFoundError, match=r"Run exostab list --offline to see the names\."):
+        load_system("Nonexistent-999", offline=True)
+
+
+@pytest.mark.parametrize("query", ["two_planet.yaml", "my system.YML", "x.json"])
+def test_a_file_name_gets_a_hint_for_from_file(query: str) -> None:
+    with pytest.raises(SystemNotFoundError, match=f"use --from-file {query}"):
+        names.resolve_host(query, SUGGESTED_HOSTS)
+
+
+def test_list_counts_a_zero_without_an_uncertainty_as_no_e() -> None:
+    # Kepler-1542: list 0, report 4 assumed.
+    rows = [
+        row("Host b", pl_orbeccen=0.0, pl_orbeccenerr1=None, pl_orbeccenerr2=None),
+        row("Host c", pl_orbper=25.0, pl_orbeccen=None),
+        row("Host d", pl_orbper=60.0, pl_orbeccen=0.0, pl_orbeccenerr1=0.05, pl_orbeccenerr2=0.0),
+        row("Host e", pl_orbper=90.0),
+    ]
+    assert list_systems(rows)[0].missing_eccentricities == 2
+    assert (
+        sum(p.eccentricity.provenance is Provenance.ASSUMED for p in system_from_rows(rows, INFO).planets)
+        == 2
+    )
 
 
 def test_list_systems_filters() -> None:

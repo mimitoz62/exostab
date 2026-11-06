@@ -53,6 +53,7 @@ import math
 from typing import Any
 
 from .._numerics import bisect
+from ..models import UnusableParametersError
 from ..sampling import Realization
 from . import DrawStats, IndicatorResult, Verdict, combine
 
@@ -141,17 +142,23 @@ def pair_table(real: Realization) -> list[dict[str, Any]]:
     for k in range(len(real.bodies) - 1):
         b1, b2 = real.bodies[k], real.bodies[k + 1]
         a1, a2 = float(a[k]), float(a[k + 1])
-        rows.append(
-            {
-                "pair": f"{b1.name} / {b2.name}",
-                "separation_hill": separation_in_hill_radii(b1.m, b2.m, a1, a2, real.m_star),
-                "gladman_critical_hill": gladman_critical_separation(b1.m, b2.m, real.m_star),
-                "gladman_margin": gladman_margin(b1.m, b2.m, a1, a2, b1.e, b2.e, real.m_star),
-                "orbits_cross": a1 * (1 + b1.e) >= a2 * (1 - b2.e),
-                "required_separation_hill": required_separation(b1.m, b2.m, b1.e, b2.e, real.m_star),
-                "e_max": max(b1.e, b2.e),
-            }
-        )
+        try:
+            rows.append(
+                {
+                    "pair": f"{b1.name} / {b2.name}",
+                    "separation_hill": separation_in_hill_radii(b1.m, b2.m, a1, a2, real.m_star),
+                    "gladman_critical_hill": gladman_critical_separation(b1.m, b2.m, real.m_star),
+                    "gladman_margin": gladman_margin(b1.m, b2.m, a1, a2, b1.e, b2.e, real.m_star),
+                    "orbits_cross": a1 * (1 + b1.e) >= a2 * (1 - b2.e),
+                    "required_separation_hill": required_separation(b1.m, b2.m, b1.e, b2.e, real.m_star),
+                    "e_max": max(b1.e, b2.e),
+                }
+            )
+        except (ValueError, ArithmeticError) as exc:
+            raise UnusableParametersError(
+                f"{b1.name} / {b2.name}: the Hill limit cannot be evaluated in double precision for these masses "
+                f"({b1.m:.3g} and {b2.m:.3g} solar masses around {real.m_star:.3g})"
+            ) from exc
     return rows
 
 

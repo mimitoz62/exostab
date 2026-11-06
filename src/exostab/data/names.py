@@ -8,11 +8,15 @@ from collections.abc import Collection, Iterable, Mapping, Sequence
 
 from .archive import Row
 
-_NON_ALNUM = re.compile(r"[^0-9a-z]+")
+_NON_ALNUM = re.compile(r"[^0-9a-z+]+")
+_BETWEEN_DIGITS = re.compile(r"(?<=[0-9])[^0-9a-z+]+(?=[0-9])")
+_CANDIDATE_NUMBER = re.compile(r"\.0[0-9]$")
 _PLANET_LETTER = re.compile(r"\s*[a-z]$", re.IGNORECASE)
 _GLIESE = re.compile(r"(?:gliese|gl|gj)\W*(\d+)", re.IGNORECASE)
-# For the command line. The web app replaces it, because it has its own list of the names in the sidebar.
+# For the command line. The web app replaces them, because it has its own list of the names in the sidebar.
 LIST_HINT = "Run exostab list to see the names."
+SNAPSHOT_LIST_HINT = "Run exostab list --offline to see the names."
+FILE_SUFFIXES = (".yaml", ".yml", ".json")
 # Abbreviations in the archive's host names. A name with an abbreviation that is not listed gets no long form.
 _GREEK = {
     "bet": "Beta",
@@ -51,11 +55,25 @@ _CONSTELLATIONS = {
 class SystemNotFoundError(LookupError):
     """No archive system matches the name."""
 
-    def __init__(self, query: str, suggestions: Sequence[str], *, where: str = "the archive table"):
+    def __init__(
+        self,
+        query: str,
+        suggestions: Sequence[str],
+        *,
+        where: str = "the archive table",
+        list_hint: str = LIST_HINT,
+    ):
         self.query = query
         self.suggestions = list(suggestions)
-        hint = f"Did you mean: {', '.join(self.suggestions)}?" if self.suggestions else LIST_HINT
-        super().__init__(f"No multi-planet system named {query!r} in {where}. {hint}")
+        # What only the command line can do, which the web app replaces (None: nothing to replace).
+        self.cli_hint: str | None = None if self.suggestions else list_hint
+        if query.strip().lower().endswith(FILE_SUFFIXES):
+            self.cli_hint = f"To read a system from this file, use --from-file {query.strip()}."
+        hints = [
+            *([self.cli_hint] if self.cli_hint else []),
+            *([f"Did you mean: {', '.join(self.suggestions)}?"] if self.suggestions else []),
+        ]
+        super().__init__(f"No multi-planet system named {query!r} in {where}. {' '.join(hints)}")
 
 
 class AmbiguousNameError(SystemNotFoundError):
@@ -64,6 +82,7 @@ class AmbiguousNameError(SystemNotFoundError):
     def __init__(self, query: str, matches: Mapping[str, str]):
         self.query = query
         self.suggestions = list(matches)
+        self.cli_hint = None
         what = " and ".join(matches.values())
         LookupError.__init__(
             self,
@@ -72,13 +91,22 @@ class AmbiguousNameError(SystemNotFoundError):
 
 
 def normalize(name: str) -> str:
-    """Case-, space- and punctuation-insensitive key: "TRAPPIST-1" and "trappist 1" both give "trappist1"."""
-    return _NON_ALNUM.sub("", name.lower())
+    """Case-, space- and punctuation-insensitive key: "TRAPPIST-1" and "trappist 1" both give "trappist1".
+
+    Two things stay apart, because dropping them would reach another star: digits on both sides of punctuation
+    ("Kepler-10.01" is not Kepler-1001, "K2-3.2" is not K2-32), and a plus sign ("BD+08 2823" is not BD-08 2823).
+    """
+    return ".".join(_NON_ALNUM.sub("", part) for part in _BETWEEN_DIGITS.split(name.lower()))
 
 
 def _stem(row: Row) -> str:
     """The planet name without its final letter: "Kepler-90" for "Kepler-90 i". "TOI-836.01" has no letter."""
     return str(row["pl_name"]).removesuffix(f" {row['pl_letter']}")
+
+
+def _candidate_stem(row: Row) -> str:
+    """The name of a candidate without its number: "TOI-1233" for "TOI-1233.01"."""
+    return _CANDIDATE_NUMBER.sub("", str(row["pl_name"]))
 
 
 def _may_mean(query: str, name: str) -> bool:
@@ -105,7 +133,11 @@ def _may_mean(query: str, name: str) -> bool:
 def _suggestions(query: str, hosts: Mapping[str, Sequence[Row]]) -> list[str]:
     """Hosts for the error message: the ones ``query`` may mean, or else the ones spelled like it."""
     query = " ".join(query.split())
-    found = sorted(h for h, rows in hosts.items() if any(_may_mean(query, n) for n in {h, *map(_stem, rows)}))
+    found = sorted(
+        h
+        for h, rows in hosts.items()
+        if any(_may_mean(query, n) for n in {h, *map(_stem, rows), *map(_candidate_stem, rows)})
+    )
     if found:
         return found
     by_key = {normalize(h): h for h in hosts}
