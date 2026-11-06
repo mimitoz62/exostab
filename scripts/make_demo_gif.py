@@ -119,7 +119,7 @@ def main() -> None:
     durations.append(6000)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     pal = [fr.convert("P", palette=Image.Palette.ADAPTIVE, colors=128) for fr in frames]
-    pal[0].save(OUT, save_all=True, append_images=pal[1:], duration=durations, loop=0, optimize=True)
+    pal[0].save(OUT, save_all=True, append_images=pal[1:], duration=durations, optimize=True)
     print(f"wrote {OUT} ({OUT.stat().st_size / 1e6:.2f} MB, {len(frames)} frames)")
 
 

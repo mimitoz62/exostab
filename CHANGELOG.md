@@ -8,6 +8,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- The README shows the install line and the first command before the recording, and the recording plays once and
+  stops on the report card. `CONTRIBUTING.md` says where to start.
 - The catalog has three new columns, `hill_summary`, `amd_summary` and `overall_summary`, with the report card's
   sentences. A system's page built from them has a section, Why this verdict; a page built from an older catalog keeps
   its general text.
