@@ -990,6 +990,39 @@ def test_output_that_cannot_be_encoded_is_replaced(
     assert "Traceback" not in r.stderr
 
 
+@pytest.mark.parametrize(
+    ("platform", "filename", "quiet"),
+    [("win32", None, True), ("win32", "a:b?", False), ("linux", None, False)],
+)
+def test_a_pipe_whose_reader_has_gone_ends_quietly_on_windows(
+    monkeypatch: pytest.MonkeyPatch, platform: str, filename: str | None, quiet: bool
+) -> None:
+    # `exostab list | head` in Git Bash: Windows reports the closed pipe as EINVAL, not as a broken pipe (CPython
+    # gh-79935), and a traceback followed the lines that head printed. A path error, which has a file name, still raises.
+    import errno
+
+    import typer
+
+    from exostab import cli
+
+    def closed(*args: object, **kwargs: object) -> None:
+        raise OSError(errno.EINVAL, "Invalid argument", filename)
+
+    silenced = []
+    monkeypatch.setattr(cli.sys, "platform", platform)
+    monkeypatch.setattr(typer.Typer, "__call__", closed)
+    monkeypatch.setattr(cli.signal, "signal", lambda *args: None)
+    monkeypatch.setattr(cli.os, "dup2", lambda *args: silenced.append(args))
+    if quiet:
+        with pytest.raises(SystemExit) as stop:
+            cli.app(["list", "--offline"])
+        assert stop.value.code == 1
+    else:
+        with pytest.raises(OSError, match="Invalid argument"):
+            cli.app(["list", "--offline"])
+        assert silenced == []
+
+
 def test_python_m_exostab() -> None:
     r = _exostab("--version")
     assert r.returncode == 0 and __version__ in r.stdout

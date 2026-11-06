@@ -33,6 +33,8 @@ All notable changes to this project are documented here. The format follows
   tested on Windows.
 - Python 3.10: after Ctrl-C during `check` or `sweep`, the process no longer waits for ever for the queue of its stopped
   workers. On Windows a few queued runs fill the pipe, and the window had to be closed.
+- Windows: `exostab list | head` and other output into a reader that stops early end quietly, without a traceback.
+  Windows reports such a pipe as an invalid argument, not as a broken pipe (CPython gh-79935).
 - Ctrl-C reaches exostab again after an integration. REBOUND leaves its own handler for it in place, so the web app's
   server could not be stopped from its terminal once it had run a check (on every platform).
 

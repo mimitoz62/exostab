@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import io
 import itertools
@@ -48,6 +49,18 @@ def _stop_on_signal(signum: int, frame: FrameType | None) -> NoReturn:
     raise SystemExit(128 + signum)
 
 
+def _reader_went_away(exc: OSError) -> bool:
+    """Windows reports a pipe whose reader has gone (``exostab list | head``) as EINVAL, not as a broken pipe
+    (CPython gh-79935), so neither Rich nor Typer stopped quietly. A path error has a file name; a write has none."""
+    on_windows = sys.platform == "win32"  # a variable, so that mypy checks the rest on every platform
+    if not on_windows or exc.errno != errno.EINVAL or exc.filename is not None:
+        return False
+    try:
+        return not sys.stdout.isatty()
+    except ValueError:  # stdout already closed
+        return True
+
+
 class _Exostab(typer.Typer):
     """The exostab command, with what must be in place before Typer parses the arguments."""
 
@@ -60,7 +73,15 @@ class _Exostab(typer.Typer):
         for name in ("SIGTERM", "SIGHUP"):
             if hasattr(signal, name):
                 signal.signal(getattr(signal, name), _stop_on_signal)
-        return super().__call__(*args, **kwargs)
+        try:
+            return super().__call__(*args, **kwargs)
+        except OSError as exc:
+            if not _reader_went_away(exc):
+                raise
+            # As Python does for a broken pipe elsewhere: no traceback, and nothing more written to the pipe at exit.
+            with suppress(OSError, ValueError):
+                os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+            raise SystemExit(1) from None
 
 
 app = _Exostab(
