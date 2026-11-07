@@ -20,6 +20,12 @@ All notable changes to this project are documented here. The format follows
   downloads the table and builds a font cache), and the address of the guide to reading the card.
 - The BibTeX of the software has the DOI of version 1.1.1, and `main` is 1.1.2.dev0.
 
+### Fixed
+
+- Windows: output that goes to a file or another program (`exostab check "TRAPPIST-1" > card.txt`) is written in UTF-8,
+  so ☉ and ⊕ no longer become `?`. Windows PowerShell 5.1 needs `[Console]::OutputEncoding = [Text.Encoding]::UTF8`
+  first (FAQ).
+
 ## [1.1.1] - 2026-11-06
 
 ### Added

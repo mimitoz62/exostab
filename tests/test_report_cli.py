@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import io
 import json
 import math
 import os
@@ -988,6 +989,54 @@ def test_output_that_cannot_be_encoded_is_replaced(
     r = _exostab(*args, PYTHONIOENCODING=encoding)
     assert r.returncode == 0, r.stderr
     assert "Traceback" not in r.stderr
+
+
+class _Stream(io.BytesIO):
+    def __init__(self, tty: bool) -> None:
+        super().__init__()
+        self.tty = tty
+
+    def isatty(self) -> bool:
+        return self.tty
+
+
+@pytest.mark.parametrize(
+    ("windows", "tty", "chosen", "expected"),
+    [
+        (True, False, None, "M⊕ –"),  # redirected on Windows: UTF-8
+        (True, True, None, "M? –"),  # a console takes Unicode through its own API, not these bytes
+        (True, False, "cp1252", "M? –"),  # PYTHONIOENCODING stays
+        (False, False, None, "M? –"),  # elsewhere the locale decides
+    ],
+)
+def test_redirected_output_on_windows_is_utf8(
+    monkeypatch: pytest.MonkeyPatch, windows: bool, tty: bool, chosen: str | None, expected: str
+) -> None:
+    from exostab.cli import _prepare_stream
+
+    monkeypatch.delenv("PYTHONIOENCODING", raising=False)
+    if chosen:
+        monkeypatch.setenv("PYTHONIOENCODING", chosen)
+    raw = _Stream(tty)
+    stream = io.TextIOWrapper(raw, encoding="cp1252")
+    _prepare_stream(stream, windows=windows)
+    stream.write("M⊕ –")
+    stream.flush()
+    assert raw.getvalue().decode(stream.encoding) == expected
+
+
+def test_output_to_a_pipe_keeps_every_character() -> None:
+    # On Windows a pipe or a file got the ANSI code page, which has no "☉": "M* (M?)" up to version 1.1.1.
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONIOENCODING", "PYTHONUTF8")}
+    r = subprocess.run(
+        [sys.executable, "-m", "exostab", "list", "--offline", "--limit", "1"],
+        capture_output=True,
+        timeout=120,
+        check=False,
+        env=env,
+    )
+    assert r.returncode == 0, r.stderr
+    assert "M☉" in r.stdout.decode("utf-8")
 
 
 @pytest.mark.parametrize(
