@@ -257,6 +257,9 @@ def test_evaluate_texts() -> None:
     assert r.summary.startswith("Weakly")
     r = amd.evaluate(real_of([1e-3, 1e-3], [1.0, 1.6], [0.035, 0.0]), [])
     assert "Hill stable in the AMD framework" in r.summary
+    # β_H assumes as much AMD in the inclinations as in the eccentricities, so encounters are not "impossible"
+    assert "excluded if the mutual inclinations carry no more AMD than the eccentricities" in r.summary
+    assert "impossible" not in r.summary
     r = amd.evaluate(real_of([1e-3, 1e-3], [1.0, 1.6], [0.05, 0.0]), [])
     assert r.verdict is Verdict.MARGINAL and "not 'unstable'" in r.summary and "β_H,p = 0.844" in r.summary
     r = amd.evaluate(real_of([3e-5, 3e-5], [1.0, 2.2], [0.5, 0.5]), [])

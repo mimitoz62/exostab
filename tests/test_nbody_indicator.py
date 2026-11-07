@@ -202,9 +202,17 @@ def test_unstable_nbody_resting_on_upper_limits_is_not_overall_unstable() -> Non
     assert "(masses of X b and X c)" in o.summary and "does not show that the system is unstable" in o.summary
     assert "within the published uncertainties" not in o.summary
     assert "Only upper limits are published for: masses of X b and X c." in o.reasons
-    # A limit is the worst case for stability, so a stable result at the limits stands.
+    # A stable result at the limits stands, but it says that it describes the values that were run: for AMD a lighter
+    # planet need not be more stable (BD-06 1339 in docs/methods.md). Its summary did not name the limits.
     stable = {"hill": ind("hill", S), "amd": ind("amd", S), "nbody": nbody_ind(20)}
-    assert overall_verdict(stable, upper_limits=["mass of X b"]).verdict is S
+    o = overall_verdict(stable, upper_limits=["mass of X b"])
+    assert o.verdict is S and "upper limits (mass of X b)" in o.summary
+    assert "not every value below a limit" in o.summary and o.summary.endswith("not the age of the system.")
+    assert o.reasons == ["Only upper limits are published for: mass of X b."]
+    # nor did the reasons of a run without draws
+    no_draws = {"hill": ind("hill", S, []), "amd": ind("amd", S, []), "nbody": nbody_ind(0)}
+    o = overall_verdict(no_draws, upper_limits=["mass of X b"])
+    assert o.verdict is M and "Only upper limits are published for: mass of X b." in o.reasons
 
 
 def test_upper_limit_inputs() -> None:

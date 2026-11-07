@@ -141,7 +141,7 @@ Each run is classified as:
 - **regular**: no close encounter or escape, and ⟨Y⟩ < 2.2;
 - **chaotic**: no close encounter or escape, but ⟨Y⟩ ≥ 2.2;
 - **unstable**: two planets came closer than the mean of their Hill radii, or a planet moved beyond 100 times
-  the largest orbit;
+  the largest orbit. The run stops there, and it is unstable whatever its energy error;
 - **inconclusive**: the relative energy error exceeded 10⁻⁵ at any of 1,200 equally spaced checks through the
   run, so the numbers cannot be trusted; or a planet came closer to the star than half its own Hill radius
   (a *star approach*), where tides, general relativity and the size of the star, none of which is modelled, can

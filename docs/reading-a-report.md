@@ -337,7 +337,7 @@ every eccentricity is assumed, the summary warns that the test says nothing abou
     | `AMD-stable only because no eccentricity is measured` | Every eccentricity is assumed, so the AMD and every β are 0. | stable |
     | `Weakly AMD-stable` | β < 1 for every pair, but β_S ≥ 1: no pair can collide in this approximation, but the AMD could in principle bring the innermost planet to the star. | marginal |
     | `AMD-unstable: … of … adjacent pairs have β ≥ 1` | Three or more planets, with at least one pair at β ≥ 1. | marginal |
-    | `AMD-unstable (β = …) but Hill stable in the AMD framework` | Two planets. Close encounters are impossible, but chaos is not excluded. | marginal |
+    | `AMD-unstable (β = …) but Hill stable in the AMD framework` | Two planets. Close encounters are excluded if the mutual inclinations carry no more AMD than the eccentricities, but chaos is not. | marginal |
     | `Neither AMD-stable (β = …) nor Hill stable (β_H = …), even for exactly coplanar orbits` | Two planets, with β_p ≥ 1 and β_H,p ≥ 1. | unstable |
     | `Neither AMD-stable (β = …) nor Hill stable (β_H = …) if the mutual inclinations carry …` | Two planets that fail only with the doubled AMD. | marginal |
     | `β < 1 for every pair …, but … outside the domain` | Every β is below 1, but a pair lies outside the range of the critical AMD. | marginal |
@@ -376,7 +376,7 @@ the verdicts, so `18 stable, 2 marginal` in the heading and `18 regular, 2 chaot
 |---|---|---|
 | regular | No close encounter or escape, and ⟨Y⟩ < 2.2. No chaos was found within this run. | stable |
 | chaotic | No close encounter or escape, but ⟨Y⟩ ≥ 2.2. The motion is so sensitive to its start that the run says little about what comes later. | marginal |
-| close encounter or escape | Two planets came closer than the mean of their Hill radii, or a planet moved beyond 100 times the largest orbit. The run stops there. | unstable |
+| close encounter or escape | Two planets came closer than the mean of their Hill radii, or a planet moved beyond 100 times the largest orbit. The run stops there, and it gets this label whatever its energy error. | unstable |
 | inconclusive | The relative energy error exceeded 10⁻⁵ at any of 1,200 checks through the run, so the numbers cannot be trusted. Or a planet came closer to the star than half its own Hill radius, where tides, general relativity and the size of the star, none of which is modelled, can decide what happens. | inconclusive |
 
 Chaotic does not mean that the orbits break up. Chaotic orbits can stay bounded for far longer than a run of this

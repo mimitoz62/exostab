@@ -392,7 +392,11 @@ def _prior_note(report: Report) -> str:
     if s.draws == 0:
         return f" The {s.inclination_prior} inclination prior has no effect: it applies only to draws."
     if not any(p.mass_kind is MassKind.MINIMUM for p in report.system.planets):
-        return f" The {s.inclination_prior} inclination prior has no effect: no mass here is a minimum mass."
+        # Each draw still takes its inclination from the draw's random numbers (sampling.realize).
+        return (
+            f" The {s.inclination_prior} inclination prior changes no mass here (none is a minimum mass), but it "
+            "changes the random numbers of every draw."
+        )
     return f" Inclinations drawn with the {s.inclination_prior} prior (sin i ≥ {s.sin_i_min:g})."
 
 

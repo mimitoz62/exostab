@@ -315,7 +315,8 @@ def evaluate(
     elif len(pairs) == 1 and pairs[0]["beta_hill"] < 1:
         summary = (
             f"AMD-unstable (β = {_b(worst['beta'])}) but Hill stable in the AMD framework "
-            f"(β_H = {_b(pairs[0]['beta_hill'])}): close encounters are impossible, chaos is not excluded."
+            f"(β_H = {_b(pairs[0]['beta_hill'])}): close encounters are excluded if the mutual inclinations carry "
+            "no more AMD than the eccentricities; chaos is not excluded."
         )
     elif v_nom is Verdict.UNSTABLE:
         summary = (
