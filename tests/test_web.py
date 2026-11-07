@@ -15,12 +15,14 @@ import pytest
 pytest.importorskip("streamlit")
 pytest.importorskip("plotly")
 
+from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.testing.v1 import AppTest
 
 from conftest import two_planet_system
 from exostab.analysis import CheckSettings, check_system
 from exostab.data import archive, load_system, store
 from exostab.models import PhaseKind, Provenance, UnusableParametersError
+from exostab.report import Report
 from exostab.web import figures
 from exostab.web.state import (
     AppState,
@@ -444,23 +446,39 @@ def test_app_says_when_only_the_snapshot_was_searched(monkeypatch: pytest.Monkey
     assert "not the full archive table" in message
 
 
-def test_app_rejects_circumbinary_and_reports_json() -> None:
+def test_app_rejects_circumbinary_and_reports_json(monkeypatch: pytest.MonkeyPatch) -> None:
     at = AppTest.from_file(APP, default_timeout=60)
     at.query_params.update({"system": "Kepler-47", "source": "snapshot"})
     at.run()
     assert at.error and "circumbinary" in at.error[0].value
-    # report.json produced by the app is a valid report
-    at = AppTest.from_file(APP, default_timeout=120)
-    at.query_params.update(
-        {"system": "Kepler-36", "source": "snapshot", "orbits": "200", "draws": "1", "run": "1"}
-    )
-    at.run()
-    data = at.get("download_button")[0].proto.url  # served from the media file manager
-    assert data
-    rep = json.loads(
-        check_system(load_system("Kepler-36"), CheckSettings(orbits=200, draws=1, jobs=1)).report.to_json()
-    )
-    assert rep["settings"]["orbits"] == 200
+    # report.json as the app serves it: the bytes its download button gives Streamlit's media file manager
+    served: dict[str | None, bytes | str] = {}
+    add = MediaFileManager.add
+
+    def keep(self: MediaFileManager, data: bytes | str, *args: Any, **kwargs: Any) -> str:
+        served[kwargs.get("file_name")] = data
+        return add(self, data, *args, **kwargs)
+
+    monkeypatch.setattr(MediaFileManager, "add", keep)
+
+    def served_report(**params: str) -> Report:
+        served.clear()
+        at = AppTest.from_file(APP, default_timeout=120)
+        at.query_params.update(
+            {"system": "Kepler-36", "source": "snapshot", "orbits": "200", "draws": "1", "run": "1", **params}
+        )
+        at.run()
+        assert not at.exception, at.exception
+        return Report.model_validate_json(served["report.json"])
+
+    rep = served_report()
+    assert rep.system.name == "Kepler-36" and rep.settings.orbits == 200 and rep.settings.draws == 1
+    assert (rep.command or "").startswith("exostab web app")
+    assert "changed in the web app" not in rep.overall.summary
+    # an edit from the link reaches the served file (the edited system goes through JSON to the cached run)
+    rep = served_report(edits=_b64({"Kepler-36 b": {"mass_earth": 300.0}}))
+    assert "values changed in the web app" in rep.overall.summary
+    assert rep.system.planet("b").mass_earth.reference == "edited in the web app"
 
 
 def _what_if_app(system: str, **params: str) -> AppTest:
@@ -757,6 +775,9 @@ def test_browser_messages_do_not_mention_options() -> None:
         at = AppTest.from_file(APP, default_timeout=120)
         at.query_params.update({"source": "snapshot", **params})
         at.run()
+        # the messages checked below appear only in the results of a run that worked
+        assert not at.exception, (params, at.exception)
+        assert any("Overall:" in m.value for m in at.markdown), params
         for element in (*at.markdown, *at.caption, *at.warning, *at.error):
             assert "--" not in element.value, element.value
 

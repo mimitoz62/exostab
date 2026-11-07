@@ -117,9 +117,17 @@ def test_star_approach_is_not_a_close_encounter(integrator: str) -> None:
     assert res.t_end >= res.t_target and res.megno is not None
 
 
-def test_escape_is_detected() -> None:
-    res = run(pair(ratio=1.25, m=3e-3), RunConfig(n_orbits=20000, escape_factor=1.6))
-    assert res.status in ("escape", "encounter")
+@pytest.mark.parametrize("integrator", ["whfast", "ias15"])
+def test_escape_is_detected(integrator: str) -> None:
+    # Not an ejection: c (P = 1 yr, e = 0.5) stays bound, but the escape distance is lowered to 1.2 times its
+    # semi-major axis, which c passes at about 0.24 yr on its way from pericentre to apocentre (1.5 AU). b and c
+    # stay more than 0.28 AU apart, so nothing else can stop the run.
+    real = Realization(
+        "nominal", 1.0, (Body("b", 3e-5, 0.1, 0.0, 0.0, 0.0), Body("c", 3e-5, 1.0, 0.5, 0.0, 0.0))
+    )
+    res = run(real, RunConfig(n_orbits=100, integrator=integrator, escape_factor=1.2))  # type: ignore[arg-type]
+    assert res.status == "escape" and res.star_approach is None
+    assert 0 < res.t_end < 0.5 < res.t_target  # stopped on c's way out, in a run planned for 10 yr
 
 
 def test_ias15_run() -> None:

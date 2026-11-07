@@ -164,7 +164,7 @@ def _worker(rows: list[Row], info: TableInfo, settings: CatalogSettings, out: An
         out.put((host, check_one(rows, info, settings)))
     except KeyboardInterrupt:  # Ctrl-C reaches every process of the group; the main process stops and reports
         pass
-    except Exception as exc:  # pragma: no cover - reported as an error row
+    except Exception as exc:  # reported as an error row
         out.put((host, _empty(host, len(rows), "error", f"{type(exc).__name__}: {exc}", settings, info)))
 
 
