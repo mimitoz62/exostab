@@ -507,7 +507,8 @@ A stability verdict is only as good as the inputs and settings behind it, so exo
   bars, and a verdict stands only if at least 95% of the draws agree with the nominal one.
 - **The integrators check each other.** The nominal run is repeated with IAS15. If WHFast and IAS15 disagree, the
   N-body verdict cannot be *stable*. The energy error is checked over the whole of every run, and a run whose
-  relative energy error exceeds 10⁻⁵ is *inconclusive*.
+  relative energy error exceeds 10⁻⁵ is *inconclusive*, unless a close encounter or escape stopped it: such a run
+  counts as *unstable* whatever its energy error.
 - **Runs are reproducible.** On the same platform and software versions, the same `--seed` gives identical runs (this
   is tested). On another platform, floating-point rounding can change chaotic runs and with them a verdict. Each
   `report.json` stores the seed, the versions of exostab, REBOUND, NumPy, astropy and Python, the integrator and time

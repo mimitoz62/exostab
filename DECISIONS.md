@@ -85,7 +85,7 @@ Resolved on 2026-09-28 by D23: SPOCK runs as an optional indicator in a separate
 | Close encounter | two planets closer than the mean of their Hill radii, (R_H,j + R_H,k)/2 (REBOUND collision detection, "line" mode); a planet passing within half its Hill radius of the star is not one and makes the run inconclusive (D20, amended 2026-10-04) | Changed from the Research Note's global rule, see D20 |
 | Escape | distance from the centre of mass above 100 × the largest semi-major axis | Research Note's rule |
 | MEGNO threshold | ⟨Y⟩ ≥ 2.2 is chaotic | See below |
-| Energy-error limit | maximum relative energy error > 1e-5 → run "inconclusive"; checked at 1,200 equally spaced times in every run (nominal, draws, IAS15 check, catalog and sweep runs) and at an early stop; the plot samples are a subset of these checks. Until 2026-10-04: sampled 400 times for the nominal run and only at the end for draws | See below |
+| Energy-error limit | maximum relative energy error > 1e-5 → run "inconclusive", unless a close encounter or escape stopped it (then "unstable"); checked at 1,200 equally spaced times in every run (nominal, draws, IAS15 check, catalog and sweep runs) and at an early stop; the plot samples are a subset of these checks. Until 2026-10-04: sampled 400 times for the nominal run and only at the end for draws | See below |
 
 **MEGNO threshold (uncertain).** ⟨Y⟩ → 2 for quasi-periodic orbits and grows linearly for chaotic ones
 (Cincotta & Simó 2000; restated by Goździewski, Migaszewski & Musieliński 2007, arXiv:0802.0254, and Maffione

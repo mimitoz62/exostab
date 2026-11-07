@@ -628,6 +628,10 @@ stable verdicts have every eccentricity assumed 0
     the stable verdict on the card rests on an eccentricity close to 0. In the N-body column, `unstable` is the label
     close encounter or escape, and `—` means that ⟨Y⟩ is not meaningful for a stopped run.
 
+    The sweep keeps the mean anomaly of planet b at the start of each run, so as e grows, planet b also starts off its
+    transit: by about 2° at e = 0.02 and 10° at e = 0.1. `check` starts it at its transit. So the N-body column does
+    not separate the effect of e from that of this shift; Hill and AMD do not depend on where a planet starts.
+
 - Look for a published eccentricity or limit, and run it with `--from-file`.
   [What the catalog shows](findings.md#what-stable-means-here-and-what-it-does-not) describes such a run for Kepler-36,
   which comes out marginal.

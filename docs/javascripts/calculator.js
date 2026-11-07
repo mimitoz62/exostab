@@ -371,7 +371,7 @@
     if (p.summary === "hill_stable") {
       return (
         "AMD-unstable (β = " + beta + ") but Hill stable in the AMD framework (β_H = " + betaH + "): close encounters are " +
-        "excluded in that framework, chaos is not."
+        "excluded if the mutual inclinations carry no more AMD than the eccentricities; chaos is not excluded."
       );
     }
     if (p.summary === "neither_coplanar") {

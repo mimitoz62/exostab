@@ -292,9 +292,9 @@ def _combined_verdict(
             )
         if upper_limits:
             summary += (
-                f" Some inputs are only published upper limits ({limits}): the nominal run takes each limit and the "
-                "draws are uniform below it, so this verdict describes the values that were run, not every value "
-                "below a limit."
+                f" These runs use values that are only published upper limits ({limits}): the nominal run takes "
+                "each limit and the draws are uniform below it, so this verdict describes the values that were "
+                "run, not every value below a limit."
             )
         return Overall(verdict=Verdict.STABLE, summary=summary + HORIZON, reasons=hidden + extra)
 
@@ -312,8 +312,8 @@ def _combined_verdict(
             )
     if upper_limits:
         sentences.append(
-            f"Some inputs are only published upper limits ({limits}): the nominal run takes each limit and the "
-            "draws are uniform below it."
+            f"These runs use values that are only published upper limits ({limits}): the nominal run takes each "
+            "limit and the draws are uniform below it."
         )
     return Overall(
         verdict=Verdict.MARGINAL,
