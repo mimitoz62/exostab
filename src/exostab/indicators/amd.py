@@ -94,7 +94,7 @@ from typing import Any
 from .._numerics import bisect
 from ..models import UnusableParametersError
 from ..sampling import Realization
-from . import DrawStats, IndicatorResult, Verdict, combine
+from . import DrawStats, IndicatorResult, Verdict, combine, kept_despite, kept_note
 
 
 def _b(x: float) -> str:
@@ -267,6 +267,28 @@ def classify(real: Realization) -> Verdict:
     return Verdict.MARGINAL
 
 
+def _differs(real: Realization, v: Verdict, nominal: Verdict) -> tuple[str, str, list[str]]:
+    """What a draw whose verdict ``v`` differs from the ``nominal`` one shows, for :func:`kept_note`."""
+    if v is Verdict.STABLE:
+        return "is AMD-stable", "are AMD-stable", []
+    if v is Verdict.UNSTABLE:
+        return "has β_p and β_H,p ≥ 1", "have β_p and β_H,p ≥ 1", []
+    if nominal is Verdict.UNSTABLE:  # a marginal draw of two planets: not both coplanar coefficients are ≥ 1
+        return "has β_p or β_H,p below 1", "have β_p or β_H,p below 1", []
+    info = analyse(real)
+    high = [p["pair"] for p in info["pairs"] if p["beta"] >= 1]
+    if high:
+        return "has β ≥ 1", "have β ≥ 1", high
+    if info["beta_star"] >= 1:
+        return "has β_S ≥ 1", "have β_S ≥ 1", []
+    off = [p["pair"] for p in info["pairs"] if p["outside_domain"]]
+    return (
+        "has a pair outside the domain of the critical AMD",
+        "have a pair outside the domain of the critical AMD",
+        off,
+    )
+
+
 def evaluate(
     nominal: Realization, draws: list[Realization], *, assumed_eccentricities: Sequence[str] = ()
 ) -> IndicatorResult:
@@ -339,6 +361,8 @@ def evaluate(
     notes = []
     if verdict is not v_nom and v_nom is not Verdict.INCONCLUSIVE:
         notes.append(f"The nominal parameters give '{v_nom.value}', but the draws disagree.")
+    if differ := kept_despite(v_nom, verdict, v_draws):
+        notes.append(kept_note(verdict, len(draws), [_differs(draws[k], v_draws[k], v_nom) for k in differ]))
     if assumed:
         notes.append(
             f"Eccentricity assumed, not measured (e = 0 in every run), for: {', '.join(assumed)}. "

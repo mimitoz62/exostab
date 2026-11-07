@@ -202,10 +202,10 @@ have no mark of their own: the limit is used as the value, and the list under `D
 │   2015), not a proof.                                                                            │
 ```
 
-All three indicator blocks have the same form. The heading gives the name, the verdict and how the draws came out. A
-draw is a copy of the system with its values varied according to the published error bars ([below](#the-draws)). Then
-comes a summary of the result for the published values, which the card calls *nominal*, and then notes, marked with
-bullets.
+All three indicator blocks have the same form. The heading gives the name, the verdict and how the draws came out
+(versions after 1.1.1 say `no draws` when none were run). A draw is a copy of the system with its values varied
+according to the published error bars ([below](#the-draws)). Then comes a summary of the result for the published
+values, which the card calls *nominal*, and then notes, marked with bullets.
 
 Hill spacing asks whether neighbouring orbits are far enough apart.
 
@@ -398,7 +398,8 @@ draws. [Data and assumptions](data-assumptions.md#monte-carlo-draws) has the det
 All three indicators use the draws in the same way:
 
 - The verdict for the published values stands only if at least 95% of the draws share it: 19 of 20 here, and 10 of 10 in
-  the catalog, which uses 10 draws. Otherwise the indicator says marginal.
+  the catalog, which uses 10 draws. Otherwise the indicator says marginal. When the verdict stands although some draws
+  differ, versions after 1.1.1 add a note that says what those draws show.
 - The indicator says inconclusive if its nominal run is, or if more than 20% of its draws are.
 
 Two more conditions apply only to the N-body verdict. It cannot be stable if WHFast and IAS15 disagree on the nominal

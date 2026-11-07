@@ -333,7 +333,11 @@ def _planet_table(report: Report) -> Table:
 
 
 def _indicator_block(report: Report) -> Group:
-    """One heading line per indicator (name, verdict, draw counts) followed by its explanation."""
+    """One heading line per indicator (name, verdict, draw counts) followed by its explanation.
+
+    Without draws the heading says "no draws": the verdict holds for the nominal parameters only. The overall summary
+    says what that means, once for the whole card.
+    """
     parts: list[Any] = []
     width = max(len(ind.title) for ind in report.indicators.values())
     for ind in report.indicators.values():
@@ -346,6 +350,8 @@ def _indicator_block(report: Report) -> Group:
                 + (f", {d.inconclusive} inconclusive" if d.inconclusive else ""),
                 style="dim",
             )
+        else:
+            head.append("   no draws", style="dim")
         body = Text(ind.summary)
         for note in ind.notes:
             body.append("\n• " + note, style="dim")

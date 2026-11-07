@@ -174,6 +174,40 @@ def test_evaluate_summaries_and_draw_disagreement() -> None:
     assert res.verdict is Verdict.STABLE and "at least" in res.summary
 
 
+def test_a_verdict_kept_by_the_95_percent_rule_says_what_the_other_draws_show() -> None:
+    # A draw that failed showed only in the counts of the heading (issue #22).
+    two, close = real_of([3e-5, 3e-5], [1.0, 2.0]), real_of([3e-5, 3e-5], [1.0, 1.01])
+    res = hill.evaluate(two, [two] * 19 + [close])
+    assert res.verdict is Verdict.STABLE and res.draws is not None and res.draws.unstable == 1
+    assert res.notes == [
+        "1 of 20 draws has a pair inside the Gladman (1993) limit (p0 / p1); the verdict stays stable under the "
+        "95% rule."
+    ]
+    res = hill.evaluate(close, [close] * 19 + [two])
+    assert res.verdict is Verdict.UNSTABLE
+    assert res.notes == [
+        "1 of 20 draws has no pair inside the Gladman (1993) limit; the verdict stays unstable under the 95% rule."
+    ]
+    # Three planets: each reason with its pairs, and draws with the same reason counted together.
+    three = real_of([3e-6] * 3, [1.0, 2.0, 4.0])
+    tight = real_of([3e-6] * 3, [1.0, 1.2, 1.44])
+    hot = real_of([3e-6] * 3, [1.0, 2.0, 4.0], [0.06, 0.0, 0.0])
+    inside = real_of([3e-6] * 3, [1.0, 1.001, 4.0])
+    res = hill.evaluate(three, [three] * 76 + [tight, hot, inside, tight])
+    assert res.verdict is Verdict.STABLE
+    assert res.notes[0] == (
+        "2 of 80 draws have a pair closer than the spacing threshold for its eccentricities (p0 / p1, p1 / p2), 1 "
+        "has a pair with an eccentricity above 0.05 (p0 / p1) and 1 has a pair inside the Gladman (1993) limit "
+        "(p0 / p1); the verdict stays stable under the 95% rule."
+    )
+    # None when every draw agrees, when the draws change the verdict, or when the nominal verdict is marginal,
+    # which the rule gives anyway when draws differ.
+    assert hill.evaluate(two, [two] * 20).notes == []
+    assert not any("95% rule" in n for n in hill.evaluate(two, [two] * 18 + [close] * 2).notes)
+    res = hill.evaluate(tight, [tight] * 19 + [three])
+    assert res.verdict is Verdict.MARGINAL and not any("95% rule" in n for n in res.notes)
+
+
 @pytest.mark.parametrize("m_earth", [1e-13, 1e-16, 1e-20])
 def test_a_mass_ratio_too_small_for_the_limit_is_named(m_earth: float) -> None:
     # "root not bracketed: f(1.000000000001)=-6.28e-08" used to end in a traceback, after every integration of a sweep

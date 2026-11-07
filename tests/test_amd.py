@@ -275,6 +275,37 @@ def test_evaluate_texts() -> None:
     assert any("draws disagree" in n for n in r.notes)
 
 
+def test_a_verdict_kept_by_the_95_percent_rule_says_what_the_other_draws_show() -> None:
+    # A draw that failed showed only in the counts of the heading (issue #22).
+    circ = real_of([3e-5, 3e-5], [1.0, 2.2], [0.0, 0.0])  # AMD-stable
+    high = real_of([3e-5, 3e-5], [1.0, 2.2], [0.2, 0.2])  # β = 1.22 but β_p, β_H,p < 1: marginal
+    crossing = real_of([3e-5, 3e-5], [1.0, 2.2], [0.3, 0.3])  # β_p and β_H,p ≥ 1: unstable
+    r = amd.evaluate(circ, [circ] * 38 + [high, crossing])
+    assert r.verdict is Verdict.STABLE
+    assert r.notes[0] == (
+        "1 of 40 draws has β ≥ 1 (p0 / p1) and 1 has β_p and β_H,p ≥ 1; the verdict stays stable under the 95% rule."
+    )
+    r = amd.evaluate(crossing, [crossing] * 38 + [circ, high])
+    assert r.verdict is Verdict.UNSTABLE
+    assert r.notes[0] == (
+        "1 of 40 draws is AMD-stable and 1 has β_p or β_H,p below 1; the verdict stays unstable under the 95% rule."
+    )
+    light = real_of([1e-8, 1e-3], [1.0, 8.0], [0.0, 0.0])
+    r = amd.evaluate(light, [light] * 19 + [real_of([1e-8, 1e-3], [1.0, 8.0], [0.0, 0.15])])
+    assert r.verdict is Verdict.STABLE
+    assert r.notes[0] == "1 of 20 draws has β_S ≥ 1; the verdict stays stable under the 95% rule."
+    wide = real_of([5e-3, 5e-3], [1.0, 3.0], [0.0, 0.0])
+    off = real_of([5e-3, 5e-3], [1.0, 1.3], [0.0, 0.0])  # ε > ε_lim and α > α_R: outside the domain
+    r = amd.evaluate(wide, [wide] * 19 + [off])
+    assert r.verdict is Verdict.STABLE
+    assert r.notes[0] == (
+        "1 of 20 draws has a pair outside the domain of the critical AMD (p0 / p1); the verdict stays stable under "
+        "the 95% rule."
+    )
+    assert not any("95% rule" in n for n in amd.evaluate(circ, [circ] * 20).notes)
+    assert not any("95% rule" in n for n in amd.evaluate(circ, [circ] * 18 + [high] * 2).notes)
+
+
 def test_assumed_eccentricities_are_disclosed() -> None:
     """An eccentricity that was not measured is 0 in every run, so beta = 0 says nothing about the real orbits."""
     circ = real_of([3e-5, 3e-5], [1.0, 2.2], [0.0, 0.0])

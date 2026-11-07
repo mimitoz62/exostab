@@ -37,7 +37,7 @@ from pathlib import Path
 from typing import Any
 
 from ..sampling import Realization
-from . import DrawStats, IndicatorResult, Verdict, combine
+from . import DrawStats, IndicatorResult, Verdict, combine, kept_despite, kept_note
 
 THRESHOLD = 0.34  # Tamayo et al. (2020): 10% false-positive rate on the resonant hold-out set
 MASS_RATIO_RANGE = (1e-7, 1e-4)
@@ -171,6 +171,12 @@ def evaluate(nominal: Realization, draws: list[Realization], python: str) -> Ind
     ]
     if verdict is not v_nom:
         notes.append(f"The nominal parameters give '{v_nom.value}', but the draws disagree.")
+    if differ := kept_despite(v_nom, verdict, v_draws):  # draws on the other side of the threshold
+        side = (
+            f"below the {THRESHOLD:g} threshold" if v_nom is Verdict.STABLE else f"of at least {THRESHOLD:g}"
+        )
+        reason = (f"has an estimate {side}", f"have estimates {side}", ())
+        notes.append(kept_note(verdict, len(draws), [reason] * len(differ)))
     details: dict[str, Any] = {
         "threshold": THRESHOLD,
         "p_stable_nominal": p_nom,
