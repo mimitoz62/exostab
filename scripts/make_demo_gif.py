@@ -10,6 +10,7 @@ frame with Pillow: the command is typed, then the report card appears. Nothing i
 from __future__ import annotations
 
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -18,11 +19,20 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 from rich.text import Text
 
+from exostab.cli import integrating_text
+
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "assets" / "demo.gif"
 COMMAND = 'exostab check "TRAPPIST-1" --offline'  # typed in the recording, and run as typed
 COLS = 96
 FONT_SIZE = 15
+FONTS = ("/System/Library/Fonts/Menlo.ttc", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf")
+# Rich's spinner is made of Braille patterns, which Menlo does not have: they are drawn with one of these instead.
+BRAILLE_FONTS = (
+    "/System/Library/Fonts/Apple Braille.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+)
+BRAILLE = re.compile("([\u2800-\u28ff]+)")
 BG, FG = (24, 24, 27), (228, 228, 231)
 DIM = (140, 140, 150)
 ANSI = {  # standard ANSI colour numbers -> RGB
@@ -59,8 +69,8 @@ def capture() -> Text:
     return Text.from_ansi("\n".join(kept))
 
 
-def font() -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    for path in ("/System/Library/Fonts/Menlo.ttc", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"):
+def font(paths: tuple[str, ...] = FONTS) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    for path in paths:
         if Path(path).exists():
             return ImageFont.truetype(path, FONT_SIZE)
     return ImageFont.load_default()
@@ -80,7 +90,7 @@ def main() -> None:
     lines = list(text.split("\n"))
     while lines and not lines[-1].plain.strip():
         lines.pop()
-    f = font()
+    f, braille = font(), font(BRAILLE_FONTS)
     cw = f.getbbox("M")[2]
     lh = int(FONT_SIZE * 1.35)
     width = cw * (COLS + 2)
@@ -95,8 +105,9 @@ def main() -> None:
             y = lh // 2 + lh * (i + 1)
             x = cw
             for span_text, style in _segments(ln):
-                d.text((x, y), span_text, font=f, fill=colour(style))
-                x += cw * len(span_text)
+                for part in BRAILLE.split(span_text):
+                    d.text((x, y), part, font=braille if BRAILLE.fullmatch(part) else f, fill=colour(style))
+                    x += cw * len(part)
         return img
 
     frames, durations = [], []
@@ -105,12 +116,9 @@ def main() -> None:
         durations.append(60)
     frames.append(frame([], COMMAND))
     durations.append(400)
-    # the progress line shown while the integrations run (the real spinner is animated)
-    frames.append(
-        frame(
-            [Text.from_markup("[green]⠋[/green] Integrating TRAPPIST-1: 21 runs of 1e+04 orbits…")], COMMAND
-        )
-    )
+    # the progress line shown while the integrations run, with the defaults of COMMAND (the real spinner is animated)
+    progress = Text.assemble(("⠋", "green"), " ", integrating_text("TRAPPIST-1", 20, 1e4))
+    frames.append(frame([progress], COMMAND))
     durations.append(1500)
     for n in range(1, len(lines) + 1, 3):
         frames.append(frame(lines[:n], COMMAND))

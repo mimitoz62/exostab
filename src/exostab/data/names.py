@@ -55,6 +55,8 @@ _CONSTELLATIONS = {
 class SystemNotFoundError(LookupError):
     """No archive system matches the name."""
 
+    table_kind: str | None = None  # TableInfo.kind of the table that was searched, where it is known
+
     def __init__(
         self,
         query: str,
@@ -62,8 +64,10 @@ class SystemNotFoundError(LookupError):
         *,
         where: str = "the archive table",
         list_hint: str = LIST_HINT,
+        table_kind: str | None = None,
     ):
         self.query = query
+        self.table_kind = table_kind
         self.suggestions = list(suggestions)
         # What only the command line can do, which the web app replaces (None: nothing to replace).
         self.cli_hint: str | None = None if self.suggestions else list_hint

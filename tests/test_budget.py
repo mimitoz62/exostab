@@ -78,6 +78,12 @@ def test_cli_budget(tmp_path: Path) -> None:
     assert r.exit_code == 2 and "budget must be" in r.output
 
 
+def test_a_bad_budget_is_reported_before_the_system_is_loaded() -> None:
+    # It came after the download of the table and the SPOCK probe, and a name that was not found hid it.
+    r = CliRunner().invoke(app, ["check", "No-such-system", "--budget", "later", "--offline"])
+    assert r.exit_code == 2 and "budget must be" in r.output
+
+
 @pytest.mark.parametrize("value", ["inf", "nan", "-5", "0"])
 def test_budget_message_says_what_is_wanted(value: str) -> None:
     # "budget must be positive, got 'inf'"

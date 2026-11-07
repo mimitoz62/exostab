@@ -711,6 +711,16 @@ def test_cache_roundtrip_and_refresh(monkeypatch: pytest.MonkeyPatch) -> None:
     assert info.kind == "archive"
 
 
+def test_reports_name_the_cache_file_but_not_its_folder(monkeypatch: pytest.MonkeyPatch) -> None:
+    # report.json, which the bug report form asks for, had /Users/<name>/Library/Caches/exostab/pscomppars_multi.csv.
+    monkeypatch.delenv("EXOSTAB_OFFLINE")
+    monkeypatch.setattr(store, "fetch_rows", lambda where: pair())
+    for kind in ("archive", "archive-cache"):  # downloaded, then read from the cache
+        rows, info = load_rows()
+        assert (info.kind, info.path) == (kind, "pscomppars_multi.csv")
+        assert system_from_rows(rows, info).source.path == "pscomppars_multi.csv"
+
+
 def test_damaged_cache_is_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("EXOSTAB_OFFLINE")
     d = store.cache_dir()

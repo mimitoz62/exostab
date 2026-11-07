@@ -55,6 +55,8 @@ MAX_SHORT_HOSTS = 0.01
 class TableInfo:
     kind: SourceKind  # "archive", "archive-cache" or "snapshot"
     retrieved_utc: str | None
+    # For the cache, the file name without the folder, which has the user's name in it: report.json goes into bug
+    # reports.
     path: str | None
     note: str | None = None
 
@@ -108,7 +110,7 @@ def load_cache() -> tuple[list[Row], TableInfo] | None:
     retrieved = info.get("retrieved_utc")
     if len(rows) != info.get("n_rows") or not isinstance(retrieved, (str, type(None))):
         return None
-    return rows, TableInfo(kind="archive-cache", retrieved_utc=retrieved, path=str(table))
+    return rows, TableInfo(kind="archive-cache", retrieved_utc=retrieved, path=CACHE_TABLE)
 
 
 def _refuse_cut_table(rows: list[Row]) -> None:
@@ -161,7 +163,7 @@ def refresh_cache() -> tuple[list[Row], TableInfo]:
         with contextlib.suppress(OSError):
             tmp_table.unlink(missing_ok=True)
             tmp_meta.unlink(missing_ok=True)
-    return rows, TableInfo(kind="archive", retrieved_utc=stamp, path=str(table))
+    return rows, TableInfo(kind="archive", retrieved_utc=stamp, path=CACHE_TABLE)
 
 
 def load_rows(*, refresh: bool = False, offline: bool = False) -> tuple[list[Row], TableInfo]:

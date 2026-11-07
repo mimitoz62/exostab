@@ -438,11 +438,13 @@ def render(report: Report, console: Console, *, outputs: list[Path] | None = Non
         ]
     if src.note:
         parts += [Text(f"Note: {src.note}", style="yellow")]
-    if outputs:
-        parts += [Text(""), Text("Saved: " + ", ".join(str(p) for p in outputs), style="dim")]
     console.print(
         Panel(Group(*parts), title=f"exostab {report.software.exostab} — stability report card", expand=True)
     )
+    if (
+        outputs
+    ):  # below the box and on one line, so that a long path is not cut by its border and can be copied
+        console.print(Text("Saved: " + ", ".join(str(p) for p in outputs), style="dim"), soft_wrap=True)
 
 
 def write_json(report: Report, path: Path) -> Path:
