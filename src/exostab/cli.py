@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import codecs
 import errno
 import hashlib
 import io
@@ -64,14 +65,31 @@ def _reader_went_away(exc: OSError) -> bool:
         return True
 
 
+def _prepare_stream(stream: object, *, windows: bool) -> None:
+    """Set up stdout or stderr before anything is written to it."""
+    if not isinstance(stream, io.TextIOWrapper):
+        return
+    # A terminal or a redirected file that cannot encode "⊕" or "☉" gets "?" instead of a traceback.
+    stream.reconfigure(errors="replace")
+    # Windows writes output that goes to a file or another program in the ANSI code page, which has no "⊕" or "☉".
+    # UTF-8 keeps every character, as Python 3.15 does by default (PEP 686). The console itself takes Unicode already,
+    # and an encoding the user chose with PYTHONIOENCODING stays.
+    if not windows or os.environ.get("PYTHONIOENCODING") or codecs.lookup(stream.encoding).name == "utf-8":
+        return
+    try:
+        redirected = not stream.isatty()
+    except ValueError:  # already closed
+        return
+    if redirected:
+        stream.reconfigure(encoding="utf-8")
+
+
 class _Exostab(typer.Typer):
     """The exostab command, with what must be in place before Typer parses the arguments."""
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        # A terminal or a redirected file that cannot encode "⊕" or "☉" gets "?" instead of a traceback.
         for stream in (sys.stdout, sys.stderr):
-            if isinstance(stream, io.TextIOWrapper):
-                stream.reconfigure(errors="replace")
+            _prepare_stream(stream, windows=sys.platform == "win32")
         # By default these signals would end this process at once and leave its workers running.
         for name in ("SIGTERM", "SIGHUP"):
             if hasattr(signal, name):

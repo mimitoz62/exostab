@@ -75,9 +75,11 @@ Yes. Continuous integration runs the tests and the command line on Windows with 
 macOS. The [Quickstart](quickstart.md#install) has the install lines for Command Prompt. Two things differ. The
 optional SPOCK indicator is not tested on Windows: its setup script runs in Git Bash and builds two packages from
 source, which needs the Microsoft C++ Build Tools; in WSL, exostab and SPOCK work as on Linux. And output that goes to
-a file or to another program is written in the Windows code page, so ☉ and ⊕ become `?`, and Windows PowerShell also
-turns – ± and • into other letters. To keep a report card, redirect it in Command Prompt
-(`exostab check "TRAPPIST-1" > card.txt`), or keep `report.json`, which holds every value.
+a file or to another program is written in UTF-8, as Python itself will do from version 3.15. Command Prompt and
+PowerShell 7.4 or later keep it as it is (`exostab check "TRAPPIST-1" > card.txt`), and Notepad opens it. Windows
+PowerShell 5.1 reads it in the console's code page instead and turns ☉, ⊕, – and ± into other letters; run
+`[Console]::OutputEncoding = [Text.Encoding]::UTF8` in that window first. `report.json` holds every value in any case.
+Versions up to 1.1.1 wrote such output in the Windows code page, so ☉ and ⊕ became `?`.
 
 **Can I use exostab from Python?**
 Not through a documented API yet. Every check writes `report.json`, whose JSON schema ships with the package as
