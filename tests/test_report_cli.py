@@ -102,6 +102,14 @@ def test_render_card(small_result) -> None:  # type: ignore[no-untyped-def]
         assert s in text
 
 
+def test_saved_paths_are_not_cut_by_the_box(small_result) -> None:  # type: ignore[no-untyped-def]
+    # A long --out was folded inside the card, with │ between the pieces of each path, which could not be copied.
+    saved = [Path("results-" + "x" * 100) / name for name in ("report.json", "orbits.png")]
+    console = Console(record=True, width=80)
+    render(small_result.report, console, outputs=saved)
+    assert f"Saved: {saved[0]}, {saved[1]}" in console.export_text()
+
+
 def test_flags_are_grouped_in_the_card() -> None:
     from exostab.data import load_system
     from exostab.report import group_flags
@@ -156,6 +164,46 @@ def test_figures(small_result, tmp_path: Path) -> None:  # type: ignore[no-untyp
     paths = check_figures(small_result, tmp_path)
     assert [p.name for p in paths] == ["orbits.png", "megno.png"]
     assert all(p.stat().st_size > 10_000 for p in paths)
+
+
+def test_figure_labels_say_what_is_drawn(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # "1 draws", with ticks at -0.04 and 0.04; every <Y> above 8 drawn at 8 under a label naming only encounters;
+    # "closest pair" over the smallest margin of any pair; and no collisions below β = 1 without the approximation.
+    from exostab import plots
+    from exostab.integrate import RunResult
+
+    figures = []
+    monkeypatch.setattr(plots, "_save", lambda fig, path, **kwargs: figures.append(fig))
+    run = RunResult(
+        label="x",
+        integrator="whfast",
+        dt=0.01,
+        t_target=1.0,
+        t_end=1.0,
+        status="completed",
+        megno=2.0,
+        lyapunov=None,
+        energy_error=1e-10,
+        walltime=0.1,
+        encounter_distance=0.01,
+        n_orbits_innermost=10.0,
+        n_orbits_outermost=5.0,
+        series={"t": [0.0, 1.0], "megno": [0.0, 2.0], "energy_error": [0.0, 1e-10]},
+    )
+    plots.megno_figure([run, run], None, "T", tmp_path / "megno.png")
+    draws = figures[-1].axes[2]
+    assert draws.get_title(loc="left") == "1 draw within the uncertainties"
+    assert all(float(tick).is_integer() for tick in draws.get_xticks())
+    assert "values above 8 drawn at 8" in " ".join(draws.get_ylabel().split())
+    rows = [
+        {"value": v, "nbody_class": "chaotic", "megno": 137.0, "hill_margin_min": 0.1, "amd_beta_max": 0.5}
+        for v in (0.0, 0.1)
+    ]
+    plots.sweep_figure(rows, "e of T b", "T: sweep", tmp_path / "sweep.png")
+    megno, hill, amd = (" ".join(ax.get_ylabel().split()) for ax in figures[-1].axes)
+    assert "values above 8 drawn at 8" in megno
+    assert hill.startswith("smallest Gladman margin of the adjacent pairs")
+    assert "below 1: no collisions in the secular approximation" in amd
 
 
 def write_system(tmp_path: Path, system: str = "T", b: str = "T b", c: str = "T c") -> Path:
@@ -305,6 +353,33 @@ def test_check_from_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     data = json.loads((out / "report.json").read_text())
     assert data["data"]["source"] == "file" and data["settings"]["seed"] == 0
     assert "--from-file" in data["command"]
+
+
+def test_the_command_says_when_exostab_offline_chose_the_data(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Repeated where the variable is not set, the command read the archive table, not the snapshot.
+    args = [
+        "check",
+        "Kepler-36",
+        "--orbits",
+        "100",
+        "--draws",
+        "0",
+        "--jobs",
+        "1",
+        "--no-ias15",
+        "--no-plots",
+    ]
+    args += ["--out", str(tmp_path)]
+    for given, command in (
+        ([], "EXOSTAB_OFFLINE=1 exostab check Kepler-36"),
+        (["--offline"], "exostab check"),
+    ):
+        monkeypatch.setattr("sys.argv", ["exostab", *args, *given])
+        r = runner.invoke(app, [*args, *given])  # conftest sets EXOSTAB_OFFLINE=1
+        assert r.exit_code == 0, r.output
+        assert json.loads((tmp_path / "report.json").read_text())["command"].startswith(command)
 
 
 def test_check_by_name_offline(tmp_path: Path) -> None:
@@ -773,6 +848,16 @@ def test_an_empty_output_folder_is_refused(tmp_path: Path, monkeypatch: pytest.M
     assert list(tmp_path.iterdir()) == []
 
 
+def test_a_tilde_in_out_is_the_home_folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # The shell leaves ~ as it is in --out=~/x and in quotes, and a folder named ~ was made in the current folder.
+    from exostab.cli import path
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))  # the home folder on Windows
+    assert path("~/results") == tmp_path / "results"
+    assert path("results/~x") == Path("results/~x")
+
+
 def test_slug_is_safe_for_long_and_non_latin_names() -> None:
     # A 300-character name failed with "File name too long" after the run.
     long = slug("x" * 300)
@@ -1088,6 +1173,33 @@ def test_a_name_that_is_not_found_gets_a_way_forward(name: str, hint: str) -> No
     assert "--refresh" not in text  # offline: the snapshot is all there is
 
 
+@pytest.mark.parametrize(
+    ("kind", "args", "refresh"),
+    [
+        ("archive-cache", [], True),  # the cache can be older than the system
+        ("archive", [], False),  # downloaded in this run, as with --refresh
+        ("snapshot", [], False),  # the archive could not be reached
+        (None, [], False),  # EXOSTAB_OFFLINE, which conftest sets and which ignores --refresh
+        (None, ["--refresh"], False),
+    ],
+)
+def test_refresh_is_suggested_only_where_it_can_help(
+    kind: str | None, args: list[str], refresh: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # --refresh was suggested in all of these, and a system with one planet, which no table or file can give, was not
+    # mentioned: Kepler-22 and 51 Peg are among the first names people try.
+    import exostab.data as data
+
+    if kind is not None:
+        rows, _ = data.load_rows(offline=True)
+        info = data.TableInfo(kind=kind, retrieved_utc="2026-09-28T00:00:00+00:00", path=None)
+        monkeypatch.setattr(data, "load_rows", lambda **kwargs: (rows, info))
+    r = runner.invoke(app, ["check", "Kepler-22", *args])
+    text = " ".join(plain(r.output).split())
+    assert r.exit_code == 1 and "only systems with two or more known planets" in text
+    assert ("--refresh downloads" in text) is refresh
+
+
 def test_the_last_lines_give_the_whole_time_and_the_guide(tmp_path: Path) -> None:
     # The time left out the download and the start-up, a third of a first run.
     r = runner.invoke(app, ["check", "Kepler-36", *FAST, "--no-plots", "--out", str(tmp_path)])
@@ -1151,6 +1263,17 @@ def test_a_worker_that_dies_is_one_line(tmp_path: Path, monkeypatch: pytest.Monk
         r = runner.invoke(app, args)
         assert r.exit_code == 1 and isinstance(r.exception, SystemExit), r.output
         assert "worker process died" in " ".join(r.output.split())
+
+
+def test_a_sweep_is_not_told_to_use_fewer_draws(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # sweep has no --draws
+    def killed(*args: object, **kwargs: object) -> None:
+        raise BrokenProcessPool("A process in the process pool was terminated abruptly")
+
+    monkeypatch.setattr("exostab.sweep.run_sweep", killed)
+    r = runner.invoke(app, ["sweep", "Kepler-36", "--orbits", "100", "--steps", "2", "--out", str(tmp_path)])
+    text = " ".join(plain(r.output).split())
+    assert r.exit_code == 1 and "Try fewer workers (--jobs)." in text and "draws" not in text
 
 
 def test_parameters_the_analysis_cannot_use_are_one_line(
@@ -1324,6 +1447,27 @@ def test_sweep_refuses_a_letter_that_fits_two_planets(tmp_path: Path) -> None:
     assert r.exit_code == 1 and "fits several planets" in " ".join(r.output.split())
 
 
+def test_sweep_says_where_planet_b_came_from(tmp_path: Path) -> None:
+    # "no planet 'b' in S" for a file whose planets have no letters, and the user had typed no b.
+    file = write_system(tmp_path, "S", "Alpha", "Beta")
+    args = [
+        "sweep",
+        "--from-file",
+        str(file),
+        "--steps",
+        "2",
+        "--orbits",
+        "100",
+        "--out",
+        str(tmp_path / "o"),
+    ]
+    r = runner.invoke(app, args)
+    text = " ".join(plain(r.output).split())
+    assert r.exit_code == 1 and "Without --planet, sweep varies planet b" in text
+    r = runner.invoke(app, [*args, "--planet", "z"])
+    assert r.exit_code == 1 and "Without --planet" not in " ".join(plain(r.output).split())
+
+
 def test_sweep_table_tells_close_values_apart(tmp_path: Path) -> None:
     # All three rows read 16.22, while sweep.csv had 16.2187, 16.2188 and 16.2189.
     r = runner.invoke(
@@ -1466,6 +1610,14 @@ def test_one_of_a_thing_is_singular(tmp_path: Path) -> None:
     res = check_system(two_planet_system(), CheckSettings(orbits=300, draws=1, jobs=1))
     text = _card(res)
     assert "1 Monte Carlo draw;" in text and "1 draws" not in text
+
+
+def test_the_progress_line_writes_numbers_as_the_card_does() -> None:
+    # "21 runs of 1e+04 orbits…", and "1 runs" with --draws 0, while the card says 10,000 orbits.
+    from exostab.cli import integrating_text
+
+    assert integrating_text("X", 0, 100) == "Integrating X: 1 run of 100 orbits…"
+    assert integrating_text("X", 20, 1e4) == "Integrating X: 21 runs of 10,000 orbits…"
 
 
 def test_catalog_timeout_and_skip(tmp_path: Path) -> None:

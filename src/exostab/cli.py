@@ -186,7 +186,8 @@ def path(value: str | Path) -> Path:
     --out "$DIR", and would write into the current folder."""
     if str(value) == "":
         raise typer.BadParameter("the output folder is empty; give a path")
-    return Path(value)
+    # The shell leaves ~ as it is in --out=~/x and in quotes, which would make a folder named ~ here.
+    return Path(os.path.expanduser(value))
 
 
 def _output_folder(out: Path, files: Iterable[str]) -> Path:
@@ -238,17 +239,19 @@ def _refuse_conflicting_sources(refresh: bool, offline: bool) -> None:
 
 
 @contextmanager
-def _analysis_errors() -> Iterator[None]:
-    """One line, not a traceback, for parameters the analysis cannot use and for a worker that died."""
+def _analysis_errors(*, draws: bool = True) -> Iterator[None]:
+    """One line, not a traceback, for parameters the analysis cannot use and for a worker that died. ``draws``: the
+    command has --draws."""
     try:
         yield
     except UnusableParametersError as exc:
         _print_error(exc)
         raise typer.Exit(1) from exc
     except BrokenProcessPool as exc:
+        fewer = "fewer draws or fewer workers" if draws else "fewer workers"
         _print_error(
             "A worker process died, possibly because the computer ran out of memory, so the run was stopped. "
-            "Try fewer draws or fewer workers (--jobs)."
+            f"Try {fewer} (--jobs)."
         )
         raise typer.Exit(1) from exc
 
@@ -275,12 +278,14 @@ def _load(name: str | None, from_file: Path | None, refresh: bool, offline: bool
     except (SystemNotFoundError, IncompleteSystemError, SystemFileError, ArchiveError) as exc:
         _print_error(exc)
         if isinstance(exc, SystemNotFoundError) and not isinstance(exc, AmbiguousNameError):
-            err_console.print(Text(_way_forward(exc.query, offline), style="dim"))
+            # --refresh can only help where the table came from the cache: not offline, nor just after a download
+            err_console.print(Text(_way_forward(exc.query, exc.table_kind == "archive-cache"), style="dim"))
         raise typer.Exit(1) from exc
 
 
-def _way_forward(name: str, offline: bool) -> str:
-    """What to do about a name the table does not have: often a system too new for it, or one of our own."""
+def _way_forward(name: str, refreshable: bool) -> str:
+    """What to do about a name the table does not have: often a system with one planet, one too new for the table,
+    or one of our own."""
     from .data.names import normalize
 
     if normalize(name) in {"sun", "sol", "solarsystem"}:
@@ -288,16 +293,30 @@ def _way_forward(name: str, offline: bool) -> str:
             "The Solar System is not in the archive, which lists exoplanets. To check it, run exostab check "
             f"--from-file solar_system.yaml with this file: {SOLAR_SYSTEM_FILE}"
         )
+    newer = "If the system was published after the table, --refresh downloads the archive's current table. "
     # each URL ends its line: a full stop after it would become part of the link in some terminals
-    newer = "" if offline else "--refresh downloads the archive's current table. "
     return (
-        f"{newer}A system that is not in the table can be checked from a file of its parameters with --from-file: "
-        f"{OWN_PARAMETERS}"
+        "The table lists only systems with two or more known planets, as exostab needs at least two. "
+        f"{newer if refreshable else ''}A system of two or more planets that is not in the table can be "
+        f"checked from a file of its parameters with --from-file: {OWN_PARAMETERS}"
     )
 
 
-def _command() -> str:
-    return "exostab " + " ".join(shlex.quote(a) for a in sys.argv[1:])
+def _command(system: System, offline: bool) -> str:
+    """The command as typed, with EXOSTAB_OFFLINE in front where it chose the snapshot: without it, the same
+    command reads the archive table."""
+    from .data.store import offline_requested
+
+    variable = system.source.kind == "snapshot" and not offline and offline_requested()
+    typed = " ".join(shlex.quote(a) for a in sys.argv[1:])
+    return f"{'EXOSTAB_OFFLINE=1 ' if variable else ''}exostab {typed}"
+
+
+def integrating_text(name: str, draws: int, orbits: float) -> str:
+    """The progress line of check, which scripts/make_demo_gif.py draws too."""
+    from .units import format_count
+
+    return f"Integrating {name}: {_plural(draws + 1, 'run')} of {format_count(orbits)} orbits…"
 
 
 OrbitsOpt = Annotated[
@@ -424,6 +443,13 @@ def check(
             "[red]--budget chooses --orbits and --draws; give either --budget or those options.[/red]"
         )
         raise typer.Exit(2)
+    seconds = None
+    if budget is not None:  # before the SPOCK probe and the download, which a typo would waste
+        try:
+            seconds = parse_budget(budget)
+        except ValueError as exc:
+            _print_error(exc)
+            raise typer.Exit(2) from exc
     if spock_python == "":  # an unset shell variable in --spock-python "$PY", which would run without SPOCK
         err_console.print("[red]--spock-python is empty; give the path of the interpreter.[/red]")
         raise typer.Exit(2)
@@ -459,13 +485,6 @@ def check(
         ias15_check=not no_ias15,
         jobs=jobs,
     )
-    seconds = None
-    if budget is not None:
-        try:
-            seconds = parse_budget(budget)
-        except ValueError as exc:
-            _print_error(exc)
-            raise typer.Exit(2) from exc
     out_dir = _output_folder(
         out or Path("exostab-results") / slug(system.name),
         OUTPUT_FILES["check"][:1] if no_plots else OUTPUT_FILES["check"],
@@ -481,10 +500,10 @@ def check(
             console.print(f"[yellow]{p.warning}[/yellow]")
     from .indicators.spock import SpockUnavailableError
 
-    status = Text(f"Integrating {system.name}: {settings.draws + 1} runs of {settings.orbits:.3g} orbits…")
+    status = Text(integrating_text(system.name, settings.draws, settings.orbits))
     with _analysis_errors(), console.status(status):
         try:
-            result = check_system(system, settings, command=_command())
+            result = check_system(system, settings, command=_command(system, offline))
         except SpockUnavailableError as exc:
             _print_error(exc)
             raise typer.Exit(1) from exc
@@ -581,9 +600,14 @@ def sweep(
         target = system.planet(_named_planet(name, system) if planet is None else planet).name
     except KeyError as exc:
         _print_error(exc.args[0])
+        if planet is None:  # b, the default, which was not typed
+            err_console.print(
+                Text("Without --planet, sweep varies planet b. Choose the planet with --planet.", style="dim")
+            )
         raise typer.Exit(1) from exc
     out_dir = _output_folder(out or Path("exostab-results") / slug(system.name), OUTPUT_FILES["sweep"])
-    with _analysis_errors(), console.status(Text(f"Sweeping {param.value} of {target} over {steps} values…")):
+    status = Text(f"Sweeping {param.value} of {target} over {steps} values…")
+    with _analysis_errors(draws=False), console.status(status):
         rows = run_sweep(system, target, param.value, value_range, steps, orbits=orbits, seed=seed, jobs=jobs)
     try:
         paths = write_sweep(
@@ -596,7 +620,7 @@ def sweep(
             steps=steps,
             orbits=orbits,
             seed=seed,
-            command=_command(),
+            command=_command(system, offline),
         )
     except OSError as exc:
         _print_error(f"Could not write the results: {exc}")

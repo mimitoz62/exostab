@@ -81,15 +81,15 @@ def find_host(name: str, hosts: Mapping[str, Sequence[Row]], info: TableInfo) ->
         if isinstance(exc, AmbiguousNameError):
             raise
         if info.kind != "snapshot":
-            if not info.retrieved_utc:
-                raise
             # a system published after this date is the likely reason
-            where = f"the archive table of {info.retrieved_utc[:10]}"
-            raise SystemNotFoundError(exc.query, exc.suggestions, where=where) from exc
+            when = f" of {info.retrieved_utc[:10]}" if info.retrieved_utc else ""
+            raise SystemNotFoundError(
+                exc.query, exc.suggestions, where=f"the archive table{when}", table_kind=info.kind
+            ) from exc
         why = "" if info.note is None or info.note.startswith("offline snapshot") else f" ({info.note})"
         where = f"the offline snapshot{why}, not the full archive table"
         raise SystemNotFoundError(
-            exc.query, exc.suggestions, where=where, list_hint=SNAPSHOT_LIST_HINT
+            exc.query, exc.suggestions, where=where, list_hint=SNAPSHOT_LIST_HINT, table_kind=info.kind
         ) from exc
 
 

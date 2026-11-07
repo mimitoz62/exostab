@@ -447,7 +447,7 @@ def render(folder: Path | None) -> str:
 |---|---|
 | Overall, Hill, AMD, N-body | Verdicts: stable, marginal, unstable, inconclusive (see [Methods](methods.md)). "skipped" or "timeout" means no verdict; hover for the reason. |
 | Min. spacing | Smallest separation of adjacent planets in mutual Hill radii |
-| Max. AMD β | Largest AMD-stability coefficient β of the adjacent pairs, with twice the coplanar AMD for the unknown inclinations. Below 1 excludes collisions between planets; the AMD verdict is stable only if, in addition, the innermost planet cannot reach the star (β_S < 1) and every pair lies in the domain of the critical AMD (see [Methods](methods.md)). ∞ means resonances overlap even for circular orbits |
+| Max. AMD β | Largest AMD-stability coefficient β of the adjacent pairs, with twice the coplanar AMD for the unknown inclinations. Below 1 excludes collisions between planets in the secular (orbit-averaged) approximation; the AMD verdict is stable only if, in addition, the innermost planet cannot reach the star (β_S < 1) and every pair lies in the domain of the critical AMD (see [Methods](methods.md)). ∞ means resonances overlap even for circular orbits |
 | Nominal ⟨Y⟩ | MEGNO of the nominal run (runs stopped by a close encounter still show a value) |
 | Draws reg/chaos/unst | Monte Carlo draws that were regular / chaotic / had a close encounter or escape |
 | Horizon | Length of the N-body runs in years |

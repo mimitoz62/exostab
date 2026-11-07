@@ -23,6 +23,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
+from matplotlib.ticker import MaxNLocator
 
 from .indicators.megno import MEGNO_CHAOTIC, classify_run
 from .integrate import RunResult
@@ -227,8 +228,17 @@ def megno_figure(runs: Sequence[RunResult], ias15: RunResult | None, title: str,
                 )
         ax_d.axhline(MEGNO_CHAOTIC, color=MUTED, lw=0.8, ls="--")
         ax_d.set_xlabel("Monte Carlo draws, sorted by <Y>")
-        ax_d.set_ylabel(f"final <Y> (close encounters shown at {MEGNO_CLIP:g})")
-        ax_d.set_title(f"{len(ys)} draws within the uncertainties", fontsize=9, loc="left", color=INK)
+        # draws are counted: no tick at 0.5, nor at ±0.04 around a single draw
+        ax_d.xaxis.set_major_locator(MaxNLocator(integer=True, min_n_ticks=1))
+        ax_d.set_ylabel(
+            f"final <Y>\n(close encounters and values above {MEGNO_CLIP:g} drawn at {MEGNO_CLIP:g})"
+        )
+        ax_d.set_title(
+            f"{len(ys)} {'draw' if len(ys) == 1 else 'draws'} within the uncertainties",
+            fontsize=9,
+            loc="left",
+            color=INK,
+        )
         if ys:
             ax_d.legend(loc="upper left", fontsize=7.5)
         else:
@@ -267,13 +277,13 @@ def sweep_figure(rows: Sequence[dict[str, Any]], param_label: str, title: str, p
                     zorder=3,
                 )
         ax.axhline(MEGNO_CHAOTIC, color=MUTED, lw=0.8, ls="--")
-        ax.set_ylabel(f"MEGNO <Y>\n(encounters at {MEGNO_CLIP:g})")
+        ax.set_ylabel(f"MEGNO <Y>\n(encounters and values\nabove {MEGNO_CLIP:g} drawn at {MEGNO_CLIP:g})")
         ax.set_title(_plain(title), fontsize=9, loc="left", color=INK)
         ax.legend(fontsize=7.5, loc="upper left")
         ax = axes[1]
         ax.plot(x, [r["hill_margin_min"] for r in rows], color=PLANET_COLORS[0], lw=1.6, marker="o", ms=3)
         ax.axhline(0.0, color=MUTED, lw=0.8, ls="--")
-        ax.set_ylabel("Gladman margin,\nclosest pair\n(Hill stable above 0)")
+        ax.set_ylabel("smallest Gladman margin\nof the adjacent pairs\n(Hill stable above 0)")
         ax = axes[2]
         beta = np.array([r["amd_beta_max"] for r in rows], dtype=float)
         y, lo, hi = _plotted_beta(beta)
@@ -297,7 +307,7 @@ def sweep_figure(rows: Sequence[dict[str, Any]], param_label: str, title: str, p
         ax.axhline(1.0, color=MUTED, lw=0.8, ls="--")
         ax.set_yscale("log")
         ax.set_ylim(lo, hi)
-        ax.set_ylabel("largest AMD ratio β = 2β_p\n(no collisions below 1)")
+        ax.set_ylabel("largest AMD ratio β = 2β_p\n(below 1: no collisions in\nthe secular approximation)")
         if np.isposinf(beta).any() or (beta == 0).any():
             ax.legend(fontsize=7.5, loc="best")
         ax.set_xlabel(_plain(param_label))
