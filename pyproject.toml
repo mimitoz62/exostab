@@ -34,6 +34,7 @@ dependencies = [
     "numpy>=1.24",
     "astropy>=5.3",
     "astroquery>=0.4.7",
+    "pyvo>=1.4",  # data/archive.py imports DALOverflowWarning, new in pyvo 1.4; astroquery 0.4.7 allows pyvo 1.1
     "pydantic>=2.11,<3",  # older pydantic writes a different JSON schema than the shipped report.schema.json
     "typer>=0.16",  # older typer fails on `str | None` options or with click >= 8.2 (tested 2026-10-03)
     "rich>=13.0",
@@ -44,7 +45,7 @@ dependencies = [
 
 [project.optional-dependencies]
 catalog = ["pyarrow>=14"]
-web = ["streamlit>=1.50", "plotly>=6"]
+web = ["streamlit>=1.52", "plotly>=6"]  # st.plotly_chart(width=...) needs 1.51; CI cannot test below 1.52 (D25)
 dev = [
     "pytest>=8",
     "pytest-cov>=5",
@@ -54,7 +55,7 @@ dev = [
     "pre-commit>=3.5",
     "types-PyYAML",
     "pyarrow>=14",
-    "streamlit>=1.50",
+    "streamlit>=1.52",
     "plotly>=6",
     "mkdocs>=1.6,<2",  # MkDocs 2.0 drops plugin/theme compatibility (Material for MkDocs warning, 2026)
     "mkdocs-material>=9.5",

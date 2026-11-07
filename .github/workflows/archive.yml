@@ -1,0 +1,28 @@
+name: Live archive
+
+# Queries the NASA Exoplanet Archive and checks two systems with its answer. Not a job of nightly.yml: the README's
+# validation badge shows the status of that workflow, which should not fail when the archive is down.
+on:
+  schedule:
+    - cron: "37 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  archive:
+    name: live archive query
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - name: Query the NASA Exoplanet Archive and check two systems
+        run: |
+          exostab list --refresh --min-planets 7
+          exostab check "TRAPPIST-1" --orbits 2000 --draws 3 --no-plots --out live/
+          exostab check "HD 127195" --orbits 2000 --draws 3 --no-plots --out live-hd/

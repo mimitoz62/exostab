@@ -185,6 +185,13 @@ def test_sdist_ships_what_the_tests_load() -> None:
     assert [path for path in needed if path not in include] == []
 
 
+def test_the_extras_have_the_bounds_of_dev() -> None:
+    # The CI job `lowest` installs .[dev] at its lower bounds and checks each of them, so the extras that users install
+    # must ask for the same versions.
+    extras = pyproject()["project"]["optional-dependencies"]
+    assert [r for name in ("catalog", "web") for r in extras[name] if r not in extras["dev"]] == []
+
+
 @pytest.mark.skipif(
     shutil.which("git") is None or not (ROOT / ".git").exists(), reason="needs a git checkout"
 )
@@ -221,6 +228,103 @@ def test_workflow_pipelines_keep_the_exit_status() -> None:
                 if pipe.search(step.get("run", "")) and step.get("shell", shell) != "bash":
                     unsafe.append(f"{path.name}: {job_id}: {step.get('name') or step['run'][:60]}")
     assert unsafe == []
+
+
+@pytest.mark.skipif(not WORKFLOWS.is_dir(), reason="workflows are not in the sdist")
+def test_ci_runs_once_for_a_pull_request_and_for_each_push_to_main() -> None:
+    # A push to the branch of a pull request started a second run of the same commit. Pull requests from forks get
+    # only the pull_request event, so it has no filter.
+    workflow = yaml.safe_load((WORKFLOWS / "ci.yml").read_text(encoding="utf-8"))
+    on = workflow[True]  # YAML 1.1 reads the key `on` as true
+    assert on == {
+        "push": {"branches": ["main"], "tags": ["v*"]},
+        "pull_request": None,
+        "workflow_dispatch": None,
+    }
+
+
+@pytest.mark.skipif(
+    not WORKFLOWS.is_dir() or os.name == "nt" or shutil.which("bash") is None,
+    reason="needs the workflows and a POSIX shell",
+)
+@pytest.mark.parametrize(
+    ("ls_remote", "returncode", "ran"),
+    [
+        (
+            0,
+            0,
+            [
+                "scripts/system_pages.py catalog-latest",
+                "scripts/catalog_page.py catalog-latest",
+                "scripts/catalog_changes.py archive",
+            ],
+        ),
+        (2, 0, ["scripts/catalog_page.py", "scripts/catalog_changes.py"]),  # no branch catalog-data yet
+        (128, 1, []),  # origin did not answer
+    ],
+)
+def test_the_docs_use_catalog_placeholders_only_when_the_branch_does_not_exist(
+    tmp_path: Path, ls_remote: int, returncode: int, ran: list[str]
+) -> None:
+    # Any failed fetch of catalog-data gave placeholder pages, which the deploy job put over the live catalog.
+    steps = yaml.safe_load((WORKFLOWS / "docs.yml").read_text(encoding="utf-8"))["jobs"]["build"]["steps"]
+    script = next(step["run"] for step in steps if "catalog-data" in step.get("name", ""))
+    stubs = tmp_path / "bin"
+    stubs.mkdir()
+    # As git does: without the branch, or without an answer, the fetch fails too.
+    git = f'case "$1" in ls-remote) exit {ls_remote} ;; fetch) [ {ls_remote} -eq 0 ] || exit 128 ;; esac'
+    (stubs / "git").write_text(f"#!/bin/sh\n{git}\n", encoding="utf-8")
+    (stubs / "python").write_text('#!/bin/sh\necho "$*" >> ran.txt\n', encoding="utf-8")
+    for stub in stubs.iterdir():
+        stub.chmod(0o755)
+    env = {**os.environ, "PATH": f"{stubs}{os.pathsep}{os.environ['PATH']}"}
+    result = subprocess.run(  # a step without `shell:` runs as `bash -e {0}`
+        ["bash", "-e", "-c", script], cwd=tmp_path, env=env, capture_output=True, text=True, check=False
+    )
+    assert result.returncode == returncode, result.stderr
+    log = tmp_path / "ran.txt"
+    assert (log.read_text(encoding="utf-8").splitlines() if log.exists() else []) == ran
+
+
+@pytest.mark.skipif(not WORKFLOWS.is_dir(), reason="workflows are not in the sdist")
+def test_a_release_pull_request_runs_the_notebooks_with_its_own_checkout() -> None:
+    # The release commit moves the notebooks' pin to a tag that is pushed only after the merge, so on the release pull
+    # request the install failed, and both notebooks with it.
+    workflow = yaml.safe_load((WORKFLOWS / "browser-paths.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["notebook"]["steps"]
+    swap = next(i for i, step in enumerate(steps) if "install this checkout" in step.get("name", ""))
+    assert swap < next(i for i, step in enumerate(steps) if "jupyter nbconvert" in step.get("run", ""))
+    assert steps[swap]["if"] == "github.event_name == 'pull_request'"
+    pin = re.search(r'sed -i "s#(.+?)#', steps[swap]["run"])
+    assert pin is not None
+    url = pin[1].replace("$tag", f"v{latest_release()}")
+    for name in ("exostab_quickstart.ipynb", "exostab_exercise.ipynb"):
+        notebook = (ROOT / "examples" / name).read_text(encoding="utf-8")
+        assert f"examples/{name}" in steps[swap]["run"] and url in notebook, name
+
+
+@pytest.mark.skipif(not WORKFLOWS.is_dir(), reason="workflows are not in the sdist")
+def test_the_weekly_catalog_is_built_without_write_permission() -> None:
+    # The build runs the newest release of every dependency for about two hours. With a token that can write, any of
+    # them could push to main or move a tag, so its job only reads and keeps no token on disk.
+    workflow = yaml.safe_load((WORKFLOWS / "catalog.yml").read_text(encoding="utf-8"))
+    assert workflow["permissions"] == {"contents": "read"}
+    jobs = workflow["jobs"]
+    checkout = next(s for s in jobs["catalog"]["steps"] if s.get("uses", "").startswith("actions/checkout@"))
+    assert "permissions" not in jobs["catalog"] and checkout["with"]["persist-credentials"] is False
+    writers = {name for name, job in jobs.items() if "write" in job.get("permissions", {}).values()}
+    assert writers == {"publish", "docs"}
+    installs = [s for name in writers for s in jobs[name]["steps"] if "pip install" in s.get("run", "")]
+    assert installs == []
+
+
+@pytest.mark.skipif(not WORKFLOWS.is_dir(), reason="workflows are not in the sdist")
+def test_the_validation_badge_does_not_depend_on_the_live_archive() -> None:
+    # The README's validation badge shows the status of nightly.yml, which should not fail when the archive is down.
+    nightly = yaml.safe_load((WORKFLOWS / "nightly.yml").read_text(encoding="utf-8"))
+    offline = {job_id: job.get("env", {}).get("EXOSTAB_OFFLINE") for job_id, job in nightly["jobs"].items()}
+    assert offline == {"validation": "1"}
+    assert "exostab list --refresh" in (WORKFLOWS / "archive.yml").read_text(encoding="utf-8")
 
 
 @pytest.mark.skipif(not WORKFLOWS.is_dir(), reason="workflows are not in the sdist")
