@@ -1,8 +1,10 @@
 """One-parameter sweeps: how do the indicators change when one planet's parameter is varied?
 
 All other parameters stay at the nominal values (randomized angles are drawn once from the seed and then
-held fixed, so the sweep isolates the swept parameter). When the argument of periastron or the period is
-changed, the mean anomaly at the epoch is kept.
+held fixed). When the eccentricity, the argument of periastron or the period is changed, the mean anomaly at
+the epoch is kept, whereas ``exostab check`` and the web app compute it from the transit time of a planet that
+has one. A planet phased from a transit time can therefore be off its transit at that time, and a sweep of
+omega on a circular orbit only moves where the planet starts.
 """
 
 from __future__ import annotations

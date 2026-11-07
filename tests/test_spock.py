@@ -108,6 +108,18 @@ def test_evaluate_with_fake_worker(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         sp.evaluate(Realization("x", 1.0, trio().bodies[:2]), [], sys.executable)
 
 
+def test_the_median_of_an_even_number_of_draws_is_the_mean_of_the_middle_two(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # It was the upper of the two middle values, here 0.3.
+    fake_worker(tmp_path, monkeypatch, [0.5, 0.9, 0.1, 0.3, 0.2])
+    res = sp.evaluate(trio(), [trio()] * 4, sys.executable)
+    assert res.details["p_stable_draws"] == [0.9, 0.1, 0.3, 0.2]
+    assert res.details["p_stable_median"] == pytest.approx(0.25)
+    fake_worker(tmp_path, monkeypatch, [0.5, 0.9, 0.1, 0.3])
+    assert sp.evaluate(trio(), [trio()] * 3, sys.executable).details["p_stable_median"] == 0.3
+
+
 @pytest.mark.parametrize(
     ("body", "match"),
     [

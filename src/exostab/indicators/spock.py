@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import json
 import os
+import statistics
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -178,7 +179,7 @@ def evaluate(nominal: Realization, draws: list[Realization], python: str) -> Ind
         "versions": versions,
     }
     if p_draws:
-        details["p_stable_median"] = sorted(p_draws)[len(p_draws) // 2]
+        details["p_stable_median"] = statistics.median(p_draws)
     return IndicatorResult(
         name="spock",
         title="SPOCK (ML)",

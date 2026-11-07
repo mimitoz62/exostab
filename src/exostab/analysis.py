@@ -270,7 +270,7 @@ def _combined_verdict(
             return Overall(
                 verdict=Verdict.MARGINAL,
                 summary="Every indicator is stable for the nominal parameters. " + no_draws,
-                reasons=caveats,
+                reasons=extra + caveats,
             )
         if encounters:
             # A close encounter within the uncertainties is direct evidence of instability (DECISIONS.md, D15).
@@ -290,7 +290,13 @@ def _combined_verdict(
             summary = "All indicators agree: no sign of instability for the nominal parameters or " + (
                 "the 1 draw." if n == 1 else f"any of the {n} draws."
             )
-        return Overall(verdict=Verdict.STABLE, summary=summary + HORIZON, reasons=hidden)
+        if upper_limits:
+            summary += (
+                f" These runs use values that are only published upper limits ({limits}): the nominal run takes "
+                "each limit and the draws are uniform below it, so this verdict describes the values that were "
+                "run, not every value below a limit."
+            )
+        return Overall(verdict=Verdict.STABLE, summary=summary + HORIZON, reasons=hidden + extra)
 
     sentences = _nbody_sentences(nb, allowed)
     bad = [f"{r.title}: {r.verdict.value}" for r in others if r.verdict is not Verdict.STABLE]
@@ -306,8 +312,8 @@ def _combined_verdict(
             )
     if upper_limits:
         sentences.append(
-            f"Some inputs are only published upper limits ({limits}): the nominal run takes each limit and the "
-            "draws are uniform below it."
+            f"These runs use values that are only published upper limits ({limits}): the nominal run takes each "
+            "limit and the draws are uniform below it."
         )
     return Overall(
         verdict=Verdict.MARGINAL,

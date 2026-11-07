@@ -1400,7 +1400,10 @@ def test_the_card_says_what_the_inclination_prior_did() -> None:
         two_planet_system(),
         CheckSettings(orbits=100, draws=1, jobs=1, ias15_check=False, inclination_prior="isotropic"),
     )
-    assert "no mass here is a minimum mass" in _card(no_minimum)
+    # It changes no mass, but it was said to have no effect although it changes the random numbers of the draws.
+    note = _card(no_minimum)
+    assert "prior changes no mass here (none is a minimum mass)" in note and "no effect" not in note
+    assert "changes the random numbers of every draw" in note
     default = _card(check_system(hd, CheckSettings(orbits=100, draws=1, jobs=1)))
     assert "isotropic" not in default and "no effect" not in default
 

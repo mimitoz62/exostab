@@ -479,7 +479,11 @@ def sentences_of(result: Case) -> dict[str, str]:
             f"Weakly AMD-stable: no planet-planet collisions (β = {beta}), but the AMD could in principle "
             f"bring the inner planet to the star (β_S = {beta_s})."
         ),
-        "hill_stable": f"AMD-unstable (β = {beta}) but Hill stable in the AMD framework (β_H = {beta_h})",
+        "hill_stable": (
+            f"AMD-unstable (β = {beta}) but Hill stable in the AMD framework (β_H = {beta_h}): close "
+            "encounters are excluded if the mutual inclinations carry no more AMD than the eccentricities; "
+            "chaos is not excluded."
+        ),
         "neither_coplanar": f"{neither}, even for exactly coplanar orbits ({coplanar})",
         "neither": (
             f"{neither} if the mutual inclinations carry as much AMD as the eccentricities; not 'unstable', "

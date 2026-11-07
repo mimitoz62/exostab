@@ -96,9 +96,10 @@ threshold grows with eccentricity [@pu2015; @pu2015erratum]. The AMD criteria as
 catalogue systems, that the unknown mutual inclinations carry as much AMD as the eccentricities, and the
 resonance-overlap criterion is used only within the domain its authors state [@petit2017]. N-body runs use a time
 step of one thirtieth of the shortest pericentre-passage time [@wisdom2015; @hadden2018], detect close encounters
-for every pair of planets, and repeat the nominal run with IAS15. A run is declared inconclusive if its relative
-energy error, checked at 1,200 times through every run, exceeds 10⁻⁵, or if a planet passes within half its Hill
-radius of the star, where unmodelled tides, relativity and stellar size matter. SPOCK, when enabled, can make the
+for every pair of planets, and repeat the nominal run with IAS15. A run stopped by a close encounter or escape
+counts as unstable, whatever its relative energy error. Any other run is declared inconclusive if that error,
+checked at 1,200 times through every run, exceeds 10⁻⁵, or if a planet passes within half its Hill radius of the
+star, where unmodelled tides, relativity and stellar size matter. SPOCK, when enabled, can make the
 overall verdict marginal but never unstable. The overall verdict is "stable" only if all indicators agree, draws
 were run and no draw has a close encounter, and "unstable" only on direct numerical evidence of close encounters
 or escapes that rests neither on values published only as upper limits nor on a single-star model of a system

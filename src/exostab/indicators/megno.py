@@ -43,7 +43,8 @@ from . import DrawStats, IndicatorResult, Verdict, combine
 # <Y> at or above this value counts as chaotic. Same threshold as the HD 127195 Research Note;
 # see DECISIONS.md (D8) for its uncertainty.
 MEGNO_CHAOTIC = 2.2
-# Runs whose maximum relative energy error exceeds this are inconclusive (DECISIONS.md, D8).
+# Runs whose maximum relative energy error exceeds this are inconclusive, unless a close encounter or escape
+# stopped them (classify_run; DECISIONS.md, D8).
 ENERGY_ERROR_MAX = 1e-5
 # The outermost planet must complete at least this many orbits for a "stable" verdict.
 MIN_OUTER_ORBITS = 100
