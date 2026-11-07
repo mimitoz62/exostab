@@ -12,7 +12,9 @@ description: >-
 Parameters come from the NASA Exoplanet Archive's **Planetary Systems Composite Parameters** table (`pscomppars`,
 doi:[10.26133/NEA13](https://doi.org/10.26133/NEA13)), queried through its Table Access Protocol (TAP) service with
 astroquery. exostab downloads all planets in systems with two or more planets (`sy_pnum >= 2`, about 2,700 rows)
-once, stores them in your user cache folder, and reuses the copy until you pass `--refresh`. The copy is written
+once, stores them in your user cache folder (`~/.cache/exostab` on Linux, `~/Library/Caches/exostab` on macOS,
+`%LOCALAPPDATA%\exostab\exostab\Cache` on Windows, or the folder named by the environment variable
+`EXOSTAB_CACHE_DIR`), and reuses the copy until you pass `--refresh`. The copy is written
 atomically and its row count and checksum are checked when it is read, so an interrupted download cannot leave a
 truncated table behind. Every report records:
 

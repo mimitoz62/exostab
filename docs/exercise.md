@@ -71,7 +71,7 @@ macOS (Apple M4 Pro), one worker process, the snapshot of 28 September 2026 and 
 **What can differ between computers.** Hill spacing, the margin, β and the Hill and AMD verdicts do not depend on the
 integration. ⟨Y⟩, the number of chaotic draws and the end of a chaotic run can differ; they are marked †, and an N-body
 or overall verdict could differ with them, although none did in the two runs here. Colab runs on Linux, and this
-notebook has not been run there yet. In a † cell, a value after a semicolon is a stand-in for Linux: a second run on the
+notebook has not been run in Colab yet. In a † cell, a value after a semicolon is a stand-in for Linux: a second run on the
 same computer, with REBOUND 5.2.2 rebuilt to use the `rand_r` of glibc, the C library of Linux. REBOUND draws the random
 starting direction of MEGNO's tangent vector with that function. For two commands of the quickstart notebook that the
 Linux runner of `Browser paths` ran on 31 October 2026 (exostab 1.0.0, with the same integration code), this build gives
@@ -285,8 +285,9 @@ does not mean unstable, and neither verdict is a proof."
 
 - The notebook ran from a clean environment without errors on macOS, once with each build of REBOUND, and each question
   was checked against what the cells show.
-- It has not been run in Colab, which needs a sign-in, or on Linux. Once the workflow `Browser paths` has run it, its
-  artifact `executed-notebooks` holds a run on Linux to compare with these notes.
+- It has not been run in Colab, which needs a sign-in. The workflow `Browser paths` runs it on Linux every day, with
+  Python 3.13 and the release the notebook installs; its artifact `executed-notebooks` holds the outputs. These notes
+  have not yet been compared with them.
 - It has not been tried with students, so the plan of about 90 minutes is untested.
 
 The references are in [Methods](methods.md#references) and [What the catalog shows](findings.md#references), except

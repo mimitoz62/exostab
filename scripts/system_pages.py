@@ -27,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "systems"
 OVERVIEW = "https://exoplanetarchive.ipac.caltech.edu/overview/"
 BINDER = "https://mybinder.org/v2/gh/mimitoz62/exostab/main?urlpath="
+ASK = "https://github.com/mimitoz62/exostab/issues/new?template=request_system.yml"
 
 # The completion rules in plain language; data-assumptions.md has the full table.
 RULES = {
@@ -213,8 +214,17 @@ def page(row: dict[str, str], meta: dict[str, object], systems: set[str]) -> str
     parts.append(
         f"## At the archive\n\n[{_text(system)} at the NASA Exoplanet Archive]({OVERVIEW}{quote(system)}).\n"
     )
+    parts.append(
+        "## Questions about this system\n\nDoes a value or a verdict here look wrong, or is there a published solution "
+        f"to compare with? [Ask about {_text(system)} on GitHub]({ask_url(system)}) (this needs a GitHub account).\n"
+    )
     parts.append(CITE)
     return "\n".join(parts)
+
+
+def ask_url(system: str) -> str:
+    """The issue form for questions about a system, with its name filled in (GitHub fills a form's fields by id)."""
+    return f"{ASK}&system={quote(system, safe='')}&title={quote(system + ': ', safe='')}"
 
 
 def _binder_sentence(row: dict[str, str], ok: bool) -> str:

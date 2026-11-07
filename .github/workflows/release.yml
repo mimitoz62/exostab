@@ -30,6 +30,14 @@ jobs:
           grep -qE '^date-released: "?[0-9]{4}-[0-9]{2}-[0-9]{2}"?$' CITATION.cff || { echo "::error::CITATION.cff has no date-released"; exit 1; }
           awk -v v="$version" '/^## /{p = (index($0, "[" v "]") > 0)} p' CHANGELOG.md > notes.md
           test -s notes.md || { echo "::error::CHANGELOG.md has no section [$version]"; exit 1; }
+          # The release page opens with the install line of the wheel attached to it.
+          {
+            printf 'Install this release (Python 3.10 or newer, no git needed):\n\n'
+            printf '```bash\npip install https://github.com/mimitoz62/exostab/releases/download/v%s/exostab-%s-py3-none-any.whl\n```\n\n' "$version" "$version"
+            printf '[Documentation](https://mimitoz62.github.io/exostab/) · [Try it without installing](https://mimitoz62.github.io/exostab/quickstart/#try-it-without-installing) · [How to cite](https://mimitoz62.github.io/exostab/citing/)\n\n'
+            cat notes.md
+          } > notes.tmp
+          mv notes.tmp notes.md
       - uses: actions/upload-artifact@v7
         with:
           name: dist

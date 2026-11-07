@@ -63,13 +63,14 @@ and how that answer holds up within the published error bars.
 It takes the system's parameters from the [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/)
 (the Planetary Systems Composite Parameters table, `pscomppars`) or from a YAML file you write. Every missing value
 is filled by a written rule, and every rule that fires is printed with the result. exostab then asks the stability
-question in three independent ways, for the published values and for 20 random draws within the published error
+question in three independent ways, for the published values and for 20 random draws based on the published error
 bars, and combines the answers into one deliberately conservative verdict: **stable**, **marginal**, **unstable** or
 **inconclusive**. When the indicators disagree, it says so instead of picking the most comfortable answer.
 
-**Who it is for.** Students and educators who want a quick first answer with the caveats visible. Amateur and
-professional astronomers who want to test a system, or a "what if" variation of it, before setting up their own
-integrations. Researchers who want the same indicators for the whole archive in one table.
+**Who it is for.** Students and educators who want a quick first answer with the caveats visible; the
+[classroom exercise](https://mimitoz62.github.io/exostab/exercise/) is a place to start. Amateur and professional
+astronomers who want to test a system, or a "what if" variation of it, before setting up their own integrations.
+Researchers who want the same indicators for the archive's multi-planet systems in one table.
 
 **Why it exists.** Published orbital solutions are rarely complete enough to integrate directly. In the archive's
 composite table on 28 September 2026, 44% of the planets in multi-planet systems had masses estimated from their
@@ -122,7 +123,7 @@ above and saves `report.json`, `orbits.png` and `megno.png` in `exostab-results/
 
 TRAPPIST-1 comes out **marginal**, with the bundled snapshot and with the archive table of 13 October 2026. That
 means mixed evidence, not "about to fall apart": planets f and g are 6.6 mutual Hill radii apart where the
-multi-planet spacing heuristic asks for 12, and 2 of the 20 draws within the published error bars are chaotic over
+multi-planet spacing heuristic asks for 12, and 2 of the 20 draws are chaotic over
 this 41.4-year run, while the angular momentum deficit rules out collisions in the secular approximation (if the
 unknown mutual inclinations carry no more AMD than the eccentricities).
 [How to read a report card](https://mimitoz62.github.io/exostab/reading-a-report/) goes through this card line by line.
@@ -294,8 +295,7 @@ pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.1.1"
 This installs release 1.1.1 from GitHub. exostab needs Python 3.10 or newer; 3.10–3.14 are tested on Linux and macOS
 in continuous integration, and 3.10 and 3.14 on Windows. The first line shows your version, and `/usr/bin/python3` on
 macOS is 3.9. If yours is older than 3.10, install a newer Python first, for example from
-[python.org](https://www.python.org/downloads/). In a new terminal, run the `source` line again. A package on PyPI is
-planned; until then, install from GitHub.
+[python.org](https://www.python.org/downloads/). In a new terminal, run the `source` line again.
 
 On Windows, in Command Prompt:
 
@@ -308,7 +308,8 @@ pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.1.1"
 
 `py` is the launcher that the installer from python.org adds. In PowerShell the activation line is
 `.venv\Scripts\Activate.ps1`, which runs only where PowerShell allows scripts, so Command Prompt is the simpler
-choice. The [FAQ](https://mimitoz62.github.io/exostab/faq/) says what else differs on Windows.
+choice. The [FAQ](https://mimitoz62.github.io/exostab/faq/#does-exostab-run-on-windows) says what else differs on
+Windows.
 
 The `pip` line needs git. Without git, install the wheel of the release; `uvx --from` takes the same URL:
 
@@ -503,7 +504,7 @@ A stability verdict is only as good as the inputs and settings behind it, so exo
 - **Every value carries its provenance**: measured, derived, assumed, estimated, randomized or upper limit, with the
   publication it came from where there is one. A conjunction or periastron time is used only when it comes from the
   same publication as the period, because the composite table can combine values from several papers.
-- **Uncertainties are propagated.** Each result is repeated for seeded Monte Carlo draws within the published error
+- **Uncertainties are propagated.** Each result is repeated for seeded Monte Carlo draws based on the published error
   bars, and a verdict stands only if at least 95% of the draws agree with the nominal one.
 - **The integrators check each other.** The nominal run is repeated with IAS15. If WHFast and IAS15 disagree, the
   N-body verdict cannot be *stable*. The energy error is checked over the whole of every run, and a run whose
@@ -568,7 +569,8 @@ Research Notes of the AAS, not yet published). It runs nightly in continuous int
 
 The numbers were produced on 31 October 2026 by `scripts/validation_summary.py` and the slow test suite from the tag
 v1.0.0, with exostab 1.0.0, REBOUND 5.2.2, NumPy 2.5.4 and Python 3.14.7 on macOS (Apple M4 Pro), with the bundled
-archive snapshot and default settings unless stated. Chaotic integrations are sensitive to floating-point rounding,
+archive snapshot and default settings unless stated. The ⟨Y⟩ of seeds 0-7 come from exostab 1.0.2.dev0 (commit
+08cc4e6, 1 November 2026), not from that tag. Chaotic integrations are sensitive to floating-point rounding,
 so counts of chaotic draws can differ by one or two on other machines. The HD 127195 draws cannot match the Note one
 to one because the random number streams differ. Full results, tolerances and figures:
 [validation](https://mimitoz62.github.io/exostab/validation/).

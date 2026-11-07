@@ -21,17 +21,18 @@
   "issueTracker": "https://github.com/mimitoz62/exostab/issues",
   "programmingLanguage": "Python",
   "runtimePlatform": "Python 3.10 or newer",
-  "operatingSystem": ["Linux", "macOS"],
+  "operatingSystem": ["Linux", "macOS", "Windows"],
   "applicationCategory": "Astronomy",
   "keywords": [
     "exoplanets",
     "orbital stability",
+    "Hill stability",
     "celestial mechanics",
     "N-body",
     "REBOUND",
     "MEGNO",
     "angular momentum deficit"
   ],
-  "softwareRequirements": ["rebound", "numpy", "astropy", "astroquery", "pydantic", "typer", "rich", "matplotlib"],
+  "softwareRequirements": ["rebound", "numpy", "astropy", "astroquery", "pydantic", "typer", "rich", "matplotlib", "platformdirs", "pyyaml"],
   "developmentStatus": "active"
 }

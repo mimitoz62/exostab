@@ -191,7 +191,8 @@ parameters. [Methods](methods.md) explains the indicators.
   [Jupiter](https://nssdc.gsfc.nasa.gov/planetary/factsheet/jupiterfact.html) (updated 2 October 2024) and
   [Saturn](https://nssdc.gsfc.nasa.gov/planetary/factsheet/saturnfact.html) (updated 18 March 2025), around a star of 1
   solar mass. The other planets are left out. exostab's indicators call this pair stable, but the Solar System as a
-  whole is AMD-unstable, because Mercury could in principle collide with Venus (Laskar & Petit 2017).
+  whole is AMD-unstable, because the giant planets hold far more AMD than the orbits of the inner planets need to cross
+  (Laskar & Petit 2017).
 - **Kepler-36 b and c**: exostab's bundled snapshot of the NASA Exoplanet Archive's composite table, retrieved on 28
   September 2026, whose stellar mass, planet masses and periods come from Vissapragada et al. (2020). Both
   eccentricities are 0 in the snapshot, a value that paper fixes in its light-curve fit. The AMD is therefore 0, and the

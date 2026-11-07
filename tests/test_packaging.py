@@ -48,6 +48,19 @@ def test_codemeta_matches_the_citation() -> None:
     assert meta["description"] == " ".join(cff["abstract"].split())
     assert meta["codeRepository"] == cff["repository-code"]
     assert meta["author"][0]["@id"] == cff["authors"][0]["orcid"]
+    assert meta["keywords"] == cff["keywords"]
+
+
+def test_codemeta_matches_pyproject() -> None:
+    # Software catalogs read codemeta.json and pip reads pyproject.toml, so both name the same requirements and systems.
+    meta = json.loads((ROOT / "codemeta.json").read_text(encoding="utf-8"))
+    project = pyproject()["project"]
+    names = [re.split(r"[<>=!~;\[ ]", requirement, maxsplit=1)[0] for requirement in project["dependencies"]]
+    assert sorted(meta["softwareRequirements"]) == sorted(names)
+    systems = {"MacOS": "macOS", "Microsoft :: Windows": "Windows", "POSIX :: Linux": "Linux"}
+    prefix = "Operating System :: "
+    found = [c.removeprefix(prefix) for c in project["classifiers"] if c.startswith(prefix)]
+    assert sorted(meta["operatingSystem"]) == sorted(systems[c] for c in found)
 
 
 @pytest.mark.skipif(not (ROOT / "overrides" / "home.html").is_file(), reason="the site is not in the sdist")
@@ -221,6 +234,27 @@ def test_workflow_pipelines_keep_the_exit_status() -> None:
                 if pipe.search(step.get("run", "")) and step.get("shell", shell) != "bash":
                     unsafe.append(f"{path.name}: {job_id}: {step.get('name') or step['run'][:60]}")
     assert unsafe == []
+
+
+@pytest.mark.skipif(
+    not WORKFLOWS.is_dir() or shutil.which("bash") is None or sys.platform == "win32",
+    reason="needs the workflows and bash",
+)
+def test_release_notes_open_with_the_install_line_of_the_wheel(tmp_path: Path) -> None:
+    # The release page shows these notes above the wheel, so they say how to install it, then the changelog section.
+    steps = yaml.safe_load((WORKFLOWS / "release.yml").read_text(encoding="utf-8"))["jobs"]["build"]["steps"]
+    run = next(step["run"] for step in steps if "notes.md" in step.get("run", ""))
+    changelog = "## [Unreleased]\n\n## [1.2.3] - 2026-12-01\n\n- Fixed.\n\n## [1.2.2] - 2026-11-01\n"
+    (tmp_path / "CHANGELOG.md").write_text(changelog, encoding="utf-8")
+    script = "version=1.2.3\n" + run[run.index("awk ") :]
+    r = subprocess.run(
+        ["bash", "-e", "-c", script], cwd=tmp_path, capture_output=True, text=True, check=False
+    )
+    assert r.returncode == 0, r.stderr
+    notes = (tmp_path / "notes.md").read_text(encoding="utf-8")
+    wheel = "https://github.com/mimitoz62/exostab/releases/download/v1.2.3/exostab-1.2.3-py3-none-any.whl"
+    assert notes.startswith("Install this release") and f"\npip install {wheel}\n" in notes
+    assert notes.endswith("\n## [1.2.3] - 2026-12-01\n\n- Fixed.\n\n")
 
 
 @pytest.mark.skipif(not WORKFLOWS.is_dir(), reason="workflows are not in the sdist")

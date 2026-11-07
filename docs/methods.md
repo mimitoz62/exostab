@@ -36,7 +36,8 @@ measured. Units are years, astronomical units (AU) and solar masses throughout t
 ## Step 2: uncertainties
 
 Every published value has error bars. exostab runs the analysis once for the published ("nominal") values and
-then again for many random *draws* within the error bars (20 by default). A result that only holds for the exact
+then again for many random *draws* based on the error bars (20 by default;
+[how they are drawn](data-assumptions.md#monte-carlo-draws)). A result that only holds for the exact
 published numbers is not trustworthy. The verdict of each indicator stands only if at least 95% of the draws agree
 with the nominal one; otherwise it becomes **marginal**. An indicator is **inconclusive** if its nominal run is,
 or if more than 20% of the draws are. With `--draws 0` nothing is tested against the uncertainties, so the

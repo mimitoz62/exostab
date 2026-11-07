@@ -45,7 +45,8 @@ PyPI refused 1.0.1 on 2026-10-31 and 1.1.1 on 2026-11-06 with `invalid-publisher
 the values of step 2. Check them at https://pypi.org/manage/account/publishing/. `PUBLISH_PYPI` stays `true`, so once
 they match, *Re-run failed jobs* on the Release run of 1.1.1
 (https://github.com/mimitoz62/exostab/actions/runs/42289845513, until 6 December 2026) uploads 1.1.1, and after that
-date the next release uploads.
+date the next release uploads. A re-run uploads the files built for 1.1.1, whose README says that a package on PyPI is
+planned; PyPI shows that README as the project page until a newer version is uploaded.
 
 ## Zenodo (software DOI)
 

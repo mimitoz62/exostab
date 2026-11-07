@@ -11,7 +11,10 @@ license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [{ name = "Mehmet Öz", email = "mehmet@mehmet-oz.com" }]
-keywords = ["exoplanets", "orbital stability", "celestial mechanics", "n-body", "REBOUND", "MEGNO", "AMD"]
+keywords = [
+    "exoplanets", "orbital stability", "Hill stability", "celestial mechanics", "n-body", "REBOUND", "MEGNO", "AMD",
+    "angular momentum deficit", "NASA Exoplanet Archive",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
