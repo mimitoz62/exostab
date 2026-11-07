@@ -49,6 +49,7 @@ $ exostab check [OPTIONS] [name]
 * `--orbits <float range>`: N-body run length, in orbits of the innermost planet [default: 10000].  [x&gt;=10]
 * `--draws <int range>`: Monte Carlo draws within the published uncertainties [default: 20]. With 0 nothing is tested against the uncertainties, and the overall verdict is never stable or unstable.  [0&lt;=x&lt;=1000000]
 * `--budget <str>`: Choose --orbits and --draws to fit a wall-clock budget: &#x27;fast&#x27; (about 10 s), &#x27;thorough&#x27; (about 2 min) or a number of seconds.
+* `--max-seconds <float range>`: Wall-clock cap, in seconds, on the N-body runs together: a run that has not ended by then stops and gets no verdict. SPOCK gets the same cap.  [x&gt;=1]
 * `--seed <int range>`: Random seed: the same seed gives the same draws and, on the same platform and software versions, the same results.  [default: 0; x&gt;=0]
 * `--out <path>`: Output folder (default: a folder named after the system in exostab-results).
 * `--inclination-prior <none|isotropic>`: For minimum masses: &#x27;none&#x27; uses m sin i as the mass; &#x27;isotropic&#x27; draws the inclination (cos i uniform, sin i &gt;= 0.1) in every draw.  [default: none]

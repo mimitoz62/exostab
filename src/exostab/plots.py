@@ -138,6 +138,7 @@ def orbits_figure(nominal: Realization, run: RunResult, title: str, path: Target
             "completed": "",
             "encounter": " — stopped at a close encounter",
             "escape": " — stopped at an escape",
+            "time_limit": " — stopped at the time limit",
         }
         ax.set_title(
             f"{_plain(title)}: nominal orbits (lines) and positions over {format_years(run.t_end)} (dots)"

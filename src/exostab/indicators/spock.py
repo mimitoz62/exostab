@@ -44,6 +44,7 @@ MASS_RATIO_RANGE = (1e-7, 1e-4)
 MAX_SPACING = 30.0  # in the mutual Hill radii of SPOCK's training code, see spock_spacings()
 WORKER = Path(__file__).with_name("spock_worker.py")
 REFERENCES = ["tamayo2020"]
+TIMEOUT_S = 600.0  # how long the worker may take when the check has no time limit of its own
 
 
 class SpockUnavailableError(RuntimeError):
@@ -75,9 +76,10 @@ def _request(real: Realization) -> dict[str, Any]:
 
 
 def predict(
-    reals: list[Realization], python: str, *, timeout: float = 600.0
+    reals: list[Realization], python: str, *, timeout: float = TIMEOUT_S
 ) -> tuple[list[float], dict[str, str]]:
-    """SPOCK stability estimates for each realization, and the versions used by the worker."""
+    """SPOCK stability estimates for each realization, and the versions used by the worker, which is stopped after
+    ``timeout`` seconds."""
     payload = json.dumps({"systems": [_request(r) for r in reals], "n_jobs": 1})
     try:
         # UTF-8 at both ends, with undecodable bytes replaced: otherwise both use the locale's encoding, and bytes it
@@ -92,7 +94,11 @@ def predict(
             timeout=timeout,
             check=False,
         )
-    except (OSError, subprocess.TimeoutExpired) as exc:
+    except subprocess.TimeoutExpired as exc:
+        raise SpockUnavailableError(
+            f"the SPOCK worker did not finish within the time limit of {timeout:g} s"
+        ) from exc
+    except OSError as exc:
         raise SpockUnavailableError(f"could not run the SPOCK environment {python!r}: {exc}") from exc
     if proc.returncode != 0:
         tail = proc.stderr.strip().splitlines()[-3:]
@@ -147,11 +153,14 @@ def domain_warnings(real: Realization) -> list[str]:
     return notes
 
 
-def evaluate(nominal: Realization, draws: list[Realization], python: str) -> IndicatorResult:
-    """SPOCK verdict for the nominal parameters and the draws (three or more planets only)."""
+def evaluate(
+    nominal: Realization, draws: list[Realization], python: str, *, timeout: float = TIMEOUT_S
+) -> IndicatorResult:
+    """SPOCK verdict for the nominal parameters and the draws (three or more planets only); the worker is stopped,
+    with SpockUnavailableError, after ``timeout`` seconds."""
     if len(nominal.bodies) < 3:
         raise ValueError("SPOCK's classifier applies to systems of three or more planets")
-    probs, versions = predict([nominal, *draws], python)
+    probs, versions = predict([nominal, *draws], python, timeout=timeout)
     p_nom, p_draws = probs[0], probs[1:]
     v_nom = classify(p_nom)
     v_draws = [classify(p) for p in p_draws]

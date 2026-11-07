@@ -39,6 +39,11 @@ Set-up (justified choices; see also DECISIONS.md):
   the error at the end of a run alone can be orders of magnitude below this maximum. A run whose maximum
   exceeds the threshold in :mod:`exostab.indicators.megno` is classified as inconclusive instead of receiving
   a verdict.
+* A run can be given a wall-clock limit (``RunConfig.max_seconds``). The time is read at each of the
+  ``ENERGY_CHECKS`` checkpoints, so the check is cheap; a run that has not reached its end when the limit has
+  passed stops at that checkpoint with the status ``time_limit``, and gets no verdict
+  (:mod:`exostab.indicators.megno`): a run cut short says nothing about the time it did not reach. A run that ends
+  before the limit is the same as without one.
 """
 
 from __future__ import annotations
@@ -60,8 +65,9 @@ from .units import SIM_UNITS
 
 Integrator = Literal["whfast", "ias15"]
 # completed: reached the requested length; star_approach: reached it, but a planet passed closer to the star
-# than half its Hill radius; encounter / escape: stopped early; error: the integration failed.
-Status = Literal["completed", "star_approach", "encounter", "escape", "error"]
+# than half its Hill radius; encounter / escape: stopped early; time_limit: stopped early by the wall-clock limit
+# (RunConfig.max_seconds); error: the integration failed.
+Status = Literal["completed", "star_approach", "encounter", "escape", "time_limit", "error"]
 
 # Number of equally spaced times at which every run checks its relative energy error (DECISIONS.md, D8).
 ENERGY_CHECKS = 1200
@@ -78,6 +84,9 @@ class RunConfig:
     megno_seed: int = 0
     n_samples: int = 0  # time-series samples kept for the plots (0: none; at most ENERGY_CHECKS)
     escape_factor: float = 100.0
+    # Wall-clock limit in seconds (None: none). A duration, not a time: the clock starts when the run starts, in the
+    # process that integrates it, because the clocks of two processes need not share a reference point.
+    max_seconds: float | None = None
 
 
 @dataclass
@@ -215,6 +224,7 @@ def _sigint_handler_kept() -> Iterator[None]:
 def run(real: Realization, config: RunConfig) -> RunResult:
     """Integrate one realization and return what happened. Never raises for physical outcomes."""
     t_wall = time.perf_counter()
+    deadline = None if config.max_seconds is None else time.monotonic() + config.max_seconds
     star_approaches: list[int] = []
     sim = build_simulation(real, config, star_approaches)
     if config.megno:
@@ -263,6 +273,9 @@ def run(real: Realization, config: RunConfig) -> RunResult:
                     continue
                 sim.integrate(tc, exact_finish_time=0)
                 sample(keep=i in kept)
+                if deadline is not None and sim.t < t_target and time.monotonic() >= deadline:
+                    status = "time_limit"
+                    break
     except (rebound.Collision, rebound.Encounter):
         status = "encounter"
     except rebound.Escape:

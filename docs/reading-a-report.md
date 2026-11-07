@@ -377,7 +377,7 @@ the verdicts, so `18 stable, 2 marginal` in the heading and `18 regular, 2 chaot
 | regular | No close encounter or escape, and ⟨Y⟩ < 2.2. No chaos was found within this run. | stable |
 | chaotic | No close encounter or escape, but ⟨Y⟩ ≥ 2.2. The motion is so sensitive to its start that the run says little about what comes later. | marginal |
 | close encounter or escape | Two planets came closer than the mean of their Hill radii, or a planet moved beyond 100 times the largest orbit. The run stops there. | unstable |
-| inconclusive | The relative energy error exceeded 10⁻⁵ at any of 1,200 checks through the run, so the numbers cannot be trusted. Or a planet came closer to the star than half its own Hill radius, where tides, general relativity and the size of the star, none of which is modelled, can decide what happens. | inconclusive |
+| inconclusive | The relative energy error exceeded 10⁻⁵ at any of 1,200 checks through the run, so the numbers cannot be trusted. Or a planet came closer to the star than half its own Hill radius, where tides, general relativity and the size of the star, none of which is modelled, can decide what happens. In versions after 1.1.1, also a run that a time limit stopped before its end (`--max-seconds`, or the web app's limit). | inconclusive |
 
 Chaotic does not mean that the orbits break up. Chaotic orbits can stay bounded for far longer than a run of this
 length; the orbits of the Solar System are themselves chaotic (Laskar 1989). So a chaotic run is a reason for caution,
@@ -804,7 +804,8 @@ period that was found by microlensing or direct imaging, and a planet with neith
 
 **What to do next.** If a value is missing and a publication gives it, supply the system with `--from-file`. exostab
 does not model planets around two stars, so a circumbinary system stays out of reach. In the catalog, the status
-`timeout` means something else: the system ran over the catalog's time limit, and `exostab check` has no such limit.
+`timeout` means something else: the system ran over the catalog's time limit, and `exostab check` has no such limit
+(in versions after 1.1.1, only with `--max-seconds`).
 
 ## Where to read more
 

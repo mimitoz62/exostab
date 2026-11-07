@@ -679,6 +679,18 @@
           "default": false,
           "title": "Spock",
           "type": "boolean"
+        },
+        "max_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Seconds"
         }
       },
       "required": [
@@ -975,7 +987,7 @@
     "overall",
     "runtime_s"
   ],
-  "title": "exostab report (schema 1.3)",
+  "title": "exostab report (schema 1.4)",
   "type": "object",
-  "$id": "https://mimitoz62.github.io/exostab/schemas/report-1.3.json"
+  "$id": "https://mimitoz62.github.io/exostab/schemas/report-1.4.json"
 }

@@ -128,6 +128,24 @@ def test_ias15_run() -> None:
     assert res.energy_error < 1e-12
 
 
+@pytest.mark.parametrize("integrator", ["whfast", "ias15"])
+def test_a_run_stops_at_its_time_limit(integrator: str) -> None:
+    # A limit that has passed before the first energy check: the run stops there, and says why.
+    config = RunConfig(n_orbits=300, integrator=integrator, n_samples=10, max_seconds=0.0)  # type: ignore[arg-type]
+    res = run(pair(), config)
+    assert res.status == "time_limit" and res.error is None
+    assert 0 < res.t_end < 2 * res.t_target / ENERGY_CHECKS  # at the first energy check, give or take a step
+    assert res.megno is not None and math.isfinite(res.energy_error)
+
+
+def test_a_limit_that_is_not_reached_changes_nothing() -> None:
+    free = run(pair(e=(0.1, 0.05)), RunConfig(n_orbits=600, n_samples=20, megno_seed=3))
+    timed = run(pair(e=(0.1, 0.05)), RunConfig(n_orbits=600, n_samples=20, megno_seed=3, max_seconds=1e6))
+    assert free.status == timed.status == "completed"
+    assert (free.t_end, free.megno, free.energy_error) == (timed.t_end, timed.megno, timed.energy_error)
+    assert free.series == timed.series
+
+
 def test_no_megno_mode() -> None:
     res = run(pair(), RunConfig(n_orbits=100, megno=False, n_samples=3))
     assert res.megno is None and res.lyapunov is None

@@ -5,7 +5,9 @@ import signal
 import sys
 import threading
 import time
+from concurrent.futures import Future
 from dataclasses import replace
+from typing import Any
 
 import pytest
 
@@ -72,6 +74,8 @@ def test_draw_stats() -> None:
         ({"status": "encounter"}, "unstable"),
         ({"status": "escape", "energy_error": 1.0}, "unstable"),
         ({"status": "star_approach", "star_approach": "b"}, "inconclusive"),
+        ({"status": "time_limit", "t_end": 10.0}, "inconclusive"),
+        ({"status": "time_limit", "megno": 5.0}, "inconclusive"),
         ({"energy_error": 1e-3}, "inconclusive"),
         ({"status": "error"}, "inconclusive"),
         ({"megno": math.nan}, "inconclusive"),
@@ -111,6 +115,143 @@ def test_evaluate_counts_and_notes() -> None:
     assert any("X b" in n and "random" in n for n in ind.notes)
     ind = nb.evaluate([result()] + [result(megno=5.0)] * 5, None)
     assert ind.verdict is M and any("draws disagree" in n for n in ind.notes)
+
+
+def test_runs_stopped_by_the_time_limit_get_no_verdict() -> None:
+    cut = {"status": "time_limit", "t_end": 25.0, "n_orbits_innermost": 2500.0}
+    regular = [result(label=f"draw {k}") for k in range(20)]
+    ind = nb.evaluate([result(**cut), *regular], result(integrator="ias15"))
+    assert ind.verdict is INC and ind.nominal_verdict is INC
+    assert ind.summary.startswith(
+        "Nominal run: time limit reached after 25 yr (2,500 of 10,000 planned inner orbits)"
+    )
+    assert ind.notes == [
+        "The time limit was reached before the end of the nominal run; no verdict for this run."
+    ]
+    assert ind.details["nominal"]["status"] == "time_limit"
+    # one draw of 20 cut short: the 95% rule still holds, and the draw is counted as inconclusive
+    ind = nb.evaluate([result(), *regular[:19], result(label="draw 20", **cut)], None)
+    assert ind.verdict is S and ind.details["classification_counts"]["inconclusive"] == 1
+    assert "The time limit was reached before the end of 1 of 20 draws; no verdict for this run." in ind.notes
+    assert not any("energy error" in n for n in ind.notes)
+    # more than 20% of the draws cut short
+    ind = nb.evaluate([result(), *regular[:15], *[result(label="draw", **cut)] * 5], None)
+    assert ind.verdict is INC and "5 of 20 draws; no verdict for these runs." in " ".join(ind.notes)
+    # an IAS15 check cut short confirms nothing: the verdict cannot be stable, and the integrators do not "disagree"
+    ind = nb.evaluate([result(), *regular], result(integrator="ias15", **cut))
+    assert ind.verdict is M
+    assert ind.notes == [
+        "The time limit was reached before the end of the IAS15 check, so it cannot confirm the nominal run."
+    ]
+    ind = nb.evaluate(
+        [result(), *regular[:19], result(label="draw 20", **cut)], result(integrator="ias15", **cut)
+    )
+    assert ind.verdict is M and any(
+        "the IAS15 check and 1 of 20 draws; no verdict for these runs. An IAS15 check cut short cannot confirm"
+        in n
+        for n in ind.notes
+    )
+
+
+def test_the_overall_verdict_says_when_the_time_limit_stopped_the_runs() -> None:
+    cut = {"status": "time_limit", "t_end": 25.0}
+    hill, amd = ind("hill", S), ind("amd", S)
+    o = overall_verdict({"hill": hill, "amd": amd, "nbody": nbody_ind(20, **cut)})
+    assert o.verdict is INC
+    assert o.summary.startswith(
+        "The N-body integrations did not finish within the time limit (see the N-body notes)"
+    )
+    o = overall_verdict({"hill": hill, "amd": amd, "nbody": nbody_ind(20, energy_error=1e-3)})
+    assert o.summary.startswith("The N-body integrations could not be trusted (see the N-body notes)")
+    both = nb.evaluate([result(energy_error=1e-3)] + [result(label="draw", **cut)] * 20, None)
+    o = overall_verdict({"hill": hill, "amd": amd, "nbody": both})
+    assert "could not be trusted or did not finish within the time limit" in o.summary
+    # every WHFast run regular, but the IAS15 check cut short: marginal, and the summary says why
+    nbi = nb.evaluate([result()] + [result(label="draw")] * 20, result(integrator="ias15", **cut))
+    o = overall_verdict({"hill": hill, "amd": amd, "nbody": nbi})
+    assert o.verdict is M and "disagree" not in o.summary
+    assert "the IAS15 check of the nominal run did not finish within the time limit" in o.summary
+
+
+def test_the_runs_share_one_time_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Each run is given the time left when it starts, also in a pool, which is handed a run only when a worker is free.
+    given: list[float | None] = []
+
+    def integrate(job: tuple[object, RunConfig]) -> RunResult:
+        given.append(job[1].max_seconds)
+        time.sleep(0.05)
+        return result(label=str(len(given)))
+
+    class Pool:  # starts each run when it is handed one, as a free worker does
+        def __init__(self, **kwargs: object) -> None:
+            self._processes: dict[int, object] = {}
+
+        def submit(self, fn: Any, job: object) -> Future[RunResult]:
+            future: Future[RunResult] = Future()
+            future.set_result(fn(job))
+            return future
+
+        def shutdown(self, **kwargs: object) -> None:
+            pass
+
+    monkeypatch.setattr(nb, "_run", integrate)
+    monkeypatch.setattr(nb, "ProcessPoolExecutor", Pool)
+    jobs = [(r, RunConfig(n_orbits=10)) for r in realizations(two_planet_system(), 3, seed=0)]
+    for workers in (1, 2):
+        given.clear()
+        results = nb.run_many(jobs, workers, max_seconds=10.0)
+        assert [r.label for r in results] == ["1", "2", "3", "4"]  # in the order of the jobs
+        times = [t for t in given if t is not None]
+        assert len(times) == 4 and times == sorted(times, reverse=True)
+        assert 10.0 >= times[0] and times[0] - times[-1] >= 0.1
+    # a run's own limit stays when it is the shorter one, and without a shared limit nothing changes
+    given.clear()
+    nb.run_many([(jobs[0][0], RunConfig(n_orbits=10, max_seconds=0.5))], 1, max_seconds=10.0)
+    nb.run_many(jobs[:1], 1)
+    assert given == [0.5, None]
+
+
+def test_in_one_process_the_ias15_check_runs_last(monkeypatch: pytest.MonkeyPatch) -> None:
+    # In one process the order changes only what a time limit stops, and the verdict rests on the WHFast runs.
+    order: list[str] = []
+
+    def integrate(job: tuple[object, RunConfig]) -> RunResult:
+        order.append(job[1].integrator)
+        return result(integrator=job[1].integrator)
+
+    monkeypatch.setattr(nb, "_run", integrate)
+    reals = realizations(two_planet_system(err=True), 2, seed=0)
+    runs, ias = nb.integrate_all(reals, nb.NBodySettings(orbits=10, jobs=1), seed=0)
+    assert order == ["whfast", "whfast", "whfast", "ias15"]
+    assert ias is not None and ias.integrator == "ias15" and {r.integrator for r in runs} == {"whfast"}
+    monkeypatch.setattr(
+        nb, "worker_count", lambda n_jobs, n_workers: 2
+    )  # a pool starts the slow IAS15 run first
+    monkeypatch.setattr(nb, "run_many", lambda jobs, n_workers, **kw: [integrate(j) for j in jobs])
+    order.clear()
+    runs, ias = nb.integrate_all(reals, nb.NBodySettings(orbits=10, jobs=2), seed=0)
+    assert order == ["ias15", "whfast", "whfast", "whfast"]
+    assert ias is not None and ias.integrator == "ias15" and {r.integrator for r in runs} == {"whfast"}
+
+
+def test_a_time_limit_reaches_worker_processes() -> None:
+    # The limit crosses to a worker as a duration, and the run's clock starts there.
+    jobs = [(r, RunConfig(n_orbits=300)) for r in realizations(two_planet_system(), 2, seed=0)]
+    assert [r.status for r in nb.run_many(jobs, 2, max_seconds=0.0)] == ["time_limit"] * 3
+
+
+def test_check_system_with_a_time_limit() -> None:
+    settings = CheckSettings(orbits=300, draws=3, seed=1, jobs=1, n_samples=10)
+    res = check_system(two_planet_system(err=True), replace(settings, max_seconds=0.0))
+    assert res.stopped_by_time_limit() == (5, 5)
+    rep = res.report
+    assert rep.indicators["nbody"].verdict is INC and rep.overall.verdict is INC
+    assert "did not finish within the time limit" in rep.overall.summary
+    assert rep.settings.max_seconds == 0.0
+    # without a limit, the same check as before
+    free = check_system(two_planet_system(err=True), settings)
+    assert free.stopped_by_time_limit() == (0, 5) and free.report.settings.max_seconds is None
+    assert free.report.overall.verdict is S
 
 
 def test_megno_seed_is_deterministic_and_distinct() -> None:

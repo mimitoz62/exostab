@@ -1,0 +1,981 @@
+{
+  "$defs": {
+    "BodyRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "mass_msun": {
+          "title": "Mass Msun",
+          "type": "number"
+        },
+        "mass_earth": {
+          "title": "Mass Earth",
+          "type": "number"
+        },
+        "period_yr": {
+          "title": "Period Yr",
+          "type": "number"
+        },
+        "period_days": {
+          "title": "Period Days",
+          "type": "number"
+        },
+        "semi_major_axis_au": {
+          "title": "Semi Major Axis Au",
+          "type": "number"
+        },
+        "eccentricity": {
+          "title": "Eccentricity",
+          "type": "number"
+        },
+        "pomega_rad": {
+          "title": "Pomega Rad",
+          "type": "number"
+        },
+        "mean_anomaly_rad": {
+          "title": "Mean Anomaly Rad",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "mass_msun",
+        "mass_earth",
+        "period_yr",
+        "period_days",
+        "semi_major_axis_au",
+        "eccentricity",
+        "pomega_rad",
+        "mean_anomaly_rad"
+      ],
+      "title": "BodyRecord",
+      "type": "object"
+    },
+    "CompletionFlag": {
+      "additionalProperties": false,
+      "description": "Record of one completion rule applied to the input data.",
+      "properties": {
+        "planet": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Planet"
+        },
+        "parameter": {
+          "title": "Parameter",
+          "type": "string"
+        },
+        "rule": {
+          "title": "Rule",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "planet",
+        "parameter",
+        "rule",
+        "message"
+      ],
+      "title": "CompletionFlag",
+      "type": "object"
+    },
+    "DataRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "table": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Table"
+        },
+        "service": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Service"
+        },
+        "retrieved_utc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Retrieved Utc"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Path"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Note"
+        },
+        "archive_rows": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Archive Rows",
+          "type": "array"
+        },
+        "acknowledgment": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Acknowledgment"
+        }
+      },
+      "required": [
+        "source",
+        "table",
+        "service",
+        "retrieved_utc",
+        "path",
+        "note",
+        "archive_rows",
+        "acknowledgment"
+      ],
+      "title": "DataRecord",
+      "type": "object"
+    },
+    "DataSource": {
+      "additionalProperties": false,
+      "description": "Where the parameters of a system were read from.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "archive",
+            "archive-cache",
+            "snapshot",
+            "file"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "table": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Table"
+        },
+        "service": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Service"
+        },
+        "retrieved_utc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retrieved Utc"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "DataSource",
+      "type": "object"
+    },
+    "DrawStats": {
+      "additionalProperties": false,
+      "description": "How the Monte Carlo draws were classified by one indicator.",
+      "properties": {
+        "n": {
+          "title": "N",
+          "type": "integer"
+        },
+        "stable": {
+          "title": "Stable",
+          "type": "integer"
+        },
+        "marginal": {
+          "title": "Marginal",
+          "type": "integer"
+        },
+        "unstable": {
+          "title": "Unstable",
+          "type": "integer"
+        },
+        "inconclusive": {
+          "title": "Inconclusive",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "n",
+        "stable",
+        "marginal",
+        "unstable",
+        "inconclusive"
+      ],
+      "title": "DrawStats",
+      "type": "object"
+    },
+    "IndicatorResult": {
+      "additionalProperties": false,
+      "description": "Outcome of one indicator for one system.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "verdict": {
+          "$ref": "#/$defs/Verdict"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "nominal_verdict": {
+          "$ref": "#/$defs/Verdict"
+        },
+        "draws": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DrawStats"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "details": {
+          "additionalProperties": true,
+          "default": {},
+          "title": "Details",
+          "type": "object"
+        },
+        "notes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
+        },
+        "references": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "References",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "title",
+        "verdict",
+        "summary",
+        "nominal_verdict"
+      ],
+      "title": "IndicatorResult",
+      "type": "object"
+    },
+    "MassKind": {
+      "description": "What a planet mass means.",
+      "enum": [
+        "true",
+        "minimum",
+        "estimated"
+      ],
+      "title": "MassKind",
+      "type": "string"
+    },
+    "NominalRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "star_mass_msun": {
+          "title": "Star Mass Msun",
+          "type": "number"
+        },
+        "epoch_jd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Epoch Jd"
+        },
+        "bodies": {
+          "items": {
+            "$ref": "#/$defs/BodyRecord"
+          },
+          "title": "Bodies",
+          "type": "array"
+        }
+      },
+      "required": [
+        "star_mass_msun",
+        "epoch_jd",
+        "bodies"
+      ],
+      "title": "NominalRecord",
+      "type": "object"
+    },
+    "Overall": {
+      "additionalProperties": false,
+      "properties": {
+        "verdict": {
+          "$ref": "#/$defs/Verdict"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "verdict",
+        "summary",
+        "reasons"
+      ],
+      "title": "Overall",
+      "type": "object"
+    },
+    "Phase": {
+      "additionalProperties": false,
+      "description": "Orbital phase information for one planet.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/PhaseKind",
+          "default": "random"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Value"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "Phase",
+      "type": "object"
+    },
+    "PhaseKind": {
+      "description": "How the orbital phase of a planet at the common epoch is known.",
+      "enum": [
+        "transit",
+        "periastron",
+        "mean_anomaly",
+        "mean_longitude",
+        "random"
+      ],
+      "title": "PhaseKind",
+      "type": "string"
+    },
+    "Planet": {
+      "additionalProperties": false,
+      "description": "One planet. Orbital elements are in the (assumed coplanar) orbital plane of the system.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "period_days": {
+          "$ref": "#/$defs/Value"
+        },
+        "mass_earth": {
+          "$ref": "#/$defs/Value"
+        },
+        "mass_kind": {
+          "$ref": "#/$defs/MassKind",
+          "default": "true"
+        },
+        "eccentricity": {
+          "$ref": "#/$defs/Value",
+          "default": {
+            "value": 0.0,
+            "err_plus": null,
+            "err_minus": null,
+            "provenance": "assumed",
+            "reference": null,
+            "reference_url": null
+          }
+        },
+        "omega_deg": {
+          "$ref": "#/$defs/Value",
+          "default": {
+            "value": null,
+            "err_plus": null,
+            "err_minus": null,
+            "provenance": "randomized",
+            "reference": null,
+            "reference_url": null
+          }
+        },
+        "phase": {
+          "$ref": "#/$defs/Phase",
+          "default": {
+            "kind": "random",
+            "value": null
+          }
+        },
+        "radius_earth": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Value"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "inclination_deg": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Value"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "semimajor_axis_au": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Value"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "archive_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Archive Name"
+        }
+      },
+      "required": [
+        "name",
+        "period_days",
+        "mass_earth"
+      ],
+      "title": "Planet",
+      "type": "object"
+    },
+    "Provenance": {
+      "description": "Where a value came from.",
+      "enum": [
+        "measured",
+        "derived",
+        "assumed",
+        "estimated",
+        "randomized",
+        "upper_limit"
+      ],
+      "title": "Provenance",
+      "type": "string"
+    },
+    "SettingsRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "seed": {
+          "title": "Seed",
+          "type": "integer"
+        },
+        "orbits": {
+          "title": "Orbits",
+          "type": "number"
+        },
+        "draws": {
+          "title": "Draws",
+          "type": "integer"
+        },
+        "inclination_prior": {
+          "title": "Inclination Prior",
+          "type": "string"
+        },
+        "sin_i_min": {
+          "title": "Sin I Min",
+          "type": "number"
+        },
+        "eccentricity_cap": {
+          "title": "Eccentricity Cap",
+          "type": "number"
+        },
+        "integrator": {
+          "title": "Integrator",
+          "type": "string"
+        },
+        "check_integrator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Check Integrator"
+        },
+        "dt_fraction": {
+          "title": "Dt Fraction",
+          "type": "number"
+        },
+        "dt_yr": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Dt Yr"
+        },
+        "t_end_yr": {
+          "title": "T End Yr",
+          "type": "number"
+        },
+        "megno_threshold": {
+          "title": "Megno Threshold",
+          "type": "number"
+        },
+        "energy_error_max": {
+          "title": "Energy Error Max",
+          "type": "number"
+        },
+        "escape_factor": {
+          "title": "Escape Factor",
+          "type": "number"
+        },
+        "encounter_rule": {
+          "title": "Encounter Rule",
+          "type": "string"
+        },
+        "budget_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Budget S"
+        },
+        "spock": {
+          "default": false,
+          "title": "Spock",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "seed",
+        "orbits",
+        "draws",
+        "inclination_prior",
+        "sin_i_min",
+        "eccentricity_cap",
+        "integrator",
+        "check_integrator",
+        "dt_fraction",
+        "dt_yr",
+        "t_end_yr",
+        "megno_threshold",
+        "energy_error_max",
+        "escape_factor",
+        "encounter_rule"
+      ],
+      "title": "SettingsRecord",
+      "type": "object"
+    },
+    "SoftwareRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "exostab": {
+          "title": "Exostab",
+          "type": "string"
+        },
+        "rebound": {
+          "title": "Rebound",
+          "type": "string"
+        },
+        "numpy": {
+          "title": "Numpy",
+          "type": "string"
+        },
+        "astropy": {
+          "title": "Astropy",
+          "type": "string"
+        },
+        "pydantic": {
+          "title": "Pydantic",
+          "type": "string"
+        },
+        "python": {
+          "title": "Python",
+          "type": "string"
+        },
+        "platform": {
+          "title": "Platform",
+          "type": "string"
+        }
+      },
+      "required": [
+        "exostab",
+        "rebound",
+        "numpy",
+        "astropy",
+        "pydantic",
+        "python",
+        "platform"
+      ],
+      "title": "SoftwareRecord",
+      "type": "object"
+    },
+    "Star": {
+      "additionalProperties": false,
+      "description": "The host star. Companion stars are not modelled (see ``n_stars``).",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "mass_msun": {
+          "$ref": "#/$defs/Value"
+        },
+        "n_stars": {
+          "default": 1,
+          "title": "N Stars",
+          "type": "integer"
+        },
+        "circumbinary": {
+          "default": false,
+          "title": "Circumbinary",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "mass_msun"
+      ],
+      "title": "Star",
+      "type": "object"
+    },
+    "System": {
+      "additionalProperties": false,
+      "description": "A star with two or more planets, ordered by orbital period.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "star": {
+          "$ref": "#/$defs/Star"
+        },
+        "planets": {
+          "items": {
+            "$ref": "#/$defs/Planet"
+          },
+          "title": "Planets",
+          "type": "array"
+        },
+        "epoch_jd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Epoch Jd"
+        },
+        "source": {
+          "$ref": "#/$defs/DataSource"
+        },
+        "flags": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/CompletionFlag"
+          },
+          "title": "Flags",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "star",
+        "planets",
+        "source"
+      ],
+      "title": "System",
+      "type": "object"
+    },
+    "Value": {
+      "additionalProperties": false,
+      "description": "A number with asymmetric uncertainties and its provenance.\n\n``err_plus`` and ``err_minus`` are magnitudes (both >= 0). For an ``upper_limit`` value, ``value``\nis the limit itself.",
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        },
+        "err_plus": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Err Plus"
+        },
+        "err_minus": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Err Minus"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance",
+          "default": "measured"
+        },
+        "reference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reference"
+        },
+        "reference_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reference Url"
+        }
+      },
+      "title": "Value",
+      "type": "object"
+    },
+    "Verdict": {
+      "enum": [
+        "stable",
+        "marginal",
+        "unstable",
+        "inconclusive"
+      ],
+      "title": "Verdict",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Everything needed to trace and reproduce one ``exostab check``.",
+  "properties": {
+    "schema_version": {
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "created_utc": {
+      "title": "Created Utc",
+      "type": "string"
+    },
+    "command": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Command"
+    },
+    "system": {
+      "$ref": "#/$defs/System"
+    },
+    "data": {
+      "$ref": "#/$defs/DataRecord"
+    },
+    "settings": {
+      "$ref": "#/$defs/SettingsRecord"
+    },
+    "software": {
+      "$ref": "#/$defs/SoftwareRecord"
+    },
+    "nominal": {
+      "$ref": "#/$defs/NominalRecord"
+    },
+    "indicators": {
+      "additionalProperties": {
+        "$ref": "#/$defs/IndicatorResult"
+      },
+      "title": "Indicators",
+      "type": "object"
+    },
+    "overall": {
+      "$ref": "#/$defs/Overall"
+    },
+    "runtime_s": {
+      "title": "Runtime S",
+      "type": "number"
+    }
+  },
+  "required": [
+    "schema_version",
+    "created_utc",
+    "command",
+    "system",
+    "data",
+    "settings",
+    "software",
+    "nominal",
+    "indicators",
+    "overall",
+    "runtime_s"
+  ],
+  "title": "exostab report (schema 1.3)",
+  "type": "object",
+  "$id": "https://mimitoz62.github.io/exostab/schemas/report-1.3.json"
+}

@@ -383,6 +383,16 @@ def check(
             "(about 2 min) or a number of seconds.",
         ),
     ] = None,
+    max_seconds: Annotated[
+        float | None,
+        typer.Option(
+            "--max-seconds",
+            help="Wall-clock cap, in seconds, on the N-body runs together: a run that has not ended by then stops "
+            "and gets no verdict. SPOCK gets the same cap.",
+            min=1,
+            callback=_finite_number,
+        ),
+    ] = None,
     seed: SeedOpt = 0,
     out: OutOpt = None,
     inclination_prior: Annotated[
@@ -458,6 +468,7 @@ def check(
         inclination_prior=inclination_prior.value,
         ias15_check=not no_ias15,
         jobs=jobs,
+        max_seconds=max_seconds,
     )
     seconds = None
     if budget is not None:
@@ -481,7 +492,10 @@ def check(
             console.print(f"[yellow]{p.warning}[/yellow]")
     from .indicators.spock import SpockUnavailableError
 
-    status = Text(f"Integrating {system.name}: {settings.draws + 1} runs of {settings.orbits:.3g} orbits…")
+    limit = "" if max_seconds is None else f", at most {max_seconds:g} s"
+    status = Text(
+        f"Integrating {system.name}: {settings.draws + 1} runs of {settings.orbits:.3g} orbits{limit}…"
+    )
     with _analysis_errors(), console.status(status):
         try:
             result = check_system(system, settings, command=_command())
@@ -502,6 +516,12 @@ def check(
     if old_figures:
         console.print(
             f"[yellow]{' and '.join(old_figures)} here are from an earlier run: --no-plots left them.[/yellow]"
+        )
+    stopped, n_runs = result.stopped_by_time_limit()
+    if stopped:
+        console.print(
+            f"[yellow]The time limit stopped {stopped} of {n_runs} runs before their end, so they have no verdict. "
+            "--max-seconds gives them more time, and --orbits, --draws or --budget choose a shorter check.[/yellow]"
         )
     total = time.perf_counter() - started  # a first run also downloads the table and builds a font cache
     console.print(

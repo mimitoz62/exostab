@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -124,6 +125,26 @@ def test_worker_failures(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, body: 
         sp.predict([trio()], sys.executable)
     with pytest.raises(sp.SpockUnavailableError, match="could not run"):
         sp.predict([trio()], str(tmp_path / "no-such-python"))
+
+
+def test_spock_gets_the_time_limit_of_the_check(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Its worker had its own 600 s, whatever limit the check had.
+    fake_worker(tmp_path, monkeypatch, [], body="import time; time.sleep(60)")
+    with pytest.raises(sp.SpockUnavailableError, match=r"did not finish within the time limit of 0\.5 s"):
+        sp.predict([trio()], sys.executable, timeout=0.5)
+    seen: list[float] = []
+
+    def predict(
+        reals: list[Realization], python: str, *, timeout: float
+    ) -> tuple[list[float], dict[str, str]]:
+        seen.append(timeout)
+        return [0.9] * len(reals), {"spock": "fake", "rebound": "4.x"}
+
+    monkeypatch.setattr(sp, "predict", predict)
+    settings = CheckSettings(orbits=100, draws=1, jobs=1, ias15_check=False, spock_python=sys.executable)
+    check_system(load_system("TOI-270"), settings)
+    res = check_system(load_system("TOI-270"), replace(settings, max_seconds=60.0))
+    assert seen == [sp.TIMEOUT_S, 60.0] and res.report.settings.max_seconds == 60.0
 
 
 def test_check_system_adds_spock_for_three_planets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
