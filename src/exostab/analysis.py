@@ -33,6 +33,9 @@ class CheckSettings:
     n_samples: int = 400  # time-series samples kept for the plots
     budget_s: float | None = None  # wall-clock budget that chose orbits and draws, if any
     spock_python: str | None = None  # interpreter of a SPOCK environment: adds the optional SPOCK indicator
+    # Wall-clock limit of the N-body runs together, and of the SPOCK worker on its own (None: none, and SPOCK's
+    # default timeout). A run that the limit stops before its end is inconclusive.
+    max_seconds: float | None = None
 
 
 def settings_for_budget(system: System, budget_s: float, base: CheckSettings) -> tuple[CheckSettings, Plan]:
@@ -49,6 +52,11 @@ class CheckResult:
     runs: list[RunResult]
     ias15: RunResult | None
     extra: dict[str, object] = field(default_factory=dict)
+
+    def stopped_by_time_limit(self) -> tuple[int, int]:
+        """How many N-body runs the time limit stopped before their end, and how many there were (IAS15 included)."""
+        runs = [*self.runs, *([self.ias15] if self.ias15 is not None else [])]
+        return sum(r.status == "time_limit" for r in runs), len(runs)
 
 
 NO_DRAWS = (
@@ -111,7 +119,9 @@ def _nbody_held(nb: IndicatorResult) -> list[str]:
     nominal = nb.details.get("nominal") or {}
     ias15 = nb.details.get("ias15") or {}
     out = []
-    if ias15 and ias15.get("classification") != nominal.get("classification"):
+    if ias15.get("status") == "time_limit" and nominal.get("status") != "time_limit":
+        out.append("the IAS15 check of the nominal run did not finish within the time limit")
+    elif ias15 and ias15.get("classification") != nominal.get("classification"):
         out.append(
             f"WHFast and IAS15 disagree on the nominal run ({nominal.get('classification')} vs "
             f"{ias15.get('classification')})"
@@ -127,6 +137,19 @@ def _nbody_held(nb: IndicatorResult) -> list[str]:
             f"{nbody_indicator.MIN_OUTER_ORBITS} needed to judge it (a longer run is needed)"
         )
     return out
+
+
+def _why_inconclusive(nb: IndicatorResult) -> str:
+    """Why an inconclusive N-body indicator gives no verdict: its runs could not be trusted (energy error, a planet
+    passing the star, a failed integration), or the time limit stopped them, or both."""
+    runs = [nb.details.get("nominal") or {}, *(nb.details.get("draws") or [])]
+    stopped = any(r.get("status") == "time_limit" for r in runs)
+    other = any(r.get("classification") == "inconclusive" and r.get("status") != "time_limit" for r in runs)
+    if stopped and not other:
+        return "did not finish within the time limit"
+    return (
+        "could not be trusted or did not finish within the time limit" if stopped else "could not be trusted"
+    )
 
 
 def _all_regular(nb: IndicatorResult) -> bool:
@@ -183,7 +206,7 @@ def overall_verdict(
     * unstable: the direct N-body integration is unstable (close encounters or escapes in the nominal run
       and in at least 95% of the draws), and that evidence rests neither on upper limits, nor on the nominal
       run alone, nor on a single-star model of a system with several stars;
-    * inconclusive: the N-body integration could not be trusted;
+    * inconclusive: the N-body integration could not be trusted, or did not finish within the time limit;
     * stable: every indicator says stable (including SPOCK when it is enabled), no N-body draw had a close
       encounter or escape, and Monte Carlo draws were run;
     * marginal: everything else, i.e. whenever the indicators disagree or any of them is marginal.
@@ -219,8 +242,8 @@ def _combined_verdict(
     if nb.verdict is Verdict.INCONCLUSIVE:
         return Overall(
             verdict=Verdict.INCONCLUSIVE,
-            summary="The N-body integrations could not be trusted (see the N-body notes), so no overall verdict "
-            "is given.",
+            summary=f"The N-body integrations {_why_inconclusive(nb)} (see the N-body notes), so no overall "
+            "verdict is given.",
             reasons=not_stable,
         )
     n = nb.draws.n if nb.draws is not None else 0
@@ -330,6 +353,7 @@ def check_system(system: System, settings: CheckSettings, *, command: str | None
         ias15_check=settings.ias15_check,
         n_samples=settings.n_samples,
         jobs=settings.jobs,
+        max_seconds=settings.max_seconds,
     )
     runs, ias15 = nbody_indicator.integrate_all(reals, nb_settings, settings.seed)
     # A phase relative to the periastron needs its direction: with omega unknown (cleared in the web app), the
@@ -345,7 +369,8 @@ def check_system(system: System, settings: CheckSettings, *, command: str | None
     )
     indicators = {"hill": hill, "amd": amd, "nbody": nbody}
     if settings.spock_python and len(nominal.bodies) >= 3:
-        indicators["spock"] = spock_indicator.evaluate(nominal, draws, settings.spock_python)
+        timeout = spock_indicator.TIMEOUT_S if settings.max_seconds is None else settings.max_seconds
+        indicators["spock"] = spock_indicator.evaluate(nominal, draws, settings.spock_python, timeout=timeout)
     report = build_report(
         system=system,
         settings=settings,

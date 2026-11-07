@@ -400,6 +400,33 @@ def test_app_says_when_a_run_is_shorter_than_the_catalogs() -> None:
     assert any("covers 300 orbits" in w.value for w in at.warning)
 
 
+def test_the_page_says_when_the_time_limit_stopped_runs(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A run slower than its estimate kept a hosted app busy, and Streamlit cannot interrupt REBOUND's C code: every
+    # check now stops at a wall-clock limit, and the runs it cuts short get no verdict.
+    import streamlit as st
+
+    import exostab.web.app as web_app
+    from exostab.web.state import BUDGET_MAX, TIME_LIMIT_S
+
+    assert TIME_LIMIT_S == web_app.TIME_LIMIT_S == 2 * BUDGET_MAX
+    monkeypatch.setattr(web_app, "TIME_LIMIT_S", 0)
+    st.cache_data.clear()  # a result that an earlier test cached would hide the limit
+    try:
+        at = AppTest.from_file(APP, default_timeout=120)
+        at.query_params.update(
+            {"system": "Kepler-36", "source": "snapshot", "orbits": "300", "draws": "2", "run": "1"}
+        )
+        at.run()
+    finally:
+        st.cache_data.clear()  # and this result must not reach a later test
+    assert not at.exception, at.exception
+    assert any(
+        "after 0 s on this server, and 4 of 4 had not reached their end" in w.value for w in at.warning
+    )
+    assert "Overall: **INCONCLUSIVE**" in " ".join(m.value for m in at.markdown)
+    assert any("did not finish within the time limit" in m.value for m in at.markdown)
+
+
 def test_search_box_shows_other_names() -> None:
     at = AppTest.from_file(APP, default_timeout=60)
     at.query_params.update({"source": "snapshot"})

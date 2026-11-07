@@ -770,3 +770,30 @@ Hill radius), time step (P/50) and grid, and is no longer claimed as reproduced 
   `Realization.semi_major_axes` then always grow outwards, so "the larger semi-major axis" holds for the values the page
   shows. Entered axes closer than about m / 3M★ can come out in the other order; such pairs fail the Hill test either
   way.
+
+## D36 — A wall-clock limit on the runs of a check (2026-11-07, issue #27)
+
+- **Where the clock is read.** `RunConfig.max_seconds` is a duration, counted from the start of the run in the process
+  that integrates it. The run reads the clock at each of its 1,200 energy checks (D8) and stops at the first one after
+  the limit, with the status `time_limit`. Streamlit cannot stop a script thread inside REBOUND's C code, and a check
+  at every step would cost too much, so a run can go on for up to one interval between energy checks after the limit.
+  A run that ends before the limit is the same as without one.
+- **No verdict for a run cut short.** It says nothing about the time it did not reach, so it is inconclusive, never
+  stable or unstable, and the usual rules follow: the N-body verdict is inconclusive if the nominal run is, or more
+  than 20% of the draws are. An IAS15 check cut short cannot confirm the nominal run, so the N-body verdict cannot be
+  stable, as when the two integrators disagree; the notes name the limit, not a disagreement.
+- **One limit for all the runs of a check.** Each run is given the time left when it starts. Durations, not clock
+  times, go to the worker processes, because the clocks of two processes need not share a reference point; so with a
+  limit, a pool is handed a run only when a worker is free. In one process, as in the web app, the IAS15 check runs
+  last, so that a check much slower than estimated cannot take the time of the runs the verdict rests on. Without a
+  limit the order changes no result.
+- **Web app: 240 s.** The runs of a check stop after 2 × `BUDGET_MAX` = 240 s (`TIME_LIMIT_S`), because the cost
+  estimate behind a budget or a shared link (D28) can be too low: it extrapolates short timing runs, and IAS15 slows
+  down near close approaches. The SPOCK worker gets the same 240 s instead of its own 600 s, so the runs and SPOCK
+  together stop after about 8 minutes at most. The right value is uncertain until it is measured on the hosting
+  platform (#2). A result cut short is cached like any other, because the limit is the same for every run on a server.
+- **Command line.** `exostab check --max-seconds` sets the same limit; without it nothing changes. `catalog build`
+  keeps its own cap per system (D17, D21), which stops the whole process and records the status `timeout`.
+- **Report schema 1.4** adds `settings.max_seconds`. The run status `time_limit` can appear in the N-body details.
+  The docs workflow publishes only the current schema, so the schema of exostab 1.0.0 to 1.1.1 is kept in the
+  repository as `docs/schemas/report-1.3.json`, and the `$id` of their reports still resolves (D33).

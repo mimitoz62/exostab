@@ -8,7 +8,10 @@ Search a system, edit its parameters, choose a time budget and run the same anal
 The run length chosen for a budget and the results are cached by a hash of every input, so a repeated view
 (or a shared link opened on the same server) is instant. Integrations run in a single process: hosted apps
 have one or two CPUs, and a process pool inside a Streamlit server is fragile. A shared link's run length is
-used only if its estimated cost on this server is within the largest time budget.
+used only if its estimated cost on this server is within the largest time budget. The estimate can be too low,
+and Streamlit cannot interrupt a script thread inside REBOUND's C code, so every check also has a wall-clock
+limit (``TIME_LIMIT_S``): the runs stop at their next energy check after it, without a verdict, and the SPOCK
+worker gets the same limit.
 """
 
 from __future__ import annotations
@@ -46,6 +49,7 @@ from .state import (
     MASS_MIN_EARTH,
     PERIOD_RATIO_MAX,
     SEED_MAX,
+    TIME_LIMIT_S,
     AppState,
     WhatIf,
     apply_changes,
@@ -208,7 +212,8 @@ def _run_settings(state: AppState, system_json: str) -> tuple[dict[str, Any], st
 
 @st.cache_data(show_spinner=False, max_entries=64)
 def _run(system_json: str, settings_json: str, key: str) -> CheckResult:
-    """The analysis, cached by the input hash ``key`` (the JSON arguments are the inputs themselves)."""
+    """The analysis, cached by the input hash ``key`` (the JSON arguments are the inputs themselves). The time limit
+    is the server's, the same for every run, so it is not one of the inputs."""
     system = System.model_validate_json(system_json)
     s = json.loads(settings_json)
     spock = spock_python() if s.get("spock") else None
@@ -221,6 +226,7 @@ def _run(system_json: str, settings_json: str, key: str) -> CheckResult:
         n_samples=300,
         budget_s=s["budget_s"],
         spock_python=spock,
+        max_seconds=TIME_LIMIT_S,
     )
     result = check_system(system, settings, command=f"exostab web app {__version__} (input {key[:12]})")
     result.extra["input_hash"] = key
@@ -462,6 +468,13 @@ def _results(result: CheckResult, state: AppState) -> None:
             for note in ind.notes:
                 st.caption("• " + note)
     s = rep.settings
+    stopped, n_runs = result.stopped_by_time_limit()
+    if stopped:
+        st.warning(
+            f"The runs of a check stop after {TIME_LIMIT_S} s on this server, and {stopped} of {n_runs} had not "
+            "reached their end by then, so they have no verdict. Choose a smaller time budget and press Run for "
+            "shorter runs."
+        )
     if s.orbits < 1e4:
         st.warning(
             f"This run covers {s.orbits:,.0f} orbits of the innermost planet, fewer than the 10,000 of exostab check "

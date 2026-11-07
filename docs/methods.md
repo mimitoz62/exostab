@@ -145,7 +145,8 @@ Each run is classified as:
 - **inconclusive**: the relative energy error exceeded 10⁻⁵ at any of 1,200 equally spaced checks through the
   run, so the numbers cannot be trusted; or a planet came closer to the star than half its own Hill radius
   (a *star approach*), where tides, general relativity and the size of the star, none of which is modelled, can
-  decide what happens.
+  decide what happens. In versions after 1.1.1, a run that a time limit stopped before its end (`--max-seconds`,
+  or the web app's limit) is inconclusive too: it says nothing about the time it did not reach.
 
 Every run checks its energy error at the same 1,200 times: the nominal run, each Monte Carlo draw, the IAS15
 check, and the runs of the catalog and of `exostab sweep`. The time series kept for the plots is a subset of these
@@ -156,7 +157,8 @@ encounter between planets and does not stop the run; if two planets later meet, 
 still unstable.
 
 The N-body verdict follows the 95% rule of Step 2. It also cannot be *stable* if WHFast and IAS15 disagree on the
-nominal run, or if the outermost planet completes fewer than 100 orbits within the run (increase `--orbits`).
+nominal run, or if the outermost planet completes fewer than 100 orbits within the run (increase `--orbits`). In
+versions after 1.1.1, it cannot be *stable* either if a time limit stopped the IAS15 check before its end.
 
 By default each run lasts 10,000 orbits of the innermost planet. That is a short time compared with the age of a
 planetary system, and exostab never claims more than "no instability found within this time". A configuration
@@ -196,7 +198,8 @@ Running the script again rebuilds the environment.
 - **unstable**: the direct integration shows close encounters or escapes for the published values and for at
   least 95% of the draws; draws were run; none of the inputs is only a published upper limit; and the system has
   a single star;
-- **inconclusive**: the N-body integrations could not be trusted;
+- **inconclusive**: the N-body integrations could not be trusted or, in versions after 1.1.1, did not finish within
+  a time limit;
 - **stable**: every indicator says stable (SPOCK too, when it is enabled), draws were run, and no N-body draw had
   a close encounter or escape;
 - **marginal**: everything else, in particular whenever the indicators disagree.

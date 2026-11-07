@@ -37,8 +37,8 @@ from .units import MEARTH_IN_MSUN, format_count, format_years, years_to_days
 
 # 1.1: settings.budget_s; 1.2: settings.spock and the optional "spock" indicator; 1.3: infinite numbers written
 # as "inf" / "-inf" instead of null, new completion flags, new keys in the indicator details, and overall
-# summaries built from the draw counts
-SCHEMA_VERSION = "1.3"
+# summaries built from the draw counts; 1.4: settings.max_seconds and the run status "time_limit"
+SCHEMA_VERSION = "1.4"
 
 ACKNOWLEDGMENT = (
     "This research has made use of the NASA Exoplanet Archive, which is operated by the California "
@@ -75,6 +75,8 @@ class SettingsRecord(BaseModel):
     encounter_rule: str
     budget_s: float | None = None  # wall-clock budget that chose orbits and draws (--budget), if any
     spock: bool = False  # whether the optional SPOCK indicator was requested
+    # wall-clock limit of the N-body runs together and of SPOCK (--max-seconds, or the web app's), if any
+    max_seconds: float | None = None
 
 
 class SoftwareRecord(BaseModel):
@@ -164,6 +166,8 @@ class _Settings(Protocol):
     def budget_s(self) -> float | None: ...
     @property
     def spock_python(self) -> str | None: ...
+    @property
+    def max_seconds(self) -> float | None: ...
 
 
 def _json_numbers(data: Any, raw: Any) -> Any:
@@ -268,6 +272,7 @@ def build_report(
             "inconclusive",
             budget_s=settings.budget_s,
             spock=settings.spock_python is not None,
+            max_seconds=settings.max_seconds,
         ),
         software=software_record(),
         nominal=NominalRecord(star_mass_msun=nominal.m_star, epoch_jd=epoch_jd, bodies=bodies),
@@ -417,6 +422,7 @@ def render(report: Report, console: Console, *, outputs: list[Path] | None = Non
         + f"; {s.draws} Monte Carlo {'draw' if s.draws == 1 else 'draws'}; seed {s.seed}; MEGNO chaotic at <Y> ≥ "
         f"{s.megno_threshold:g}; energy-error limit {s.energy_error_max:.0e}."
         + (f" Run length and draws chosen for a {s.budget_s:g} s budget." if s.budget_s else "")
+        + (f" Time limit for the runs: {s.max_seconds:g} s." if s.max_seconds is not None else "")
         + _prior_note(report)
     )
     parts: list[Any] = [

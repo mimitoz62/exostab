@@ -11,15 +11,16 @@ Each run (the nominal parameters and every Monte Carlo draw) is integrated with 
   :data:`exostab.integrate.ENERGY_CHECKS` equally spaced times, whatever is kept for the plots. A run in
   which a planet came closer to the star than half its Hill radius (status ``star_approach``) is also
   inconclusive: that is not a planet-planet encounter, but tides, general relativity and the size of the
-  star, none of which is modelled, can decide what happens so close to the star (DECISIONS.md, D20).
+  star, none of which is modelled, can decide what happens so close to the star (DECISIONS.md, D20). So is a
+  run that a wall-clock limit stopped before its end (status ``time_limit``, DECISIONS.md, D36).
 
 For quasi-periodic (regular) motion <Y> tends to 2; for chaotic motion it grows linearly with time
 (Cincotta & Simo 2000). The threshold and the run length are finite, so a "regular" run means "no
 chaos detected within this horizon", never "stable for billions of years".
 
-The nominal run is repeated with IAS15. If the two integrators disagree, the indicator cannot be
-"stable". If the outermost planet completes fewer than ``MIN_OUTER_ORBITS`` orbits, the horizon is too
-short to judge it and the indicator cannot be "stable" either.
+The nominal run is repeated with IAS15. If the two integrators disagree, or the IAS15 check did not reach its end,
+the indicator cannot be "stable". If the outermost planet completes fewer than ``MIN_OUTER_ORBITS`` orbits, the
+horizon is too short to judge it and the indicator cannot be "stable" either.
 """
 
 from __future__ import annotations
@@ -28,8 +29,9 @@ import os
 import signal
 import sys
 import threading
-from collections.abc import Sequence
-from concurrent.futures import ProcessPoolExecutor
+import time
+from collections.abc import Callable, Sequence
+from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
 from dataclasses import dataclass, replace
 from typing import Literal
 
@@ -75,19 +77,28 @@ class NBodySettings:
     ias15_check: bool = True
     n_samples: int = 400  # time-series samples kept for the nominal runs (plots)
     jobs: int | None = None  # worker processes; None: all cores but one
+    max_seconds: float | None = None  # wall-clock limit of all the runs together (None: none), see run_many
+
+
+# Statuses that make a run inconclusive, whatever <Y> says: a failed integration, a planet that passed close to the
+# star (D20) and a run that the wall-clock limit stopped before its end (D36).
+NO_VERDICT = ("error", "star_approach", "time_limit")
 
 
 def classify_run(r: RunResult) -> RunClass:
     if r.status in ("encounter", "escape"):
         return "unstable"
-    if r.status in ("error", "star_approach") or r.megno is None or not np.isfinite(r.megno):
+    if r.status in NO_VERDICT or r.megno is None or not np.isfinite(r.megno):
         return "inconclusive"
     if r.energy_error > ENERGY_ERROR_MAX:
         return "inconclusive"
     return "chaotic" if r.megno >= MEGNO_CHAOTIC else "regular"
 
 
-def _run(job: tuple[Realization, RunConfig]) -> RunResult:
+Job = tuple[Realization, RunConfig]
+
+
+def _run(job: Job) -> RunResult:
     return run(*job)
 
 
@@ -117,21 +128,70 @@ def worker_limit(n_workers: int) -> int:
     return min(n_workers, MAX_WINDOWS_WORKERS) if sys.platform == "win32" else n_workers
 
 
-def run_many(jobs: Sequence[tuple[Realization, RunConfig]], n_workers: int | None) -> list[RunResult]:
+def worker_count(n_jobs: int, n_workers: int | None) -> int:
+    """The processes :func:`run_many` uses for ``n_jobs`` runs; 1 means this process, without a pool."""
+    if n_workers is None:
+        n_workers = max(1, (os.cpu_count() or 2) - 1)
+    return worker_limit(min(n_workers, n_jobs))
+
+
+def _in_turn(
+    pool: ProcessPoolExecutor, jobs: Sequence[Job], n_workers: int, prepare: Callable[[Job], Job]
+) -> list[RunResult]:
+    """The results of ``jobs`` in ``pool``, each handed to a worker only when one is free, through ``prepare``."""
+    results: dict[int, RunResult] = {}
+    waiting = iter(enumerate(jobs))
+    running: dict[Future[RunResult], int] = {}
+
+    def start_next() -> None:
+        item = next(waiting, None)
+        if item is not None:
+            running[pool.submit(_run, prepare(item[1]))] = item[0]
+
+    for _ in range(n_workers):
+        start_next()
+    while running:
+        done, _ = wait(running, return_when=FIRST_COMPLETED)
+        for future in done:
+            results[running.pop(future)] = future.result()
+            start_next()
+    return [results[k] for k in range(len(jobs))]
+
+
+def run_many(
+    jobs: Sequence[Job], n_workers: int | None, *, max_seconds: float | None = None
+) -> list[RunResult]:
     """Run integrations, in parallel worker processes when more than one worker is allowed.
+
+    With ``max_seconds``, the runs share a wall-clock limit that starts now: each run is given the time left when it
+    starts, as its :attr:`RunConfig.max_seconds`, and stops at its first energy check after that. A run measures this
+    duration on its own clock, in the process that integrates it, so a pool is handed each run only when a worker is
+    free to start it.
 
     When the wait is interrupted (Ctrl-C, SIGTERM or a worker that died), the workers are stopped at once: the
     pool's own shutdown would wait for jobs it has already queued, which can take minutes.
     """
-    if n_workers is None:
-        n_workers = max(1, (os.cpu_count() or 2) - 1)
-    n_workers = worker_limit(min(n_workers, len(jobs)))
+    t0 = time.monotonic()
+
+    def time_left(job: Job) -> Job:
+        if max_seconds is None:
+            return job
+        real, config = job
+        left = max(0.0, max_seconds - (time.monotonic() - t0))
+        if config.max_seconds is not None:
+            left = min(left, config.max_seconds)
+        return real, replace(config, max_seconds=left)
+
+    n_workers = worker_count(len(jobs), n_workers)
     if n_workers <= 1:
-        return [_run(j) for j in jobs]
+        return [_run(time_left(j)) for j in jobs]
     _python_handles_ctrl_c()
     pool = ProcessPoolExecutor(max_workers=n_workers, initializer=_worker_signals)
     try:
-        results = list(pool.map(_run, jobs, chunksize=1))
+        if max_seconds is None:
+            results = list(pool.map(_run, jobs, chunksize=1))
+        else:
+            results = _in_turn(pool, jobs, n_workers, time_left)
     except BaseException:
         processes = list((pool._processes or {}).values())
         # Python 3.10 waits at exit for the thread that feeds the workers' queue, which is stuck once they are gone and
@@ -157,16 +217,21 @@ def integrate_all(
 ) -> tuple[list[RunResult], RunResult | None]:
     """WHFast runs for every realization (nominal first) plus the IAS15 check of the nominal run."""
     base = RunConfig(n_orbits=settings.orbits, integrator="whfast", dt_fraction=settings.dt_fraction)
-    jobs: list[tuple[Realization, RunConfig]] = []
+    jobs: list[Job] = []
     for k, r in enumerate(reals):
         samples = settings.n_samples if k == 0 else 0
         jobs.append((r, replace(base, megno_seed=megno_seed(seed, k), n_samples=samples)))
+    first = False
     if settings.ias15_check:
-        # IAS15 is the slowest single run (5-20 times WHFast), so it is started first: the pool then
-        # works through the WHFast runs while it goes on, instead of waiting for it at the end.
-        jobs.insert(0, (reals[0], replace(jobs[0][1], integrator="ias15")))
-    results = run_many(jobs, settings.jobs)
-    ias15 = results.pop(0) if settings.ias15_check else None
+        check = (reals[0], replace(jobs[0][1], integrator="ias15"))
+        # IAS15 is the slowest single run (5-20 times WHFast), so a pool starts it first: it then works through
+        # the WHFast runs while IAS15 goes on, instead of waiting for it at the end. In one process the order
+        # changes the results of no run, only what a time limit stops: there IAS15 comes last, so that a check
+        # much slower than estimated cannot leave the runs the verdict rests on without time (DECISIONS.md, D36).
+        first = worker_count(len(jobs) + 1, settings.jobs) > 1
+        jobs.insert(0 if first else len(jobs), check)
+    results = run_many(jobs, settings.jobs, max_seconds=settings.max_seconds)
+    ias15 = results.pop(0 if first else -1) if settings.ias15_check else None
     return results, ias15
 
 
@@ -196,8 +261,10 @@ def evaluate(
     if verdict is not v_nom and v_nom is not Verdict.INCONCLUSIVE:
         notes.append(f"The nominal run is '{c_nom}', but the draws disagree.")
     c_ias = classify_run(ias15) if ias15 is not None else None
-    if c_ias is not None and c_ias != c_nom:
-        notes.append(f"WHFast and IAS15 disagree on the nominal run ({c_nom} vs {c_ias}).")
+    if ias15 is not None and c_ias is not None and c_ias != c_nom:
+        # A run that the time limit stopped confirms nothing and contradicts nothing; the note on the limit says so.
+        if "time_limit" not in (ias15.status, nominal.status):
+            notes.append(f"WHFast and IAS15 disagree on the nominal run ({c_nom} vs {c_ias}).")
         if verdict is Verdict.STABLE:
             verdict = Verdict.MARGINAL
     if nominal.status == "completed" and nominal.n_orbits_outermost < MIN_OUTER_ORBITS:
@@ -214,7 +281,7 @@ def evaluate(
             f"unstable for random phases; {phases_remedy} to test the real configuration."
         )
     for r, c in zip([nominal, *draws], [c_nom, *c_draws], strict=True):
-        if c == "inconclusive" and r.status not in ("error", "star_approach"):
+        if c == "inconclusive" and r.status not in NO_VERDICT:
             notes.append(
                 f"{r.label}: relative energy error {r.energy_error:.1e} exceeds {ENERGY_ERROR_MAX:.0e}; "
                 "no verdict for this run."
@@ -228,11 +295,16 @@ def evaluate(
             "models neither tides, nor general relativity, nor the size of the star, which can decide what "
             "happens so close to it; no verdict for these runs."
         )
+    stopped = _time_limit_note(nominal, draws, ias15)
+    if stopped:
+        notes.append(stopped)
     years = nominal.t_target
     counts = {c: c_draws.count(c) for c in ("regular", "chaotic", "unstable", "inconclusive")}
     planned = nominal.t_target / (nominal.t_end / nominal.n_orbits_innermost) if nominal.t_end > 0 else 0.0
-    if c_nom == "unstable":
-        what = "close encounter" if nominal.status == "encounter" else "escape"
+    if c_nom == "unstable" or nominal.status == "time_limit":
+        what = {"encounter": "close encounter", "escape": "escape", "time_limit": "time limit reached"}[
+            nominal.status
+        ]
         summary = (
             f"Nominal run: {what} after {format_years(nominal.t_end)} "
             f"({format_count(nominal.n_orbits_innermost)} of {format_count(planned)} planned inner orbits)"
@@ -276,6 +348,29 @@ def evaluate(
         notes=notes,
         references=REFERENCES,
     )
+
+
+def _time_limit_note(nominal: RunResult, draws: Sequence[RunResult], ias15: RunResult | None) -> str | None:
+    """Which runs the wall-clock limit stopped before their end, or None if it stopped none."""
+    check = ias15 is not None and ias15.status == "time_limit"
+    k = sum(r.status == "time_limit" for r in draws)
+    parts = ["the nominal run"] if nominal.status == "time_limit" else []
+    if k:
+        parts.append(f"{k} of {len(draws)} draws" if len(draws) > 1 else "the draw")
+    if check and not parts:
+        return "The time limit was reached before the end of the IAS15 check, so it cannot confirm the nominal run."
+    if not parts:
+        return None
+    if check:
+        parts.insert(0, "the IAS15 check")
+    runs = ", ".join(parts[:-1]) + " and " + parts[-1] if len(parts) > 1 else parts[0]
+    n = k + check + (nominal.status == "time_limit")
+    note = f"The time limit was reached before the end of {runs}; no verdict for " + (
+        "this run." if n == 1 else "these runs."
+    )
+    if check and nominal.status != "time_limit":
+        note += " An IAS15 check cut short cannot confirm the nominal run."
+    return note
 
 
 def _run_summary(r: RunResult, c: str) -> dict[str, object]:

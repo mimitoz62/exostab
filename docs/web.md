@@ -51,7 +51,9 @@ Then open http://localhost:8501. Options after the command go to
    picks the run length and number of draws that fit (see [`--budget`](cli.md)). It always integrates in a single
    process, also when run locally, so a given budget covers fewer orbits and draws than `exostab check --budget`
    on a multi-core computer. A verdict here can therefore differ from `exostab check`, which uses 20 draws by
-   default, and from the [catalog](catalog.md), which uses 10.
+   default, and from the [catalog](catalog.md), which uses 10. The speed estimate behind a budget can be too low,
+   so versions after 1.1.1 also stop the runs of a check after 240 s, twice the largest budget: a run stopped
+   there gets no verdict, and the page says so. SPOCK gets the same 240 s.
 5. **Read the result.** It shows the overall verdict, the indicators with their explanations, the
    data-completion rules that were applied, and interactive figures (orbits, MEGNO over time, all draws).
    [How to read a report card](reading-a-report.md) explains these indicators and verdicts.

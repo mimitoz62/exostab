@@ -28,7 +28,8 @@ than one star, of which only the host is modelled. Such systems are marginal, an
 **What does "inconclusive" mean?**
 The N-body integrations could not be trusted, in the nominal run or in more than 20% of the draws: the relative
 energy error exceeded 10⁻⁵, or a planet passed so close to the star that tides, general relativity and the size
-of the star, none of which exostab models, can decide what happens. No overall verdict is given then.
+of the star, none of which exostab models, can decide what happens. In versions after 1.1.1, a run that a time limit
+stopped before its end (`--max-seconds`, or the web app's limit) is inconclusive too. No overall verdict is given then.
 
 **What does exostab say about the Solar System?**
 It is not in the archive, so `exostab check "Solar System"` finds nothing.

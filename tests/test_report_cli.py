@@ -559,6 +559,8 @@ def _no_integration(monkeypatch: pytest.MonkeyPatch) -> None:
     [
         ["check", "Kepler-36", "--orbits", "nan"],
         ["check", "Kepler-36", "--orbits", "inf"],
+        ["check", "Kepler-36", "--max-seconds", "nan"],
+        ["check", "Kepler-36", "--max-seconds", "inf"],
         ["sweep", "Kepler-36", "--orbits", "inf"],
         ["sweep", "Kepler-36", "--orbits", "nan"],
         ["list", "--max-period-days", "nan"],
@@ -1086,6 +1088,42 @@ def test_a_name_that_is_not_found_gets_a_way_forward(name: str, hint: str) -> No
     text = " ".join(plain(r.output).split())
     assert r.exit_code == 1 and hint in text
     assert "--refresh" not in text  # offline: the snapshot is all there is
+
+
+def test_check_max_seconds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from dataclasses import replace
+
+    import exostab.analysis
+
+    def card(output: str) -> str:
+        return " ".join(re.sub("[│╭╮╰╯┌┐└┘─]", " ", plain(output)).split())
+
+    args = ["check", "Kepler-36", *FAST, "--no-plots", "--out", str(tmp_path)]
+    r = runner.invoke(app, [*args, "--max-seconds", "30"])
+    assert r.exit_code == 0, r.output
+    assert json.loads((tmp_path / "report.json").read_text())["settings"]["max_seconds"] == 30.0
+    assert "Time limit for the runs: 30 s." in card(r.output) and "The time limit stopped" not in card(
+        r.output
+    )
+    r = runner.invoke(app, args)
+    assert r.exit_code == 0 and "Time limit" not in card(r.output)
+    assert json.loads((tmp_path / "report.json").read_text())["settings"]["max_seconds"] is None
+    # a limit that has passed before the runs begin: every run stops at its first energy check
+    check = exostab.analysis.check_system
+    monkeypatch.setattr(
+        exostab.analysis,
+        "check_system",
+        lambda system, settings, **kw: check(system, replace(settings, max_seconds=0.0), **kw),
+    )
+    r = runner.invoke(app, [*args, "--max-seconds", "30"])
+    text = card(r.output)
+    assert r.exit_code == 0, r.output
+    assert "N-body + MEGNO INCONCLUSIVE" in text and "Overall: INCONCLUSIVE" in text
+    assert (
+        "The time limit stopped 4 of 4 runs before their end, so they have no verdict. --max-seconds" in text
+    )
+    r = runner.invoke(app, [*args, "--max-seconds", "0"])
+    assert r.exit_code == 2
 
 
 def test_the_last_lines_give_the_whole_time_and_the_guide(tmp_path: Path) -> None:

@@ -27,6 +27,9 @@ from ..models import (
 from ..sampling import E_MAX
 
 BUDGET_MIN, BUDGET_MAX, BUDGET_DEFAULT = 5, 120, 10
+# Wall-clock limit of the N-body runs of one check, and of the SPOCK worker: the largest budget with a margin of as
+# much again, because the estimate behind a budget can be too low (DECISIONS.md, D36).
+TIME_LIMIT_S = 2 * BUDGET_MAX
 MASS_FACTORS = (0.1, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 5.0, 7.0, 10.0)
 SEED_MAX = 2**31 - 1  # range of the seed widget
 # A link can ask for at most the longest run that a time budget can choose (the last preset in budget.py).
