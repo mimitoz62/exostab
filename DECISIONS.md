@@ -584,7 +584,7 @@ several hosts carry the name ("TOI-2267"), the query is refused as ambiguous. Ot
 guess would check another system. When there is no suggestion, the error points to `exostab list`, and in the web app
 to its search box.
 
-## D25 — Dependency lower bounds are tested (2026-10-03)
+## D25 — Dependency lower bounds are tested (2026-10-03; amended 2026-11-07)
 
 The lower bounds in `pyproject.toml` had never been installed. pip keeps an installed version that satisfies a
 bound, so a bound that does not work breaks real installations. Measured on Python 3.10 with uv's lowest-direct
@@ -602,6 +602,13 @@ astroquery 0.4.7, rebound 5.2.0, matplotlib 3.7.0, rich 13.0.0, platformdirs 3.0
 1.50.0, plotly 6.0.0, pyarrow 14.0.0, pytest 8.0.0), the fast suite passes. The CI job `lowest` repeats this and
 also builds the wheel without isolation using hatchling 1.27.0. That job resolves transitive dependencies to their
 newest versions, so old transitive versions are covered only by the click spot checks above.
+
+**Streamlit and pyvo (amended 2026-11-07).** The job installed streamlit 1.52.0, not the bound 1.50: streamlit 1.50
+and 1.51 require packaging < 26, and uv keeps the newest packaging. With 1.50 the web app would also show a
+deprecation notice above each chart, because `st.plotly_chart(width=...)` is new in 1.51. So streamlit ≥ 1.52, the
+version the job installs. pyvo ≥ 1.4 is now a direct dependency: `data/archive.py` imports `DALOverflowWarning`,
+which is new in pyvo 1.4, while astroquery 0.4.7 allows pyvo 1.1. A step of the job now checks that each direct
+dependency is installed at its bound, so a bound that the job cannot install fails it.
 
 ## D26 — Version 1.0.0 and what a release must pass (2026-10-03; amended 2026-10-04)
 

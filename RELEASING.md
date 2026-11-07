@@ -146,8 +146,8 @@ workflow so the catalog page is updated. The full log is in the run's `catalog` 
 
 ## Cutting a release
 
-1. Check that CI and the nightly validation suite pass on `main` (Actions tab). The release workflow runs both
-   suites again and stops before publishing if either fails.
+1. Check that CI, the nightly validation suite and the live archive query (workflow `Live archive`) pass on `main`
+   (Actions tab). The release workflow runs the two suites again and stops before publishing if either fails.
 2. Choose the version `X.Y.Z` ([semantic versioning](https://semver.org/)) and set it in four places:
    - `src/exostab/__init__.py`: `__version__ = "X.Y.Z"`;
    - `CITATION.cff`: `version: "X.Y.Z"` and `date-released: "YYYY-MM-DD"` (the release date);
@@ -199,7 +199,9 @@ workflow so the catalog page is updated. The full log is in the run's `catalog` 
    and the release badge all point to the tag, and fail or read "no releases" until then. Binder cannot build until
    the wheel is on the GitHub release.
 8. Once the GitHub release exists, do the steps after merging in "Trying exostab in a browser" above: the release
-   commit changed the pins of the notebook and of Binder.
+   commit changed the pins of the notebook and of Binder. On the release pull request, the workflow `Browser paths`
+   ran the notebooks with the checkout, because the tag did not exist yet. To run them with the tag now, use
+   Actions → Browser paths → Run workflow; otherwise the nightly run does it.
 9. Set `__version__` in `src/exostab/__init__.py` to the next development version, for example `X.Y.(Z+1).dev0`, and
    commit it. Otherwise the code on `main`, which a codespace, the weekly catalog and `pip install git+...` use, gives
    the version of the release in its reports although it differs from the tag. `CITATION.cff` keeps citing the release.

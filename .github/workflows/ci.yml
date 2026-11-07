@@ -1,7 +1,11 @@
 name: CI
 
+# Pull requests, those from forks included, run on pull_request. A push to the branch of a pull request would
+# only start a second run of the same commit, so push runs only for main and release tags.
 on:
   push:
+    branches: [main]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -95,6 +99,27 @@ jobs:
           uv venv --python "$(command -v python)" .venv-lowest
           uv pip install --python .venv-lowest/bin/python --resolution lowest-direct ".[dev]"
           uv pip list --python .venv-lowest/bin/python
+      - name: Each direct dependency is at its declared lower bound
+        # uv installs a newer version when the newest transitive dependencies rule the bound out (streamlit 1.50
+        # needs packaging < 26), and the job would then test that version without saying so.
+        run: |
+          .venv-lowest/bin/python - <<'EOF'
+          from importlib.metadata import version
+
+          import tomli
+          from packaging.requirements import Requirement
+          from packaging.version import Version
+
+          with open("pyproject.toml", "rb") as f:
+              project = tomli.load(f)["project"]
+          above = [
+              f"{r.name} {version(r.name)} (bound {s.version})"
+              for r in map(Requirement, project["dependencies"] + project["optional-dependencies"]["dev"])
+              for s in r.specifier
+              if s.operator == ">=" and Version(version(r.name)) != Version(s.version)
+          ]
+          assert not above, above
+          EOF
       - name: CLI and fast test suite
         run: |
           .venv-lowest/bin/exostab --help

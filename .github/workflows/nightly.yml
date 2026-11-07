@@ -35,19 +35,3 @@ jobs:
         with:
           name: validation-summary-${{ matrix.os }}
           path: validation-summary.txt
-
-  archive:
-    name: live archive query
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: python -m pip install -e ".[dev]"
-      - name: Query the NASA Exoplanet Archive and check two systems
-        run: |
-          exostab list --refresh --min-planets 7
-          exostab check "TRAPPIST-1" --orbits 2000 --draws 3 --no-plots --out live/
-          exostab check "HD 127195" --orbits 2000 --draws 3 --no-plots --out live-hd/

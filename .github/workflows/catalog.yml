@@ -17,9 +17,10 @@ on:
         description: "Only the first N systems (0 = all)"
         default: "0"
 
+# The build runs the newest release of every dependency for about two hours, so its job can only read, and keeps no
+# token on disk. Each job that writes gets only the permission it needs.
 permissions:
-  contents: write  # push to the catalog-data branch
-  actions: write   # start the docs workflow afterwards
+  contents: read
 
 concurrency:
   group: catalog
@@ -38,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
@@ -50,7 +51,7 @@ jobs:
           LIMIT: ${{ inputs.limit || '0' }}
         run: |
           # The full log goes to catalog/build.log (uploaded with the catalog); the step keeps the build's exit
-          # status, so a failed build stops here instead of at the copy below.
+          # status, so a failed build stops here instead of at the copy in the job publish.
           mkdir -p catalog
           status=0
           exostab catalog build --refresh --out catalog \
@@ -58,6 +59,28 @@ jobs:
             --limit "$LIMIT" > catalog/build.log 2>&1 || status=$?
           tail -n 20 catalog/build.log
           exit "$status"
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}  # keep build.log when the build fails
+        with:
+          name: catalog
+          path: catalog/
+
+  publish:
+    needs: catalog
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # push to the catalog-data branch
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v8
+        with:
+          name: catalog
+          path: catalog/
       - name: Publish on the branch catalog-data
         run: |
           day=$(date -u +%Y-%m-%d)
@@ -79,19 +102,39 @@ jobs:
           git -C publish add -A
           git -C publish commit -m "Catalog of $day" || echo "nothing changed"
           git -C publish push origin catalog-data
-      - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}  # keep build.log when the build fails
+
+  zenodo:
+    # Only if configured (RELEASING.md).
+    if: ${{ vars.ZENODO_CATALOG_RECORD != '' }}
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install requests
+      - uses: actions/download-artifact@v8
         with:
           name: catalog
           path: catalog/
-      - name: Upload a new version to Zenodo (only if configured)
-        if: ${{ vars.ZENODO_CATALOG_RECORD != '' }}
+      - name: Upload a new version to Zenodo
         env:
           ZENODO_TOKEN: ${{ secrets.ZENODO_TOKEN }}
           ZENODO_CATALOG_RECORD: ${{ vars.ZENODO_CATALOG_RECORD }}
           ZENODO_URL: ${{ vars.ZENODO_URL || 'https://zenodo.org' }}
         run: python scripts/zenodo_catalog.py catalog
+
+  docs:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write  # start the docs workflow
+      contents: read
+    steps:
       - name: Rebuild the documentation
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run docs.yml --ref main
+        run: gh workflow run docs.yml --ref main --repo "$GITHUB_REPOSITORY"
