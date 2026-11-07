@@ -459,6 +459,8 @@ def _results(result: CheckResult, state: AppState) -> None:
                     f"Draws: {d.stable} stable, {d.marginal} marginal, {d.unstable} unstable"
                     + (f", {d.inconclusive} inconclusive" if d.inconclusive else "")
                 )
+            else:
+                st.caption("No draws.")
             for note in ind.notes:
                 st.caption("• " + note)
     s = rep.settings

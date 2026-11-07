@@ -38,7 +38,7 @@ import numpy as np
 from ..integrate import RunConfig, RunResult, run
 from ..sampling import Realization
 from ..units import format_count, format_orbits, format_years
-from . import DrawStats, IndicatorResult, Verdict, combine
+from . import DrawStats, IndicatorResult, Verdict, combine, join_words, kept_despite
 
 # <Y> at or above this value counts as chaotic. Same threshold as the HD 127195 Research Note;
 # see DECISIONS.md (D8) for its uncertainty.
@@ -47,6 +47,8 @@ MEGNO_CHAOTIC = 2.2
 ENERGY_ERROR_MAX = 1e-5
 # The outermost planet must complete at least this many orbits for a "stable" verdict.
 MIN_OUTER_ORBITS = 100
+# Draws named in the note on a verdict that the 95% rule keeps although they differ; any others are counted.
+KEPT_NAMED = 3
 
 REFERENCES = [
     "rein2012",
@@ -228,6 +230,9 @@ def evaluate(
             "models neither tides, nor general relativity, nor the size of the star, which can decide what "
             "happens so close to it; no verdict for these runs."
         )
+    kept = _kept_note(verdict, [(draws[k], c_draws[k]) for k in kept_despite(v_nom, verdict, v_draws)])
+    if kept is not None:
+        notes.append(kept)
     years = nominal.t_target
     counts = {c: c_draws.count(c) for c in ("regular", "chaotic", "unstable", "inconclusive")}
     planned = nominal.t_target / (nominal.t_end / nominal.n_orbits_innermost) if nominal.t_end > 0 else 0.0
@@ -275,6 +280,34 @@ def evaluate(
         details=details,
         notes=notes,
         references=REFERENCES,
+    )
+
+
+def _kept_note(verdict: Verdict, differ: Sequence[tuple[RunResult, RunClass]]) -> str | None:
+    """Name the draws that differ from the nominal run although the 95% rule keeps ``verdict``.
+
+    The summary already counts the draws by outcome, so the note says which draws differ and what happened in them,
+    close encounters and escapes first, and counts any beyond the first ``KEPT_NAMED``. A draw without a verdict is
+    left out: the summary counts it, and a note above says why. None if no draw with a verdict differs.
+    """
+    shown = sorted(((r, c) for r, c in differ if c != "inconclusive"), key=lambda rc: rc[1] != "unstable")
+    if not shown:
+        return None
+    named = []
+    for r, c in shown[:KEPT_NAMED]:
+        if c == "unstable":
+            event = "close encounter" if r.status == "encounter" else "escape"
+            what = f"{event} after {format_years(r.t_end)}"
+        else:  # regular or chaotic, so <Y> is a number (classify_run)
+            what = f"{c}, <Y> = {r.megno:.2f}" if r.megno is not None else c
+        named.append(f"{r.label} ({what})")
+    if len(shown) > KEPT_NAMED:
+        named.append(f"{len(shown) - KEPT_NAMED} more")
+    text = join_words(named)
+    verb = "differs" if len(shown) == 1 else "differ"
+    return (
+        f"{text[:1].upper()}{text[1:]} {verb} from the nominal run; "
+        f"the verdict stays {verdict.value} under the 95% rule."
     )
 
 

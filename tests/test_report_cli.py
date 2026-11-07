@@ -102,6 +102,19 @@ def test_render_card(small_result) -> None:  # type: ignore[no-untyped-def]
         assert s in text
 
 
+def test_each_heading_says_when_no_draws_were_run(small_result) -> None:  # type: ignore[no-untyped-def]
+    # Without draws a heading had no counts, and nothing next to an indicator's verdict said that it was not tested
+    # against the uncertainties (issue #22). The overall summary says once what that means.
+    rep = small_result.report
+    bare = {k: ind.model_copy(update={"draws": None}) for k, ind in rep.indicators.items()}
+    for report, n in ((rep, 0), (rep.model_copy(update={"indicators": bare}), len(bare))):
+        console = Console(record=True, width=100)
+        render(report, console)
+        text = console.export_text()
+        assert text.count("no draws") == n
+        assert len(re.findall(r"draws: \d+ stable, \d+ marginal, \d+ unstable", text)) == len(bare) - n
+
+
 def test_flags_are_grouped_in_the_card() -> None:
     from exostab.data import load_system
     from exostab.report import group_flags

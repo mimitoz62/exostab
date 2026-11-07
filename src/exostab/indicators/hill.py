@@ -55,7 +55,7 @@ from typing import Any
 from .._numerics import bisect
 from ..models import UnusableParametersError
 from ..sampling import Realization
-from . import DrawStats, IndicatorResult, Verdict, combine
+from . import DrawStats, IndicatorResult, Verdict, combine, kept_despite, kept_note
 
 # Spacing (in mutual Hill radii) below which an adjacent pair in a system of three or more planets is never
 # treated as widely spaced (Pu & Wu 2015, K_50 for sigma_e ~ 0.02), and the eccentricity-dependent requirement
@@ -178,6 +178,38 @@ def classify(real: Realization) -> Verdict:
     return Verdict.MARGINAL
 
 
+def _differs(real: Realization, v: Verdict, nominal: Verdict) -> tuple[str, str, list[str]]:
+    """What a draw whose verdict ``v`` differs from the ``nominal`` one shows, for :func:`kept_note`."""
+    if nominal is Verdict.UNSTABLE:  # the draw passes the limit that the nominal parameters fail
+        return (
+            "has no pair inside the Gladman (1993) limit",
+            "have no pair inside the Gladman (1993) limit",
+            [],
+        )
+    rows = pair_table(real)
+    if v is Verdict.UNSTABLE:
+        inside = [r["pair"] for r in rows if r["orbits_cross"] or r["gladman_margin"] <= 0]
+        return (
+            "has a pair inside the Gladman (1993) limit",
+            "have a pair inside the Gladman (1993) limit",
+            inside,
+        )
+    # marginal: three or more planets, and a pair spaced too closely or too eccentric for a stable verdict
+    tight = [r["pair"] for r in rows if r["separation_hill"] < r["required_separation_hill"]]
+    if tight:
+        return (
+            "has a pair closer than the spacing threshold for its eccentricities",
+            "have a pair closer than the spacing threshold for its eccentricities",
+            tight,
+        )
+    hot = [r["pair"] for r in rows if r["e_max"] > E_CALIBRATED]
+    return (
+        f"has a pair with an eccentricity above {E_CALIBRATED:g}",
+        f"have a pair with an eccentricity above {E_CALIBRATED:g}",
+        hot,
+    )
+
+
 def evaluate(nominal: Realization, draws: list[Realization]) -> IndicatorResult:
     """Hill-spacing verdict for the nominal parameters and the Monte Carlo draws."""
     rows = pair_table(nominal)
@@ -229,6 +261,8 @@ def evaluate(nominal: Realization, draws: list[Realization]) -> IndicatorResult:
     notes = []
     if verdict is not v_nom:
         notes.append(f"The nominal parameters give '{v_nom.value}', but the draws disagree.")
+    if differ := kept_despite(v_nom, verdict, v_draws):
+        notes.append(kept_note(verdict, len(draws), [_differs(draws[k], v_draws[k], v_nom) for k in differ]))
     if not two:
         notes.append(
             "For three or more planets the spacing test is a heuristic (Chambers et al. 1996; "

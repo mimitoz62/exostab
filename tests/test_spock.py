@@ -14,7 +14,7 @@ from typer.testing import CliRunner
 from exostab.analysis import CheckSettings, check_system
 from exostab.cli import app
 from exostab.data import load_system
-from exostab.indicators import Verdict
+from exostab.indicators import IndicatorResult, Verdict
 from exostab.indicators import spock as sp
 from exostab.indicators.hill import pair_table
 from exostab.sampling import Body, Realization, realizations
@@ -106,6 +106,29 @@ def test_evaluate_with_fake_worker(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     assert res.verdict is Verdict.MARGINAL
     with pytest.raises(ValueError, match="three or more"):
         sp.evaluate(Realization("x", 1.0, trio().bodies[:2]), [], sys.executable)
+
+
+def test_a_verdict_kept_by_the_95_percent_rule_says_what_the_other_draws_show(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A draw on the other side of the threshold showed only in the counts (issue #22).
+    def evaluate(p_nominal: float, p_draws: list[float]) -> IndicatorResult:
+        answer = ([p_nominal, *p_draws], {"spock": "fake", "rebound": "4.x"})
+        monkeypatch.setattr(sp, "predict", lambda reals, python: answer)
+        return sp.evaluate(trio(), [trio()] * len(p_draws), "python")
+
+    res = evaluate(0.9, [0.9] * 19 + [0.2])
+    assert res.verdict is Verdict.STABLE
+    assert res.notes[-1] == (
+        "1 of 20 draws has an estimate below the 0.34 threshold; the verdict stays stable under the 95% rule."
+    )
+    res = evaluate(0.1, [0.1] * 38 + [0.5, 0.34])
+    assert res.verdict is Verdict.UNSTABLE
+    assert res.notes[-1] == (
+        "2 of 40 draws have estimates of at least 0.34; the verdict stays unstable under the 95% rule."
+    )
+    assert not any("95% rule" in n for n in evaluate(0.9, [0.9] * 20).notes)
+    assert not any("95% rule" in n for n in evaluate(0.9, [0.9] * 18 + [0.2] * 2).notes)
 
 
 @pytest.mark.parametrize(

@@ -113,6 +113,47 @@ def test_evaluate_counts_and_notes() -> None:
     assert ind.verdict is M and any("draws disagree" in n for n in ind.notes)
 
 
+def test_a_verdict_kept_by_the_95_percent_rule_names_the_draws_that_differ() -> None:
+    # A draw that failed showed only in the counts (issue #22). The summary counts the draws by outcome, so the note
+    # says which draws differ and what happened in them instead of counting them again.
+    def draws(n: int) -> list[RunResult]:
+        return [result(label=f"draw {k}") for k in range(1, n + 1)]
+
+    ind = nb.evaluate([result(), *draws(19), result(label="draw 20", status="encounter", t_end=5.0)], None)
+    assert ind.verdict is S and "19 regular, 0 chaotic, 1 close encounter/escape of 20" in ind.summary
+    assert ind.notes == [
+        "Draw 20 (close encounter after 5 yr) differs from the nominal run; the verdict stays stable under the 95% "
+        "rule."
+    ]
+    # Close encounters and escapes first; at most three named.
+    runs = [result(), *draws(95), result(label="draw 96", megno=3.0), result(label="draw 97", megno=3.5)]
+    runs += [result(label="draw 98", status="escape", t_end=12.0), result(label="draw 99", megno=4.0)]
+    runs += [result(label="draw 100", status="encounter", t_end=0.5)]
+    ind = nb.evaluate(runs, None)
+    assert ind.verdict is S
+    assert ind.notes == [
+        "Draw 98 (escape after 12 yr), draw 100 (close encounter after 0.5 yr), draw 96 (chaotic, <Y> = 3.00) and 2 "
+        "more differ from the nominal run; the verdict stays stable under the 95% rule."
+    ]
+    unstable = [result(status="encounter", t_end=5.0), *[result(label="draw", status="encounter")] * 19]
+    ind = nb.evaluate([*unstable, result(label="draw 20", megno=2.1)], None)
+    assert ind.verdict is U and ind.notes == [
+        "Draw 20 (regular, <Y> = 2.10) differs from the nominal run; the verdict stays unstable under the 95% rule."
+    ]
+    # No note for a draw without a verdict, which has its own note, nor when no draw differs, the draws change the
+    # verdict or the IAS15 check makes it marginal.
+    ind = nb.evaluate([result(), *draws(19), result(label="draw 20", energy_error=1e-3)], None)
+    assert ind.verdict is S and ind.notes == [
+        "draw 20: relative energy error 1.0e-03 exceeds 1e-05; no verdict for this run."
+    ]
+    assert nb.evaluate([result(), *draws(20)], None).notes == []
+    ind = nb.evaluate([result(), *draws(18), *[result(label="draw", megno=4.0)] * 2], None)
+    assert ind.verdict is M and not any("95% rule" in n for n in ind.notes)
+    chaotic = result(label="draw 20", megno=4.0)
+    ind = nb.evaluate([result(), *draws(19), chaotic], result(integrator="ias15", megno=4.0))
+    assert ind.verdict is M and not any("95% rule" in n for n in ind.notes)
+
+
 def test_megno_seed_is_deterministic_and_distinct() -> None:
     assert nb.megno_seed(3, 1) == nb.megno_seed(3, 1)
     assert len({nb.megno_seed(3, k) for k in range(50)}) == 50
