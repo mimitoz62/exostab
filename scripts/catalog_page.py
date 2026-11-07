@@ -313,7 +313,15 @@ def _dataset(meta: dict[str, object]) -> str:
         "url": PAGE,
         "sameAs": BRANCH,
         "version": date,
-        "keywords": ["exoplanets", "orbital stability", "planetary systems", "N-body", "MEGNO", "AMD"],
+        "keywords": [
+            "exoplanets",
+            "orbital stability",
+            "Hill stability",
+            "planetary systems",
+            "N-body",
+            "MEGNO",
+            "AMD",
+        ],
         "creator": {
             "@type": "Person",
             "name": "Mehmet Öz",

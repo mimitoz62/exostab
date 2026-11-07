@@ -75,7 +75,7 @@ answer.
 
     ---
 
-    Seeded Monte Carlo draws within the published error bars. An indicator's verdict stands only if at least
+    Seeded Monte Carlo draws based on the published error bars. An indicator's verdict stands only if at least
     95% of the draws agree with the nominal one.
 
     [:octicons-arrow-right-24: Methods](methods.md)
@@ -119,6 +119,15 @@ answer.
     [:octicons-arrow-right-24: Catalog](catalog.md)
 
 </div>
+
+## Who it is for
+
+- **Students and teachers**: a first answer with the caveats in view. The [classroom exercise](exercise.md) is a
+  notebook that opens in Colab, with answer notes for teachers; it has not yet been tried with a class.
+- **Amateur and professional astronomers**: check a known system, a "what if" version of it or
+  [a published solution](data-assumptions.md#your-own-parameters) before setting up your own integrations.
+- **Researchers**: the same indicators for the archive's multi-planet systems in one [table](catalog.md), recomputed
+  every week.
 
 ## Get started
 
@@ -184,8 +193,9 @@ answer.
 
     A YAML file describes a system the archive does not have, or a published solution you want to test; the
     example above shows every key, and the repository's
-    [`examples/`](https://github.com/mimitoz62/exostab/tree/main/examples) folder has a second one. `sweep`
-    varies one parameter of one planet and records every indicator.
+    [`examples/`](https://github.com/mimitoz62/exostab/tree/main/examples) folder has three more: the inputs of
+    the HD 127195 Research Note, the eight planets of the Solar System, and the TRAPPIST-1 solution of Agol et al.
+    (2021). `sweep` varies one parameter of one planet and records every indicator.
 
 [Quickstart](quickstart.md){ .md-button .md-button--primary }
 [CLI reference](cli.md){ .md-button }
@@ -312,7 +322,8 @@ Borderline, or the draws within the uncertainties disagree with the nominal para
 :material-close-circle-outline: __unstable__
 { .exo-verdict__name }
 
-The indicator predicts instability for the nominal parameters and for at least 95% of the draws.
+The indicator's test fails for the nominal parameters and for at least 95% of the draws. In the N-body runs that
+means a close encounter or escape; for Hill spacing and AMD, only that close encounters are not excluded.
 </div>
 
 <div class="exo-verdict exo-verdict--inconclusive" markdown>
@@ -389,6 +400,7 @@ What changed in each release is in the [changelog](changelog.md).
 <p class="exo-meta">
 exostab is free and open-source software under the MIT License, written by
 Mehmet Öz (<a href="https://orcid.org/0009-0007-1005-7640">ORCID 0009-0007-1005-7640</a>).
-Questions, bug reports and requests for systems are welcome on
-<a href="https://github.com/mimitoz62/exostab/issues">GitHub</a>.
+Questions, bug reports and requests for systems are welcome through the
+<a href="https://github.com/mimitoz62/exostab/issues/new/choose">issue forms</a> or in
+<a href="https://github.com/mimitoz62/exostab/discussions">Discussions</a>.
 </p>

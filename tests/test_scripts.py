@@ -174,6 +174,14 @@ def test_system_pages(small_catalog: Path, tmp_path: Path, monkeypatch: pytest.M
     assert "β = ∞" in unstable and "1,234 years" in unstable and "10 with a close encounter" in unstable
     assert "`a_future_rule`" in unstable and "overview/KOI-351" in unstable
     assert "](../reading-a-report.md)" in unstable
+    # the issue form for questions about a system, with the name filled in
+    assert "issues/new?template=request_system.yml&system=KOI-351&title=KOI-351%3A%20" in unstable
+    query = parse_qs(urlsplit(pages.ask_url("Barnard's star")).query)
+    assert query == {
+        "template": ["request_system.yml"],
+        "system": ["Barnard's star"],
+        "title": ["Barnard's star: "],
+    }
     # a catalog from before the card's sentences were columns keeps the general text
     assert "## Why this verdict" not in unstable
     assert "for example, the indicators" in pages.page({**row, "overall": "marginal"}, meta, {"KOI-351"})
@@ -233,6 +241,7 @@ def test_system_pages(small_catalog: Path, tmp_path: Path, monkeypatch: pytest.M
         "exostab check" not in no_verdict
         and "mybinder" not in no_verdict
         and "overview/KOI-351" in no_verdict
+        and "template=request_system.yml&system=KOI-351" in no_verdict
     )
     assert "2 planet rows" in no_verdict and "could do with them" in no_verdict
     one_row = pages.page({**skipped, "n_planets": "1"}, meta, {"KOI-351"})

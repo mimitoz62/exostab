@@ -23,7 +23,9 @@ The numbers on this page were produced on 2026-10-31 by these two scripts from t
 REBOUND 5.2.2, NumPy 2.5.4 and Python 3.14.7 on macOS (Apple M4 Pro). They use the bundled archive snapshot of
 2026-09-28 and default settings unless stated. `validation_summary.py` prints sections 1, 3 and 4;
 `validation_figures.py` prints the fractions of section 2. The robustness measurements quoted in section 2 come from
-a separate study of the Hill-limit test (2026-10-04) and are not reproduced by the scripts.
+a separate study of the Hill-limit test (2026-10-04) and are not reproduced by the scripts. Two items were added on
+2026-11-01 with exostab 1.0.2.dev0 (commit 08cc4e6), so the tag v1.0.0 cannot reproduce them: the results for Agol
+et al. (2021) in section 3, and the ⟨Y⟩ of seeds 0 to 7. The tag v1.1.0 and later have both.
 
 Chaotic integrations are sensitive to floating-point rounding. Counts of chaotic draws can differ by one or two on
 other machines, and so can which runs of a chaotic pair meet within a finite horizon. The tests assert only what

@@ -8,7 +8,7 @@ description: >-
 # exostab and other tools
 
 exostab takes a known multi-planet system from the NASA Exoplanet Archive, or parameters you give it, and reports Hill
-spacing, the angular momentum deficit (AMD) and an N-body integration with MEGNO. It repeats them for draws within the
+spacing, the angular momentum deficit (AMD) and an N-body integration with MEGNO. It repeats them for draws based on the
 published error bars and prints each rule it used to fill gaps in the data; [Data and assumptions](data-assumptions.md)
 and [Methods](methods.md) state its other assumptions. It uses some of the tools below and replaces none of them. For
 each one, this page says what it does, how it differs from exostab, and when to use it instead of exostab or together
@@ -16,7 +16,7 @@ with it.
 
 What the page says about other tools comes mainly from their own documentation, repositories, code records and papers,
 read on 31 October and 1 November 2026. It can go out of date. If something here is wrong, please
-[open an issue](https://github.com/mimitoz62/exostab/issues).
+[open an issue](https://github.com/mimitoz62/exostab/issues/new/choose).
 
 ## What exostab does not do
 

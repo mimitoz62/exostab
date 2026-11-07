@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use exostab, please cite it as below, together with the methods and data it relies on (see docs/references.bib)."
+message: "If you use exostab, please cite it using these metadata, together with the methods and data it relies on (listed at https://mimitoz62.github.io/exostab/citing/)."
 title: "exostab: honest, traceable orbital-stability indicators for known exoplanet systems"
 abstract: >-
   exostab reports whether the published parameters of a known multi-planet system pass three tests of
@@ -21,6 +21,7 @@ url: "https://github.com/mimitoz62/exostab"
 keywords:
   - exoplanets
   - orbital stability
+  - Hill stability
   - celestial mechanics
   - N-body
   - REBOUND

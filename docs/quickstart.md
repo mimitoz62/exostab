@@ -59,7 +59,7 @@ pip install "exostab @ git+https://github.com/mimitoz62/exostab@v1.1.1"
 
 `py` is the launcher that the installer from python.org adds. In PowerShell the activation line is
 `.venv\Scripts\Activate.ps1`, which runs only where PowerShell allows scripts, so Command Prompt is the simpler
-choice. The [FAQ](faq.md) says what else differs on Windows.
+choice. The [FAQ](faq.md#does-exostab-run-on-windows) says what else differs on Windows.
 
 The `pip` line needs git. Without git, install the wheel of the release; `uvx --from` takes the same URL:
 
@@ -80,8 +80,8 @@ Without git, put the wheel's URL after the `@`:
 pip install "exostab[web] @ https://github.com/mimitoz62/exostab/releases/download/v1.1.1/exostab-1.1.1-py3-none-any.whl"
 ```
 
-Without the `[catalog]` extra, `exostab catalog build` writes `catalog.csv` but no `catalog.parquet`, and does not
-say so.
+Without the `[catalog]` extra, `exostab catalog build` writes `catalog.csv` and `catalog_meta.json` but no
+`catalog.parquet`, and prints a note that says so.
 
 ## Check a system
 
