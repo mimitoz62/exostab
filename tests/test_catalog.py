@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import multiprocessing as mp
+import os
 import signal
 import sys
 import time
@@ -120,6 +121,35 @@ def test_the_worker_stays_silent_on_ctrl_c(monkeypatch: pytest.MonkeyPatch) -> N
             raise AssertionError("nothing to report")
 
     build._worker(group_by_host(rows)["Kepler-36"], info, CatalogSettings(), NoQueue())
+
+
+def test_an_exception_in_a_worker_gives_an_error_row(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fails(*args: object) -> None:
+        raise ValueError("boom")
+
+    monkeypatch.setattr(build, "check_one", fails)
+    rows, info = load_rows()
+    put: list[Any] = []
+
+    class Queue:
+        def put(self, item: object) -> None:
+            put.append(item)
+
+    build._worker(group_by_host(rows)["Kepler-36"], info, CatalogSettings(), Queue())
+    [(host, row)] = put
+    assert host == "Kepler-36" and row["status"] == "error" and row["reason"] == "ValueError: boom"
+
+
+def _exit_at_once(*args: object) -> None:
+    """Stands for a worker that dies without a word (killed for lack of memory, for example)."""
+    os._exit(3)
+
+
+def test_a_worker_that_dies_gives_an_error_row(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Otherwise the system would wait for max_seconds and be published as a timeout.
+    monkeypatch.setattr(build, "_worker", _exit_at_once)
+    _, rows = build.build_catalog(CatalogSettings(orbits=100, draws=0, jobs=1), tmp_path, limit=1)
+    assert rows[0]["status"] == "error" and rows[0]["reason"] == "worker exited with code 3"
 
 
 def test_a_parquet_failure_still_writes_the_meta_file(

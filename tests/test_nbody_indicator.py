@@ -54,6 +54,8 @@ def test_combine_rules() -> None:
     assert combine(U, [U] * 20) is U
     assert combine(INC, [S] * 20) is INC
     assert combine(S, [S] * 15 + [INC] * 5) is INC  # more than 20% inconclusive
+    assert combine(S, [S] * 16 + [INC] * 4) is M  # exactly 20%: not inconclusive
+    assert combine(S, [S] * 8 + [INC] * 2) is M  # the same with the catalog's 10 draws
     assert AGREEMENT == 0.95
 
 
@@ -109,6 +111,8 @@ def test_evaluate_counts_and_notes() -> None:
     ind = nb.evaluate([result(status="encounter", t_end=5.0)], None, random_phases=["X b"])
     assert ind.verdict is U and "close encounter after 5 yr" in ind.summary
     assert any("X b" in n and "random" in n for n in ind.notes)
+    ind = nb.evaluate([result(status="escape", t_end=5.0)], None)
+    assert ind.verdict is U and "escape after 5 yr" in ind.summary
     ind = nb.evaluate([result()] + [result(megno=5.0)] * 5, None)
     assert ind.verdict is M and any("draws disagree" in n for n in ind.notes)
 
@@ -168,6 +172,16 @@ def test_overall_verdict_is_conservative(
     assert o.verdict is expected
     if expected is not S:
         assert o.reasons
+
+
+def test_spock_takes_part_in_the_overall_verdict() -> None:
+    """SPOCK can make the overall verdict marginal, never unstable on its own (docs/methods.md)."""
+    base = {"hill": ind("hill", S), "amd": ind("amd", S), "nbody": nbody_ind(20)}
+    assert overall_verdict(base).verdict is S
+    assert overall_verdict({**base, "spock": ind("spock", S)}).verdict is S
+    for v in (M, U):
+        o = overall_verdict({**base, "spock": ind("spock", v)})
+        assert o.verdict is M and f"spock: {v.value}" in o.reasons
 
 
 def test_plot_samples_never_change_the_result() -> None:
@@ -422,11 +436,15 @@ def test_ctrl_c_stops_queued_integrations_at_once() -> None:
     jobs = [(r, RunConfig(n_orbits=LONG_RUN_ORBITS)) for r in long_runs]
     main = threading.main_thread().ident
     assert main is not None
-    threading.Timer(4.0, signal.pthread_kill, (main, signal.SIGINT)).start()
-    t0 = time.monotonic()
-    with pytest.raises(KeyboardInterrupt):
-        nb.run_many(jobs, 2)
-    assert time.monotonic() - t0 < 25  # waiting for the queue of 7 runs takes over a minute
+    timer = threading.Timer(4.0, signal.pthread_kill, (main, signal.SIGINT))
+    timer.start()
+    try:
+        t0 = time.monotonic()
+        with pytest.raises(KeyboardInterrupt):
+            nb.run_many(jobs, 2)
+        assert time.monotonic() - t0 < 25  # waiting for the queue of 7 runs takes over a minute
+    finally:
+        timer.cancel()  # if run_many failed or returned early, Ctrl-C must not stop a later test or the session
 
 
 @pytest.mark.parametrize("where", ["main thread", "another thread"])

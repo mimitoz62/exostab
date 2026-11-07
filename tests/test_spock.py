@@ -131,7 +131,10 @@ def test_check_system_adds_spock_for_three_planets(tmp_path: Path, monkeypatch: 
     settings = CheckSettings(orbits=100, draws=2, jobs=1, ias15_check=False, spock_python=sys.executable)
     res = check_system(load_system("TOI-270"), settings)
     assert res.report.indicators["spock"].verdict is Verdict.UNSTABLE
-    assert res.report.overall.verdict is not Verdict.STABLE and res.report.settings.spock
+    # At 100 orbits of b, TOI-270 d completes only 29.5 orbits, so the N-body verdict is at most marginal and the
+    # overall verdict cannot be stable whatever SPOCK says. This checks that SPOCK reaches the overall verdict;
+    # test_spock_takes_part_in_the_overall_verdict checks that it blocks an overall 'stable'.
+    assert "SPOCK (ML): unstable" in res.report.overall.reasons and res.report.settings.spock
     two = check_system(load_system("Kepler-36"), settings)
     assert "spock" not in two.report.indicators
 
