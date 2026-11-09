@@ -1,6 +1,6 @@
 {
-  "created_utc": "2026-11-02T14:25:30+00:00",
-  "exostab_version": "1.0.2.dev0",
+  "created_utc": "2026-11-09T14:58:35+00:00",
+  "exostab_version": "1.1.2.dev0",
   "settings": {
     "orbits": 10000.0,
     "draws": 10,
@@ -9,8 +9,9 @@
     "jobs": null
   },
   "data_source": "archive",
-  "data_retrieved_utc": "2026-11-02T12:38:44+00:00",
-  "n_systems": 1079,
+  "data_retrieved_utc": "2026-11-09T13:02:37+00:00",
+  "data_note": null,
+  "n_systems": 1082,
   "columns": [
     "system",
     "n_planets",
